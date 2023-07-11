@@ -1,2 +1,2 @@
-# {project-name} changelog
+# Honeycomb eBPF Agent changelog
 

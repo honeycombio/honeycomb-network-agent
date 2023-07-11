@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: honeycomb
+spec: {}
+status: {}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: honeycomb-secrets
+  namespace: honeycomb
+type: Opaque
+stringData:
+  api-key: $HONEYCOMB_API_KEY # export HONEYCOMB_API_KEY env var
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: hny-ebpf-agent
+  namespace: honeycomb
+  labels:
+    app: hny-ebpf-agent
+spec:
+  selector:
+    matchLabels:
+      name: hny-ebpf-agent
+  template:
+    metadata:
+      labels:
+        name: hny-ebpf-agent
+    spec:
+      containers:
+        - name: hny-ebpf-agent
+          image: hny/ebpf-agent:local
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: HONEYCOMB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: honeycomb-secrets
+                  key: api-key
+            - name: HONEYCOMB_DATASET
+              value: ebpf-agent-go
+          securityContext:
+            capabilities:
+              add:
+                - BPF
+                - PERFMON
