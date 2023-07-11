@@ -9,6 +9,8 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: build
         run: make docker-build
