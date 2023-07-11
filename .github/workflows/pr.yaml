@@ -1,0 +1,14 @@
+name: Pull Request
+
+on:
+  pull_request:
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v1
+
+      - name: build
+        run: make docker-build
