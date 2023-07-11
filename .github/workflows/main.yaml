@@ -30,7 +30,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4.4.0
         with:
-          images: ghcr.io/${{ github.repository }}/ebpf-agent
+          images: ghcr.io/honeycombio/ebpf-agent
           tags: dev
 
       - name: Build and push
