@@ -31,14 +31,13 @@ jobs:
         uses: docker/metadata-action@v4.6.0
         with:
           images: ghcr.io/honeycombio/ebpf-agent
-          tags: dev
 
       - name: Build and push
         uses: docker/build-push-action@v4.1.1
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: dev
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
