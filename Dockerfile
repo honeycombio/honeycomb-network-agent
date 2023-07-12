@@ -1,6 +1,8 @@
 FROM golang:1.20 as builder
 RUN apt update -yq && apt install -yq clang llvm make
 WORKDIR /src
+COPY go.* .
+RUN go mod download
 COPY . .
 RUN make build
 
