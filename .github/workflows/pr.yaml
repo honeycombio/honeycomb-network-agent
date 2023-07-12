@@ -10,18 +10,17 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3.5.3
 
-      - name: Cache apt packages
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: clang llvm make binfmt-support clang-14 icu-devtools lib32gcc-s1 lib32stdc++6 libc6-i386
-            libclang-common-14-dev libclang-cpp14 libclang-rt-14-dev libclang1-14
-            libcurl3-nss libffi-dev libgc1 libgpm2 libicu-dev libicu72 libllvm14
-            libncurses-dev libncurses6 libnspr4 libnss3 libobjc-12-dev libobjc4 libpfm4
-            libpipeline1 libtinfo-dev libxml2 libxml2-dev libyaml-0-2 libz3-4 libz3-dev
-            llvm-14 llvm-14-dev llvm-14-linker-tools llvm-14-runtime llvm-14-tools
-            llvm-runtime nss-plugin-pem python3-pkg-resources python3-pygments
-            python3-yaml
-          version: 1.0
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2.2.0
 
-      - name: build
-        run: make docker-build
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2.9.0
+
+      - name: Build and push
+        uses: docker/build-push-action@v4.1.1
+        with:
+          context: .
+          push: false
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
