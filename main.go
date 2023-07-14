@@ -12,7 +12,7 @@ import (
 const Version string = "0.0.1"
 
 func main() {
-	log.Printf("Starting Honeycomb Kubernetes agent v%s\n", Version)
+	log.Printf("Starting Honeycomb eBPF agent v%s\n", Version)
 
 	// Try to detect host kernel kernelVersion
 	kernelVersion, err := utils.HostKernelVersion()
