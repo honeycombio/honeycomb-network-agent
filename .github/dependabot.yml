@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    labels:
+      - "type: dependencies"
+    reviewers:
+      - "honeycombio/telemetry-team"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "maint"
+      include: "scope"
