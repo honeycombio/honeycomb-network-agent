@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/cilium/ebpf v0.10.0
 	github.com/honeycombio/libhoney-go v1.20.0
+	golang.org/x/sys v0.10.0
 )
 
 require (
@@ -14,6 +15,5 @@ require (
 	github.com/klauspost/compress v1.16.6 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/sys v0.2.0 // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 )

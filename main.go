@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/honeycombio/ebpf-agent/bpf/probes"
+	"github.com/honeycombio/ebpf-agent/bpf/socket"
 	"github.com/honeycombio/libhoney-go"
 )
 
@@ -17,5 +17,6 @@ func main() {
 	defer libhoney.Close()
 
 	log.Println("Starting Honeypot eBPF Agent")
-	probes.Setup()
+	// probes.Setup()
+	socket.Setup()
 }
