@@ -7,38 +7,61 @@
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
-struct sock_common
+// example based off https://github.com/iovisor/bcc/blob/master/examples/networking/http_filter/http-parse-simple.c
+
+#define cursor_advance(_cursor, _len) \
+    ({ void *_tmp = _cursor; _cursor += _len; _tmp; })
+#define IP_TCP 6
+#define ETH_HLEN 14
+#define MIN_HTTP_SIZE 12
+
+struct ethernet_t
 {
-    union
-    {
-        struct
-        {
-            __be32 skc_daddr;
-            __be32 skc_rcv_saddr;
-        };
-    };
-    union
-    {
-        // Padding out union skc_hash.
-        __u32 _;
-    };
-    union
-    {
-        struct
-        {
-            __be16 skc_dport;
-            __u16 skc_num;
-        };
-    };
-    short unsigned int skc_family;
+    unsigned long long dst : 48;
+    unsigned long long src : 48;
+    unsigned int type : 16;
 };
 
-struct sock
+struct ip_t
 {
-    struct sock_common __sk_common;
+    unsigned char ver : 4; // byte 0
+    unsigned char hlen : 4;
+    unsigned char tos;
+    unsigned short tlen;
+    unsigned short identification; // byte 4
+    unsigned short ffo_unused : 1;
+    unsigned short df : 1;
+    unsigned short mf : 1;
+    unsigned short foffset : 13;
+    unsigned char ttl; // byte 8
+    unsigned char nextp;
+    unsigned short hchecksum;
+    unsigned int src; // byte 12
+    unsigned int dst; // byte 16
 };
 
-typedef struct http_event_t
+struct tcp_t
+{
+    unsigned short src_port; // byte 0
+    unsigned short dst_port;
+    unsigned int seq_num;     // byte 4
+    unsigned int ack_num;     // byte 8
+    unsigned char offset : 4; // byte 12
+    unsigned char reserved : 4;
+    unsigned char flag_cwr : 1;
+    unsigned char flag_ece : 1;
+    unsigned char flag_urg : 1;
+    unsigned char flag_ack : 1;
+    unsigned char flag_psh : 1;
+    unsigned char flag_rst : 1;
+    unsigned char flag_syn : 1;
+    unsigned char flag_fin : 1;
+    unsigned short rcv_wnd;
+    unsigned short cksum; // byte 16
+    unsigned short urg_ptr;
+};
+
+struct http_event_t
 {
     u64 start_time;
     u64 end_time;
@@ -47,7 +70,7 @@ typedef struct http_event_t
     u32 saddr;
     u16 sport;
     u64 bytes_sent;
-} http_event_t;
+};
 
 struct
 {
@@ -57,182 +80,112 @@ struct
 SEC("socket/http_filter")
 int socket__http_filter(struct __sk_buff *skb)
 {
-    http_event_t event = {};
-    event.start_time = bpf_ktime_get_ns();
+    u8 *cursor = 0;
 
-    bpf_perf_event_output(skb, &events, BPF_F_CURRENT_CPU, &event, sizeof(http_event_t));
+    struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
+    // filter IP packets (ethernet type = 0x0800)
+    if (!(ethernet->type == 0x0800))
+    {
+        goto DROP;
+    }
+
+    struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
+    // filter TCP packets (ip next protocol = 0x06)
+    if (ip->nextp != IP_TCP)
+    {
+        goto DROP;
+    }
+
+    u32 tcp_header_length = 0;
+    u32 ip_header_length = 0;
+    u32 payload_offset = 0;
+    u32 payload_length = 0;
+
+    // calculate ip header length
+    // value to multiply * 4
+    // e.g. ip->hlen = 5 ; IP Header Length = 5 x 4 byte = 20 byte
+    ip_header_length = ip->hlen << 2; // SHL 2 -> *4 multiply
+
+    // check ip header length against minimum
+    if (ip_header_length < sizeof(*ip))
+    {
+        goto DROP;
+    }
+
+    // shift cursor forward for dynamic ip header size
+    void *_ = cursor_advance(cursor, (ip_header_length - sizeof(*ip)));
+
+    struct tcp_t *tcp = cursor_advance(cursor, sizeof(*tcp));
+
+    // calculate tcp header length
+    // value to multiply *4
+    // e.g. tcp->offset = 5 ; TCP Header Length = 5 x 4 byte = 20 byte
+    tcp_header_length = tcp->offset << 2; // SHL 2 -> *4 multiply
+
+    // calculate payload offset and length
+    payload_offset = ETH_HLEN + ip_header_length + tcp_header_length;
+    payload_length = ip->tlen - ip_header_length - tcp_header_length;
+
+    // http://stackoverflow.com/questions/25047905/http-request-minimum-size-in-bytes
+    // minimum length of http request is always geater than 7 bytes
+    // avoid invalid access memory
+    // include empty payload
+    if (payload_length < 7)
+    {
+        goto DROP;
+    }
+
+    // load first 7 byte of payload into p (payload_array)
+    // direct access to skb not allowed
+    // unsigned long p[7];
+    // int i = 0;
+    // for (i = 0; i < 7; i++)
+    // {
+    //     p[i] = load_byte(skb, payload_offset + i);
+    // }
+    char p[MIN_HTTP_SIZE];
+    bpf_skb_load_bytes(skb, payload_offset, p, sizeof(p));
+
+    // find a match with an HTTP message
+    // HTTP
+    if ((p[0] == 'H') && (p[1] == 'T') && (p[2] == 'T') && (p[3] == 'P'))
+    {
+        goto KEEP;
+    }
+    // GET
+    if ((p[0] == 'G') && (p[1] == 'E') && (p[2] == 'T'))
+    {
+        goto KEEP;
+    }
+    // POST
+    if ((p[0] == 'P') && (p[1] == 'O') && (p[2] == 'S') && (p[3] == 'T'))
+    {
+        goto KEEP;
+    }
+    // PUT
+    if ((p[0] == 'P') && (p[1] == 'U') && (p[2] == 'T'))
+    {
+        goto KEEP;
+    }
+    // DELETE
+    if ((p[0] == 'D') && (p[1] == 'E') && (p[2] == 'L') && (p[3] == 'E') && (p[4] == 'T') && (p[5] == 'E'))
+    {
+        goto KEEP;
+    }
+    // HEAD
+    if ((p[0] == 'H') && (p[1] == 'E') && (p[2] == 'A') && (p[3] == 'D'))
+    {
+        goto KEEP;
+    }
+
+    // no HTTP match
+    goto DROP;
+
+// keep the packet and send it to userspace returning -1
+KEEP:
+    return -1;
+
+// drop the packet returning 0
+DROP:
     return 0;
 }
-
-struct sk_buff
-{
-    union
-    {
-        struct
-        {
-            struct sk_buff *next;
-            struct sk_buff *prev;
-            union
-            {
-                struct net_device *dev;
-                unsigned long dev_scratch;
-            };
-        };
-        struct rb_node rbnode;
-        struct list_head list;
-        struct llist_node ll_node;
-    };
-    union
-    {
-        struct sock *sk;
-        int ip_defrag_offset;
-    };
-    union
-    {
-        ktime_t tstamp;
-        u64 skb_mstamp_ns;
-    };
-    char cb[48];
-    union
-    {
-        struct
-        {
-            unsigned long _skb_refdst;
-            void (*destructor)(struct sk_buff *skb);
-        };
-        struct list_head tcp_tsorted_anchor;
-#ifdef CONFIG_NET_SOCK_MSG;
-        unsigned long _sk_redir;
-#endif;
-    };
-#if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE);
-    unsigned long _nfct;
-#endif;
-    unsigned int len, data_len;
-    __u16 mac_len, hdr_len;
-    __u16 queue_mapping;
-#ifdef __BIG_ENDIAN_BITFIELD;
-#define CLONED_MASK (1 << 7);
-#else;
-#define CLONED_MASK 1;
-#endif;
-#define CLONED_OFFSET offsetof(struct sk_buff, __cloned_offset);
-    __u8 cloned : 1, nohdr : 1, fclone : 2, peeked : 1, head_frag : 1, pfmemalloc : 1, pp_recycle : 1;
-#ifdef CONFIG_SKB_EXTENSIONS;
-    __u8 active_extensions;
-#endif;
-    __u8 pkt_type : 3;
-    __u8 ignore_df : 1;
-    __u8 dst_pending_confirm : 1;
-    __u8 ip_summed : 2;
-    __u8 ooo_okay : 1;
-    __u8 mono_delivery_time : 1;
-#ifdef CONFIG_NET_CLS_ACT;
-    __u8 tc_at_ingress : 1;
-    __u8 tc_skip_classify : 1;
-#endif;
-    __u8 remcsum_offload : 1;
-    __u8 csum_complete_sw : 1;
-    __u8 csum_level : 2;
-    __u8 inner_protocol_type : 1;
-    __u8 l4_hash : 1;
-    __u8 sw_hash : 1;
-#ifdef CONFIG_WIRELESS;
-    __u8 wifi_acked_valid : 1;
-    __u8 wifi_acked : 1;
-#endif;
-    __u8 no_fcs : 1;
-    __u8 encapsulation : 1;
-    __u8 encap_hdr_csum : 1;
-    __u8 csum_valid : 1;
-#ifdef CONFIG_IPV6_NDISC_NODETYPE;
-    __u8 ndisc_nodetype : 2;
-#endif;
-#if IS_ENABLED(CONFIG_IP_VS);
-    __u8 ipvs_property : 1;
-#endif;
-#if IS_ENABLED(CONFIG_NETFILTER_XT_TARGET_TRACE) || IS_ENABLED(CONFIG_NF_TABLES);
-    __u8 nf_trace : 1;
-#endif;
-#ifdef CONFIG_NET_SWITCHDEV;
-    __u8 offload_fwd_mark : 1;
-    __u8 offload_l3_fwd_mark : 1;
-#endif;
-    __u8 redirected : 1;
-#ifdef CONFIG_NET_REDIRECT;
-    __u8 from_ingress : 1;
-#endif;
-#ifdef CONFIG_NETFILTER_SKIP_EGRESS;
-    __u8 nf_skip_egress : 1;
-#endif;
-#ifdef CONFIG_TLS_DEVICE;
-    __u8 decrypted : 1;
-#endif;
-    __u8 slow_gro : 1;
-#if IS_ENABLED(CONFIG_IP_SCTP);
-    __u8 csum_not_inet : 1;
-#endif;
-#ifdef CONFIG_NET_SCHED;
-    __u16 tc_index;
-#endif;
-    u16 alloc_cpu;
-    union
-    {
-        __wsum csum;
-        struct
-        {
-            __u16 csum_start;
-            __u16 csum_offset;
-        };
-    };
-    __u32 priority;
-    int skb_iif;
-    __u32 hash;
-    union
-    {
-        u32 vlan_all;
-        struct
-        {
-            __be16 vlan_proto;
-            __u16 vlan_tci;
-        };
-    };
-#if defined(CONFIG_NET_RX_BUSY_POLL) || defined(CONFIG_XPS);
-    union
-    {
-        unsigned int napi_id;
-        unsigned int sender_cpu;
-    };
-#endif;
-#ifdef CONFIG_NETWORK_SECMARK;
-    __u32 secmark;
-#endif;
-    union
-    {
-        __u32 mark;
-        __u32 reserved_tailroom;
-    };
-    union
-    {
-        __be16 inner_protocol;
-        __u8 inner_ipproto;
-    };
-    __u16 inner_transport_header;
-    __u16 inner_network_header;
-    __u16 inner_mac_header;
-    __be16 protocol;
-    __u16 transport_header;
-    __u16 network_header;
-    __u16 mac_header;
-#ifdef CONFIG_KCOV;
-    u64 kcov_handle;
-#endif;
-    sk_buff_data_t tail;
-    sk_buff_data_t end;
-    unsigned char *head, *data;
-    unsigned int truesize;
-    refcount_t users;
-#ifdef CONFIG_SKB_EXTENSIONS;
-    struct skb_ext *extensions;
-#endif;
-};
