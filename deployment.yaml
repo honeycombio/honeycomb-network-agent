@@ -43,8 +43,8 @@ spec:
     spec:
       containers:
         - name: hny-ebpf-agent
-          # image: hny/ebpf-agent:local
-          image: ghcr.io/honeycombio/ebpf-agent:dev
+          image: hny/ebpf-agent:local
+          # image: ghcr.io/honeycombio/ebpf-agent:dev
           imagePullPolicy: IfNotPresent
           env:
             - name: HONEYCOMB_API_KEY
@@ -54,6 +54,8 @@ spec:
                   key: api-key
             - name: HONEYCOMB_DATASET
               value: ebpf-agent-go
+            - name: HONEYCOMB_API_ENDPOINT
+              value: $HONEYCOMB_API_ENDPOINT
           securityContext:
             capabilities:
               add:
