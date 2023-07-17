@@ -12,7 +12,18 @@ metadata:
   namespace: honeycomb
 type: Opaque
 stringData:
-  api-key: $HONEYCOMB_API_KEY # export HONEYCOMB_API_KEY env var
+  # export HONEYCOMB_API_KEY env var
+  api-key: $HONEYCOMB_API_KEY
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ghcr
+  namespace: honeycomb
+type: kubernetes.io/dockerconfigjson
+stringData:
+  # export GITHUB_TOKEN env var as 'github_username:github_token'
+  .dockerconfigjson: "{\"auths\":{\"ghcr.io\":{\"auth\":\"$GITHUB_TOKEN\"}}}"
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -32,7 +43,8 @@ spec:
     spec:
       containers:
         - name: hny-ebpf-agent
-          image: hny/ebpf-agent:local
+          # image: hny/ebpf-agent:local
+          image: ghcr.io/honeycombio/ebpf-agent:dev
           imagePullPolicy: IfNotPresent
           env:
             - name: HONEYCOMB_API_KEY
@@ -47,3 +59,5 @@ spec:
               add:
                 - BPF
                 - PERFMON
+      imagePullSecrets:
+        - name: ghcr
