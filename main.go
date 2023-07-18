@@ -23,6 +23,11 @@ func main() {
 	}
 	log.Printf("Host kernel version: %s\n", kernelVersion)
 
+	apikey := os.Getenv("HONEYCOMB_API_KEY")
+	if apikey == "" {
+		log.Fatalf("Honeycomb API key not set, unable to send events\n")
+	}
+
 	dataset := getEnvOrDefault("HONEYCOMB_DATASET", defaultDataset)
 	log.Printf("Honeycomb dataset: %s\n", dataset)
 
@@ -31,7 +36,7 @@ func main() {
 
 	// setup libhoney
 	libhoney.Init(libhoney.Config{
-		APIKey:  os.Getenv("HONEYCOMB_API_KEY"),
+		APIKey:  apikey,
 		Dataset: dataset,
 		APIHost: endpoint,
 	})
