@@ -20,7 +20,7 @@ func main() {
 		log.Fatalf("Failed to get host kernel version: %v", err)
 	}
 	log.Printf("Host kernel version: %s\n", kernelVersion)
-	log.Printf("Host kernel version: %s\n", os.Getenv("HONEYCOMB_API_ENDPOINT"))
+	log.Printf("Honeycomb API endpoint: %s\n", os.Getenv("HONEYCOMB_API_ENDPOINT"))
 	// setup libhoney
 	libhoney.Init(libhoney.Config{
 		APIKey:  os.Getenv("HONEYCOMB_API_KEY"),
