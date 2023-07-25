@@ -63,7 +63,7 @@ func Setup() {
 		log.Fatalf("failed creating perf reader: %v", err)
 	}
 
-	log.Println("Waiting for events..")
+	log.Println("Agent is ready!")
 	var event Event
 	for {
 		record, err := reader.Read()
