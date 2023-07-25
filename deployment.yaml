@@ -54,8 +54,9 @@ spec:
                   key: api-key
             - name: HONEYCOMB_DATASET
               value: ebpf-agent-go
-            - name: HONEYCOMB_API_ENDPOINT
-              value: $HONEYCOMB_API_ENDPOINT
+            # set to another endpoint if desired
+            # - name: HONEYCOMB_API_ENDPOINT
+            #   value: $HONEYCOMB_API_ENDPOINT
           securityContext:
             capabilities:
               add:
