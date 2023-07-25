@@ -80,8 +80,30 @@ To remove the agent:
 
 `make unapply-ebpf-agent` or `kubectl delete -f deployment.yaml`
 
+## Optionally install the "greetings" example app
 
-`make unapply-ebpf-agent`
+There is an example greeting service written in go that can be used to see additional telemetry.
+
+`make apply_greetings` or `kubectl apply -f smoke-tests/greetings.yaml`
+
+Confirm the pods are up by using `k9s` or with `kubectl`:
+
+```sh
+$ kubectl get pods --namespace=greetings
+NAME                           READY   STATUS    RESTARTS   AGE
+frontend-go-6cb864498b-wrpzj   1/1     Running   0          12s
+message-go-b7fcd59d4-jwrhc     1/1     Running   0          12s
+name-go-5794ffd766-4qxp2       1/1     Running   0          12s
+year-go-b96849dc6-xjfts        1/1     Running   0          12s
+```
+
+Hit the endpoint:
+
+`curl localhost:7777/greeting`
+
+## Remove the "greetings" example app
+
+`make unapply_greetings` or `kubectl delete -f smoke-tests/greetings.yaml`
 
 ## Debugging
 

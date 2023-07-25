@@ -37,3 +37,13 @@ apply-ebpf-agent:
 .PHONY: unapply-ebpf-agent
 unapply-ebpf-agent:
 	kubectl delete -f deployment.yaml
+
+# apply new greetings deployment in already-running cluster
+.PHONY: apply_greetings
+apply_greetings:
+	kubectl apply -f smoke-tests/greetings.yaml
+
+# remove greetings deployment
+.PHONY: unapply_greetings
+unapply_greetings:
+	kubectl delete -f smoke-tests/greetings.yaml
