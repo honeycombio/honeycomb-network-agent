@@ -23,7 +23,8 @@ metadata:
 type: kubernetes.io/dockerconfigjson
 stringData:
   # export GITHUB_TOKEN env var as 'github_username:github_token'
-  .dockerconfigjson: "{\"auths\":{\"ghcr.io\":{\"auth\":\"$GITHUB_TOKEN\"}}}"
+  # export BASE64_TOKEN=$(echo -n $GITHUB_TOKEN | base64)
+  .dockerconfigjson: "{\"auths\":{\"ghcr.io\":{\"auth\":\"$BASE64_TOKEN\"}}}"
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -43,8 +44,8 @@ spec:
     spec:
       containers:
         - name: hny-ebpf-agent
-          # image: hny/ebpf-agent:local
-          image: ghcr.io/honeycombio/ebpf-agent:dev
+          image: hny/ebpf-agent:local
+          # image: ghcr.io/honeycombio/ebpf-agent:dev
           imagePullPolicy: IfNotPresent
           env:
             - name: HONEYCOMB_API_KEY
@@ -54,10 +55,15 @@ spec:
                   key: api-key
             - name: HONEYCOMB_DATASET
               value: ebpf-agent-go
+            # set to another endpoint if desired
+            # - name: HONEYCOMB_API_ENDPOINT
+            #   value: $HONEYCOMB_API_ENDPOINT
           securityContext:
             capabilities:
               add:
                 - BPF
                 - PERFMON
+            # for local debugging
+            privileged: true
       imagePullSecrets:
         - name: ghcr
