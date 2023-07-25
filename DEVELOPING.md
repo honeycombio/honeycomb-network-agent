@@ -84,7 +84,7 @@ To remove the agent:
 
 There is an example greeting service written in go that can be used to see additional telemetry.
 
-`make apply_greetings` or `kubectl apply -f smoke-tests/greetings.yaml`
+`make apply-greetings` or `kubectl apply -f smoke-tests/greetings.yaml`
 
 Confirm the pods are up by using `k9s` or with `kubectl`:
 
@@ -103,7 +103,7 @@ Hit the endpoint:
 
 ## Remove the "greetings" example app
 
-`make unapply_greetings` or `kubectl delete -f smoke-tests/greetings.yaml`
+`make unapply-greetings` or `kubectl delete -f smoke-tests/greetings.yaml`
 
 ## Debugging
 
