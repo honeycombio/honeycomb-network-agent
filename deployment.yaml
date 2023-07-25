@@ -62,5 +62,7 @@ spec:
               add:
                 - BPF
                 - PERFMON
+            # for local debugging
+            privileged: true
       imagePullSecrets:
         - name: ghcr
