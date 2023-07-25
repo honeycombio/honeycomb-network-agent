@@ -38,22 +38,48 @@ kubectl create secret docker-registry ghcr-secret \
 
 ## To create a local docker image
 
-`make docker-build` will create a docker image called `hny/ebpf-agent:local``.
+`make docker-build` will create a local docker image called `hny/ebpf-agent:local`.
+
+Verify that it published to your local docker images:
+
+```sh
+$ docker images | grep ebpf-agent
+REPOSITORY        TAG       IMAGE ID        CREATED          SIZE
+hny/ebpf-agent    local     326362e52d9c    5 minutes ago    120MB
+```
 
 For a custom name and/or tag, pass `IMG_NAME` and/or `IMG_TAG` in the make command.
-
 For example, to get a local docker image called `hny/ebpf-agent-go:custom`:
 
 `IMG_NAME=hny/ebpf-agent-go IMG_TAG=custom make docker-build`
 
 ## Deploying the agent to a Kubernetes cluster
 
-Set environment variables like `HONEYCOMB_API_KEY` in a file called `.env`.
+Set environment variables like `HONEYCOMB_API_KEY` and the previously noted `GITHUB_TOKEN` and `BASE64_TOKEN` in a file called `.env`.
 These environment variables get passed in the make command.
 
 `make apply-ebpf-agent`
 
-## Remove the agent
+```sh
+$ make apply-ebpf-agent
+namespace/honeycomb created
+secret/honeycomb-secrets created
+secret/ghcr created
+daemonset.apps/hny-ebpf-agent created
+```
+
+Confirm that the pods are up by using `k9s` or with `kubectl`:
+
+```sh
+$ kubectl get pods --namespace=honeycomb
+NAME                   READY   STATUS    RESTARTS   AGE
+hny-ebpf-agent-bqcvl   1/1     Running   0          94s
+```
+
+To remove the agent:
+
+`make unapply-ebpf-agent` or `kubectl delete -f deployment.yaml`
+
 
 `make unapply-ebpf-agent`
 
