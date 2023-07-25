@@ -13,7 +13,9 @@ struct sock_common
 	{
 		struct
 		{
+			// skc_daddr is destination IP address
 			__be32 skc_daddr;
+			// skc_rcv_saddr is the source IP address
 			__be32 skc_rcv_saddr;
 		};
 	};
@@ -26,13 +28,21 @@ struct sock_common
 	{
 		struct
 		{
+			// skc_dport is the destination TCP/UDP port
 			__be16 skc_dport;
+			// skc_num is the source TCP/UDP port
 			__u16 skc_num;
 		};
 	};
+	// skc_family is the network address family (2 for IPV4)
 	short unsigned int skc_family;
 };
 
+/**
+ * struct sock is the network layer representation of sockets.
+ * This is a simplified copy of the kernel's struct sock.
+ * This copy is needed only to access struct sock_common.
+ */
 struct sock
 {
 	struct sock_common __sk_common;
