@@ -27,7 +27,7 @@ docker-build:
 apply-ebpf-agent:
 	# apply new deployment in already-running cluster
 	# load locally built image into kind
-	kind load docker-image hny/ebpf-agent:local
+	# kind load docker-image hny/ebpf-agent:local
 	# replace env vars in ebpf_agent.yaml (eg API key) and apply deployment
 	envsubst < deployment.yaml | kubectl apply -f -
 
