@@ -63,7 +63,7 @@ func Setup() {
 		log.Fatalf("failed creating perf reader: %v", err)
 	}
 
-	log.Println("Waiting for events..")
+	log.Println("Agent is ready!")
 	var event Event
 	for {
 		record, err := reader.Read()
@@ -88,8 +88,8 @@ func Setup() {
 		ev := libhoney.NewEvent()
 		ev.AddField("name", "tcp_event")
 		ev.AddField("duration_ms", (event.EndTime - event.StartTime) / 1_000_000) // convert ns to ms
-		ev.AddField("source", fmt.Sprintf("%s:%d", toIP4(event.Saddr), event.Sport))
-		ev.AddField("dest", fmt.Sprintf("%s:%d", toIP4(event.Daddr), event.Dport))
+		ev.AddField("source", fmt.Sprintf("%s:%d", intToIP(event.Saddr), event.Sport))
+		ev.AddField("dest", fmt.Sprintf("%s:%d", intToIP(event.Daddr), event.Dport))
 		ev.AddField("num_bytes", event.BytesSent)
 		err = ev.Send()
 		if err != nil {
@@ -98,8 +98,9 @@ func Setup() {
 	}
 }
 
-func toIP4(addr uint32) net.IP {
+// intToIP converts IPv4 number to net.IP
+func intToIP(ipNum uint32) net.IP {
 	ip := make(net.IP, 4)
-	binary.LittleEndian.PutUint32(ip, addr)
+	binary.LittleEndian.PutUint32(ip, ipNum)
 	return ip
 }
