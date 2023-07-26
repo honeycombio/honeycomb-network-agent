@@ -1,17 +1,48 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
 	"github.com/honeycombio/ebpf-agent/bpf/probes"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const Version string = "0.0.1"
 const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
+
+func getKubernetesClient() *kubernetes.Clientset {
+	// creates the in-cluster config
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		panic(err.Error())
+	}
+	// creates the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return clientset
+}
+
+func getPodsMetadata(client *kubernetes.Clientset) {
+	log.Println("Loading Pod Metadata...")
+	services, err := client.CoreV1().Services(v1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+	for _, v := range services.Items {
+		log.Printf("Service %v", v)
+	}
+}
 
 func main() {
 	log.Printf("Starting Honeycomb eBPF agent v%s\n", Version)
@@ -42,6 +73,11 @@ func main() {
 	})
 	defer libhoney.Close()
 
+	// setup pod metadata
+	client := getKubernetesClient()
+	getPodsMetadata(client)
+
+	// setup probes
 	probes.Setup()
 }
 
