@@ -134,8 +134,9 @@ func sendEvent(event Event) {
 	ev.AddField("source", fmt.Sprintf("%s:%d", sourceIpAddr, event.Sport))
 	ev.AddField("dest", fmt.Sprintf("%s:%d", destIpAddr, event.Dport))
 	ev.AddField("num_bytes", event.BytesSent)
-	ev.AddField("dest.pod.name", destPod.Name)
+	ev.AddField("k8s.pod.dest.name", destPod.Name)
 	ev.AddField("source.pod.name", sourcePod.Name)
+	ev.AddField("k8s.namespace.name", sourcePod.Namespace)
 
 	err := ev.Send()
 	if err != nil {
@@ -146,7 +147,6 @@ func sendEvent(event Event) {
 // intToIP converts IPv4 number to net.IP
 func intToIP(ipNum uint32) net.IP {
 	ip := make(net.IP, 4)
-	log.Printf("intToIP %+v\n", ip)
 	binary.LittleEndian.PutUint32(ip, ipNum)
 	return ip
 }
