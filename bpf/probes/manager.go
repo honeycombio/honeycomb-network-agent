@@ -2,6 +2,7 @@ package probes
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -12,6 +13,10 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/honeycombio/libhoney-go"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf tcp_probe.c
@@ -20,11 +25,11 @@ const mapKey uint32 = 0
 
 type Event struct {
 	StartTime uint64
-	EndTime uint64
-	Daddr uint32
-	Dport uint16
-	Saddr uint32
-	Sport uint16
+	EndTime   uint64
+	Daddr     uint32
+	Dport     uint16
+	Saddr     uint32
+	Sport     uint16
 	BytesSent uint64
 }
 
@@ -85,16 +90,56 @@ func Setup() {
 
 		// log.Printf("event: %+v\n", event)
 
-		ev := libhoney.NewEvent()
-		ev.AddField("name", "tcp_event")
-		ev.AddField("duration_ms", (event.EndTime - event.StartTime) / 1_000_000) // convert ns to ms
-		ev.AddField("source", fmt.Sprintf("%s:%d", intToIP(event.Saddr), event.Sport))
-		ev.AddField("dest", fmt.Sprintf("%s:%d", intToIP(event.Daddr), event.Dport))
-		ev.AddField("num_bytes", event.BytesSent)
-		err = ev.Send()
-		if err != nil {
-			log.Printf("error sending event: %v\n", err)
+		sendEvent(event)
+	}
+}
+
+func getPodByIPAddr(ipAddr string) v1.Pod {
+	// creates the in-cluster config
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		panic(err.Error())
+	}
+	// creates the clientset
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	pods, _ := client.CoreV1().Pods(v1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+
+	var matchedPod v1.Pod
+
+	for _, pod := range pods.Items {
+		if ipAddr == pod.Status.PodIP {
+			matchedPod = pod
 		}
+	}
+
+	return matchedPod
+}
+
+// Send event to Honeycomb
+func sendEvent(event Event) {
+
+	sourceIpAddr := intToIP(event.Saddr).String()
+	destIpAddr := intToIP(event.Daddr).String()
+
+	destPod := getPodByIPAddr(destIpAddr)
+	sourcePod := getPodByIPAddr(sourceIpAddr)
+
+	ev := libhoney.NewEvent()
+	ev.AddField("name", "tcp_event")
+	ev.AddField("duration_ms", (event.EndTime-event.StartTime)/1_000_000) // convert ns to ms
+	ev.AddField("source", fmt.Sprintf("%s:%d", sourceIpAddr, event.Sport))
+	ev.AddField("dest", fmt.Sprintf("%s:%d", destIpAddr, event.Dport))
+	ev.AddField("num_bytes", event.BytesSent)
+	ev.AddField("k8s.pod.dest.name", destPod.Name)
+	ev.AddField("k8s.pod.source.name", sourcePod.Name)
+
+	err := ev.Send()
+	if err != nil {
+		log.Printf("error sending event: %v\n", err)
 	}
 }
 

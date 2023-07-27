@@ -25,6 +25,37 @@ stringData:
   # export GITHUB_TOKEN env var as 'github_username:github_token'
   # export BASE64_TOKEN=$(echo -n $GITHUB_TOKEN | base64)
   .dockerconfigjson: "{\"auths\":{\"ghcr.io\":{\"auth\":\"$BASE64_TOKEN\"}}}"
+
+## Permissions to access pod metadata
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  name: honeycomb-sa
+  namespace: honeycomb
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: honeycomb
+rules:
+  - apiGroups: ["", "metrics.k8s.io","apps"]
+    resources: ["*"]
+    verbs: ["get","watch","list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: honeycomb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: honeycomb
+subjects:
+  - kind: ServiceAccount
+    namespace: honeycomb
+    name: honeycomb-sa
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -42,6 +73,7 @@ spec:
       labels:
         name: hny-ebpf-agent
     spec:
+      serviceAccountName: honeycomb-sa
       containers:
         - name: hny-ebpf-agent
           image: hny/ebpf-agent:local
@@ -56,8 +88,8 @@ spec:
             - name: HONEYCOMB_DATASET
               value: ebpf-agent-go
             # set to another endpoint if desired
-            # - name: HONEYCOMB_API_ENDPOINT
-            #   value: $HONEYCOMB_API_ENDPOINT
+            - name: HONEYCOMB_API_ENDPOINT
+              value: $HONEYCOMB_API_ENDPOINT
           securityContext:
             capabilities:
               add:
