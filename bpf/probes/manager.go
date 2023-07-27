@@ -135,8 +135,7 @@ func sendEvent(event Event) {
 	ev.AddField("dest", fmt.Sprintf("%s:%d", destIpAddr, event.Dport))
 	ev.AddField("num_bytes", event.BytesSent)
 	ev.AddField("k8s.pod.dest.name", destPod.Name)
-	ev.AddField("source.pod.name", sourcePod.Name)
-	ev.AddField("k8s.namespace.name", sourcePod.Namespace)
+	ev.AddField("k8s.pod.source.name", sourcePod.Name)
 
 	err := ev.Send()
 	if err != nil {
