@@ -123,13 +123,13 @@ cat /sys/kernel/debug/tracing/trace_pipe
 
 ## Generating vmlinux.h files
 
-vmlinux.h files contain all the linux types and structs to interop with a linux OS, eg the raw Socket class.
+`vmlinux.h` files contain all the linux types and structs to interop with a linux OS, e.g. the raw Socket class.
 
 We need a version for each supported architecture (eg arm & amd) and it's generated from a real linux distro.
 
-Steps to generate vmlinx.h
+Steps to generate `vmlinux.h` files:
 
 - Start a ubuntu VM (not docker, use virtualbox, multipass, ec2, etc)
-- Install additional linux commands to libbpf can work - `apt install linux-tools-$(uname -r)`
-- Use libbpf to generate the vmlinx.h file - `bpftool btf dump file /sys/kernel/btf/vmlinux format c`
-- Check in output vmlinux.h, note which architecure in file format - eg `bpf/headers/vmlinux-arm64.h`
+- Install additional linux commands so libbpf can work - `apt install linux-tools-$(uname -r)`
+- Use libbpf to generate the vmlinux.h file - `bpftool btf dump file /sys/kernel/btf/vmlinux format c`
+- Check in output vmlinux.h, note which architecture in file format - eg `bpf/headers/vmlinux-arm64.h`
