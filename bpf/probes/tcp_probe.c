@@ -5,6 +5,12 @@
 #include "bpf_helpers.h"
 #include "bpf_tracing.h"
 
+#if defined(__x86_64__)
+#include "vmlinux-amd64.h"
+#elif defined(__aarch64__)
+#include "vmlinux-arm64.h"
+#endif
+
 char __license[] SEC("license") = "Dual MIT/GPL";
 
 struct sock_common
