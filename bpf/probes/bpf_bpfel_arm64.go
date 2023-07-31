@@ -22,7 +22,6 @@ type bpfSocketEvent struct {
 	Saddr     uint32
 	Sport     uint16
 	_         [2]byte
-	BytesSent uint64
 }
 
 // loadBpf returns the embedded CollectionSpec for bpf.
@@ -66,7 +65,6 @@ type bpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
-	KprobeSendmsg    *ebpf.ProgramSpec `ebpf:"kprobe__sendmsg"`
 	KprobeTcpClose   *ebpf.ProgramSpec `ebpf:"kprobe__tcp_close"`
 	KprobeTcpConnect *ebpf.ProgramSpec `ebpf:"kprobe__tcp_connect"`
 }
@@ -113,14 +111,12 @@ func (m *bpfMaps) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
-	KprobeSendmsg    *ebpf.Program `ebpf:"kprobe__sendmsg"`
 	KprobeTcpClose   *ebpf.Program `ebpf:"kprobe__tcp_close"`
 	KprobeTcpConnect *ebpf.Program `ebpf:"kprobe__tcp_connect"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
-		p.KprobeSendmsg,
 		p.KprobeTcpClose,
 		p.KprobeTcpConnect,
 	)
