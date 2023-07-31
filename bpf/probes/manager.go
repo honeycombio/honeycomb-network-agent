@@ -38,13 +38,6 @@ func Setup() {
 	}
 	defer kprobeTcpConnect.Close()
 
-	// Deploy tcp_sendmsg kprobe
-	kprobeSendMsg, err := link.Kprobe("tcp_sendmsg", objs.KprobeSendmsg, nil)
-	if err != nil {
-		log.Fatalf("opening kprobe: %s", err)
-	}
-	defer kprobeSendMsg.Close()
-
 	// Deploy tcp_close kprobe
 	kprobeTcpClose, err := link.Kprobe("tcp_close", objs.KprobeTcpClose, nil)
 	if err != nil {
@@ -124,7 +117,6 @@ func sendEvent(event bpfSocketEvent) {
 	ev.AddField("duration_ms", (event.EndTime-event.StartTime)/1_000_000) // convert ns to ms
 	ev.AddField("source", fmt.Sprintf("%s:%d", sourceIpAddr, event.Sport))
 	ev.AddField("dest", fmt.Sprintf("%s:%d", destIpAddr, event.Dport))
-	ev.AddField("num_bytes", event.BytesSent)
 	ev.AddField("k8s.pod.dest.name", destPod.Name)
 	ev.AddField("k8s.pod.source.name", sourcePod.Name)
 
