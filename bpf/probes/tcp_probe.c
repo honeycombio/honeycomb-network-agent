@@ -62,7 +62,6 @@ typedef struct socket_event
 	u16 dport;
 	u32 saddr;
 	u16 sport;
-	u64 bytes_sent;
 } socket_event;
 
 struct
@@ -93,24 +92,6 @@ int kprobe__tcp_connect(struct pt_regs *ctx)
 	u16 sport = 0;
 	bpf_probe_read(&sport, sizeof(event.sport), &sock->__sk_common.skc_num);
 	event.sport = bpf_ntohs(sport);
-
-	bpf_map_update_elem(&context_to_http_events, &pid, &event, BPF_ANY);
-	return 0;
-}
-
-SEC("kprobe/tcp_sendmsg")
-int kprobe__sendmsg(struct pt_regs *ctx)
-{
-	u64 pid = bpf_get_current_pid_tgid();
-	void *event_ptr = bpf_map_lookup_elem(&context_to_http_events, &pid);
-	if (!event_ptr)
-	{
-		return 0;
-	}
-
-	struct socket_event event = {};
-	bpf_probe_read(&event, sizeof(socket_event), event_ptr);
-	event.bytes_sent += PT_REGS_RC(ctx);
 
 	bpf_map_update_elem(&context_to_http_events, &pid, &event, BPF_ANY);
 	return 0;

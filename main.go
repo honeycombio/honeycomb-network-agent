@@ -42,6 +42,7 @@ func main() {
 	})
 	defer libhoney.Close()
 
+	// setup probes
 	probes.Setup()
 }
 
