@@ -48,7 +48,7 @@ struct sock
 	struct sock_common __sk_common;
 };
 
-typedef struct socket_event
+typedef struct tcp_event
 {
 	u64 start_time;
 	u64 end_time;
@@ -56,7 +56,7 @@ typedef struct socket_event
 	u16 dport;
 	u32 saddr;
 	u16 sport;
-} socket_event;
+} tcp_event;
 
 struct
 {
@@ -67,7 +67,7 @@ struct
 {
 	__uint(type, BPF_MAP_TYPE_HASH);
 	__type(key, u64);
-	__type(value, struct socket_event);
+	__type(value, struct tcp_event);
 	__uint(max_entries, 1024);
 } context_to_http_events SEC(".maps");
 
@@ -75,7 +75,7 @@ SEC("kprobe/tcp_connect")
 int kprobe__tcp_connect(struct pt_regs *ctx)
 {
 	u64 pid = bpf_get_current_pid_tgid();
-	socket_event event = {};
+	tcp_event event = {};
 	event.start_time = bpf_ktime_get_ns();
 
 	struct sock *sock = (struct sock *)PT_REGS_PARM1(ctx);
@@ -101,11 +101,11 @@ int kprobe__tcp_close(struct pt_regs *ctx)
 		return 0;
 	}
 
-	struct socket_event event = {};
-	bpf_probe_read(&event, sizeof(socket_event), event_ptr);
+	struct tcp_event event = {};
+	bpf_probe_read(&event, sizeof(tcp_event), event_ptr);
 	event.end_time = bpf_ktime_get_ns();
 
-	bpf_perf_event_output((void *)ctx, &events, BPF_F_CURRENT_CPU, &event, sizeof(socket_event));
+	bpf_perf_event_output((void *)ctx, &events, BPF_F_CURRENT_CPU, &event, sizeof(tcp_event));
 	bpf_map_delete_elem(&context_to_http_events, &pid);
 	return 0;
 }
