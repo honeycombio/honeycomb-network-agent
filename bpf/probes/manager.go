@@ -15,15 +15,15 @@ import (
 	"github.com/honeycombio/libhoney-go"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf tcp_probe.c
 
 const mapKey uint32 = 0
 
-func Setup() {
+func Setup(client *kubernetes.Clientset) {
 	// Load pre-compiled programs and maps into the kernel.
 	objs := bpfObjects{}
 	if err := loadBpfObjects(&objs, nil); err != nil {
@@ -74,22 +74,11 @@ func Setup() {
 
 		// log.Printf("event: %+v\n", event)
 
-		sendEvent(event)
+		sendEvent(event, client)
 	}
 }
 
-func getPodByIPAddr(ipAddr string) v1.Pod {
-	// creates the in-cluster config
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		panic(err.Error())
-	}
-	// creates the clientset
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err.Error())
-	}
-
+func getPodByIPAddr(client *kubernetes.Clientset, ipAddr string) v1.Pod {
 	pods, _ := client.CoreV1().Pods(v1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 
 	var matchedPod v1.Pod
@@ -103,22 +92,67 @@ func getPodByIPAddr(ipAddr string) v1.Pod {
 	return matchedPod
 }
 
+func getServiceForPod(client *kubernetes.Clientset, inputPod v1.Pod) v1.Service {
+	// get list of services
+	services, _ := client.CoreV1().Services(v1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+	var matchedService v1.Service
+	// loop over services
+	for _, service := range services.Items {
+		set := labels.Set(service.Spec.Selector)
+		listOptions := metav1.ListOptions{LabelSelector: set.AsSelector().String()}
+		pods, err := client.CoreV1().Pods(v1.NamespaceAll).List(context.TODO(), listOptions)
+		if err != nil {
+			log.Println(err)
+		}
+		for _, pod := range pods.Items {
+			if pod.Name == inputPod.Name {
+				matchedService = service
+			}
+		}
+	}
+
+	return matchedService
+}
+
+func getNodeByPod(client *kubernetes.Clientset, pod v1.Pod) *v1.Node {
+	node, _ := client.CoreV1().Nodes().Get(context.TODO(), pod.Spec.NodeName, metav1.GetOptions{})
+	return node
+}
+
 // Send event to Honeycomb
-func sendEvent(event bpfTcpEvent) {
+func sendEvent(event bpfTcpEvent, client *kubernetes.Clientset) {
 
 	sourceIpAddr := intToIP(event.Saddr).String()
 	destIpAddr := intToIP(event.Daddr).String()
 
-	destPod := getPodByIPAddr(destIpAddr)
-	sourcePod := getPodByIPAddr(sourceIpAddr)
+	destPod := getPodByIPAddr(client, destIpAddr)
+	sourcePod := getPodByIPAddr(client, sourceIpAddr)
+	sourceNode := getNodeByPod(client, sourcePod)
 
 	ev := libhoney.NewEvent()
 	ev.AddField("name", "tcp_event")
 	ev.AddField("duration_ms", (event.EndTime-event.StartTime)/1_000_000) // convert ns to ms
 	ev.AddField("source", fmt.Sprintf("%s:%d", sourceIpAddr, event.Sport))
 	ev.AddField("dest", fmt.Sprintf("%s:%d", destIpAddr, event.Dport))
+	// dest pod
 	ev.AddField("k8s.pod.dest.name", destPod.Name)
+	ev.AddField("k8s.pod.dest.uid", destPod.UID)
+	// source pod
 	ev.AddField("k8s.pod.source.name", sourcePod.Name)
+	ev.AddField("k8s.pod.source.uid", sourcePod.UID)
+	// namespace
+	ev.AddField("k8s.namespace.name", sourcePod.Namespace)
+	// service name
+	ev.AddField("k8s.service.name", getServiceForPod(client, sourcePod).Name)
+
+	// node name, uid
+	ev.AddField("k8s.node.name", sourceNode.Name)
+	ev.AddField("k8s.node.uid", sourceNode.UID)
+
+	// container name
+	if len(sourcePod.Spec.Containers) > 0 {
+		ev.AddField("k8s.container.name", sourcePod.Spec.Containers[0].Name)
+	}
 
 	err := ev.Send()
 	if err != nil {
