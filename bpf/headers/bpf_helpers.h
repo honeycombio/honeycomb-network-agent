@@ -33,11 +33,11 @@
 
 #else
 
-#define SEC(name)                                                \
-	_Pragma("GCC diagnostic push")                                 \
-			_Pragma("GCC diagnostic ignored \"-Wignored-attributes\"") \
-					__attribute__((section(name), used))                   \
-					_Pragma("GCC diagnostic pop")
+#define SEC(name) \
+	_Pragma("GCC diagnostic push")					    \
+	_Pragma("GCC diagnostic ignored \"-Wignored-attributes\"")	    \
+	__attribute__((section(name), used))				    \
+	_Pragma("GCC diagnostic pop")					    \
 
 #endif
 
@@ -92,8 +92,7 @@
  * Compiler (optimization) barrier.
  */
 #ifndef barrier
-#define barrier() asm volatile("" :: \
-																	 : "memory")
+#define barrier() asm volatile("" ::: "memory")
 #endif
 
 /* Variable-specific compiler (optimization) barrier. It's a no-op which makes
@@ -110,8 +109,7 @@
  * This is a variable-specific variant of more global barrier().
  */
 #ifndef barrier_var
-#define barrier_var(var) asm volatile("" \
-																			: "+r"(var))
+#define barrier_var(var) asm volatile("" : "+r"(var))
 #endif
 
 /*
@@ -179,9 +177,9 @@ enum libbpf_tristate {
 #define __kptr_untrusted __attribute__((btf_type_tag("kptr_untrusted")))
 #define __kptr __attribute__((btf_type_tag("kptr")))
 
-#define bpf_ksym_exists(sym) ({                                                     \
-	_Static_assert(!__builtin_constant_p(!!sym), #sym " should be marked as __weak"); \
-	!!sym;                                                                            \
+#define bpf_ksym_exists(sym) ({									\
+	_Static_assert(!__builtin_constant_p(!!sym), #sym " should be marked as __weak");	\
+	!!sym;											\
 })
 
 #ifndef ___bpf_concat
@@ -327,12 +325,19 @@ extern void bpf_iter_num_destroy(struct bpf_iter_num *it) __weak __ksym;
  * extension: __attribute__((cleanup(<func>))), supported by both GCC and
  * Clang.
  */
-#define bpf_for_each(type, cur, args...) for (/* initialize and define destructor */                                                                                                                                                                                          \
-																							struct bpf_iter_##type ___it __attribute__((aligned(8), /* enforce, just in case */,                                                                                                                                            \
-																																													cleanup(bpf_iter_##type##_destroy))),																																/* ___p pointer is just to call bpf_iter_##type##_new() *once* to init ___it */ \
-																							*___p __attribute__((unused)) = (bpf_iter_##type##_new(&___it, ##args), /* this is a workaround for Clang bug: it currently doesn't emit BTF */ /* for bpf_iter_##type##_destroy() when used from cleanup() attribute */        \
-																																							 (void)bpf_iter_##type##_destroy, (void *)0);																																		/* iteration and termination check */                                           \
-																							(((cur) = bpf_iter_##type##_next(&___it)));)
+#define bpf_for_each(type, cur, args...) for (							\
+	/* initialize and define destructor */							\
+	struct bpf_iter_##type ___it __attribute__((aligned(8), /* enforce, just in case */,	\
+						    cleanup(bpf_iter_##type##_destroy))),	\
+	/* ___p pointer is just to call bpf_iter_##type##_new() *once* to init ___it */		\
+			       *___p __attribute__((unused)) = (				\
+					bpf_iter_##type##_new(&___it, ##args),			\
+	/* this is a workaround for Clang bug: it currently doesn't emit BTF */			\
+	/* for bpf_iter_##type##_destroy() when used from cleanup() attribute */		\
+					(void)bpf_iter_##type##_destroy, (void *)0);		\
+	/* iteration and termination check */							\
+	(((cur) = bpf_iter_##type##_next(&___it)));						\
+)
 #endif /* bpf_for_each */
 
 #ifndef bpf_for
@@ -349,17 +354,23 @@ extern void bpf_iter_num_destroy(struct bpf_iter_num *it) __weak __ksym;
  * Note: similarly to bpf_for_each(), it relies on C99 feature of declaring for()
  * loop bound variables and cleanup attribute, supported by GCC and Clang.
  */
-#define bpf_for(i, start, end) for (																																																																									 /* initialize and define destructor */                                          \
-																		struct bpf_iter_num ___it __attribute__((aligned(8),																																															 /* enforce, just in case */                                                     \
-																																						 cleanup(bpf_iter_num_destroy))),																																					 /* ___p pointer is necessary to call bpf_iter_num_new() *once* to init ___it */ \
-																		*___p __attribute__((unused)) = (bpf_iter_num_new(&___it, (start), (end)), /* this is a workaround for Clang bug: it currently doesn't emit BTF */ /* for bpf_iter_num_destroy() when used from cleanup() attribute */             \
-																																		 (void)bpf_iter_num_destroy, (void *)0);                                                                                                                                                           \
-																		({                                                                                                                                                                                                                                 \
-																			/* iteration step */                                                                                                                                                                                                             \
-																			int *___t = bpf_iter_num_next(&___it);                                                                                                                                                                                           \
-																			/* termination and bounds check */                                                                                                                                                                                               \
-																			(___t && ((i) = *___t, (i) >= (start) && (i) < (end)));                                                                                                                                                                          \
-																		});)
+#define bpf_for(i, start, end) for (								\
+	/* initialize and define destructor */							\
+	struct bpf_iter_num ___it __attribute__((aligned(8), /* enforce, just in case */	\
+						 cleanup(bpf_iter_num_destroy))),		\
+	/* ___p pointer is necessary to call bpf_iter_num_new() *once* to init ___it */		\
+			    *___p __attribute__((unused)) = (					\
+				bpf_iter_num_new(&___it, (start), (end)),			\
+	/* this is a workaround for Clang bug: it currently doesn't emit BTF */			\
+	/* for bpf_iter_num_destroy() when used from cleanup() attribute */			\
+				(void)bpf_iter_num_destroy, (void *)0);				\
+	({											\
+		/* iteration step */								\
+		int *___t = bpf_iter_num_next(&___it);						\
+		/* termination and bounds check */						\
+		(___t && ((i) = *___t, (i) >= (start) && (i) < (end)));				\
+	});											\
+)
 #endif /* bpf_for */
 
 #ifndef bpf_repeat
@@ -368,12 +379,18 @@ extern void bpf_iter_num_destroy(struct bpf_iter_num *it) __weak __ksym;
  * Note: similarly to bpf_for_each(), it relies on C99 feature of declaring for()
  * loop bound variables and cleanup attribute, supported by GCC and Clang.
  */
-#define bpf_repeat(N) for (																																																																						/* initialize and define destructor */                                          \
-													 struct bpf_iter_num ___it __attribute__((aligned(8),																																												/* enforce, just in case */                                                     \
-																																		cleanup(bpf_iter_num_destroy))),																																	/* ___p pointer is necessary to call bpf_iter_num_new() *once* to init ___it */ \
-													 *___p __attribute__((unused)) = (bpf_iter_num_new(&___it, 0, (N)), /* this is a workaround for Clang bug: it currently doesn't emit BTF */ /* for bpf_iter_num_destroy() when used from cleanup() attribute */             \
-																														(void)bpf_iter_num_destroy, (void *)0);                                                                                                                                                   \
-													 bpf_iter_num_next(&___it); /* nothing here  */                                                                                                                                                                             \
+#define bpf_repeat(N) for (									\
+	/* initialize and define destructor */							\
+	struct bpf_iter_num ___it __attribute__((aligned(8), /* enforce, just in case */	\
+						 cleanup(bpf_iter_num_destroy))),		\
+	/* ___p pointer is necessary to call bpf_iter_num_new() *once* to init ___it */		\
+			    *___p __attribute__((unused)) = (					\
+				bpf_iter_num_new(&___it, 0, (N)),				\
+	/* this is a workaround for Clang bug: it currently doesn't emit BTF */			\
+	/* for bpf_iter_num_destroy() when used from cleanup() attribute */			\
+				(void)bpf_iter_num_destroy, (void *)0);				\
+	bpf_iter_num_next(&___it);								\
+	/* nothing here  */									\
 )
 #endif /* bpf_repeat */
 

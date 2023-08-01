@@ -127,3 +127,11 @@ mount | grep -i debugfs
 cat /sys/kernel/debug/tracing/trace_pipe
 # look around sys/kernel/debug
 ```
+
+## Updating bpf header files
+
+Update the version in `bpf/headers/update.sh`.
+
+`make update-headers` or run `cd bpf/headers && ./update.sh`
+
+Fix line in `bpf_tracing.h` from `#include <bpf/bpf_helpers.h>` to `#include "bpf_helpers.h"`

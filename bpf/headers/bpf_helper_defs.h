@@ -1320,7 +1320,7 @@ static long (*bpf_skb_adjust_room)(struct __sk_buff *skb, __s32 len_diff, __u32 
  * 	**XDP_REDIRECT** on success, or the value of the two lower bits
  * 	of the *flags* argument on error.
  */
-static long (*bpf_redirect_map)(void *map, __u64 key, __u64 flags) = (void *)51;
+static long (*bpf_redirect_map)(void *map, __u64 key, __u64 flags) = (void *) 51;
 
 /*
  * bpf_sk_redirect_map
@@ -4213,7 +4213,7 @@ static long (*bpf_find_vma)(struct task_struct *task, __u64 addr, void *callback
  * 	The number of loops performed, **-EINVAL** for invalid **flags**,
  * 	**-E2BIG** if **nr_loops** exceeds the maximum number of loops.
  */
-static long (*bpf_loop)(__u32 nr_loops, void *callback_fn, void *callback_ctx, __u64 flags) = (void *)181;
+static long (*bpf_loop)(__u32 nr_loops, void *callback_fn, void *callback_ctx, __u64 flags) = (void *) 181;
 
 /*
  * bpf_strncmp
@@ -4227,7 +4227,7 @@ static long (*bpf_loop)(__u32 nr_loops, void *callback_fn, void *callback_ctx, _
  * 	if the first **s1_sz** bytes of **s1** is found to be
  * 	less than, to match, or be greater than **s2**.
  */
-static long (*bpf_strncmp)(const char *s1, __u32 s1_sz, const char *s2) = (void *)182;
+static long (*bpf_strncmp)(const char *s1, __u32 s1_sz, const char *s2) = (void *) 182;
 
 /*
  * bpf_get_func_arg
@@ -4240,7 +4240,7 @@ static long (*bpf_strncmp)(const char *s1, __u32 s1_sz, const char *s2) = (void 
  * 	0 on success.
  * 	**-EINVAL** if n >= argument register count of traced function.
  */
-static long (*bpf_get_func_arg)(void *ctx, __u32 n, __u64 *value) = (void *)183;
+static long (*bpf_get_func_arg)(void *ctx, __u32 n, __u64 *value) = (void *) 183;
 
 /*
  * bpf_get_func_ret
@@ -4253,7 +4253,7 @@ static long (*bpf_get_func_arg)(void *ctx, __u32 n, __u64 *value) = (void *)183;
  * 	0 on success.
  * 	**-EOPNOTSUPP** for tracing programs other than BPF_TRACE_FEXIT or BPF_MODIFY_RETURN.
  */
-static long (*bpf_get_func_ret)(void *ctx, __u64 *value) = (void *)184;
+static long (*bpf_get_func_ret)(void *ctx, __u64 *value) = (void *) 184;
 
 /*
  * bpf_get_func_arg_cnt
@@ -4265,7 +4265,7 @@ static long (*bpf_get_func_ret)(void *ctx, __u64 *value) = (void *)184;
  * Returns
  * 	The number of argument registers of the traced function.
  */
-static long (*bpf_get_func_arg_cnt)(void *ctx) = (void *)185;
+static long (*bpf_get_func_arg_cnt)(void *ctx) = (void *) 185;
 
 /*
  * bpf_get_retval
@@ -4278,7 +4278,7 @@ static long (*bpf_get_func_arg_cnt)(void *ctx) = (void *)185;
  * Returns
  * 	The BPF program's return value.
  */
-static int (*bpf_get_retval)(void) = (void *)186;
+static int (*bpf_get_retval)(void) = (void *) 186;
 
 /*
  * bpf_set_retval
@@ -4301,7 +4301,7 @@ static int (*bpf_get_retval)(void) = (void *)186;
  * Returns
  * 	0 on success, or a negative error in case of failure.
  */
-static int (*bpf_set_retval)(int retval) = (void *)187;
+static int (*bpf_set_retval)(int retval) = (void *) 187;
 
 /*
  * bpf_xdp_get_buff_len
@@ -4311,7 +4311,7 @@ static int (*bpf_set_retval)(int retval) = (void *)187;
  * Returns
  * 	The total size of a given xdp buffer.
  */
-static __u64 (*bpf_xdp_get_buff_len)(struct xdp_md *xdp_md) = (void *)188;
+static __u64 (*bpf_xdp_get_buff_len)(struct xdp_md *xdp_md) = (void *) 188;
 
 /*
  * bpf_xdp_load_bytes
@@ -4324,7 +4324,7 @@ static __u64 (*bpf_xdp_get_buff_len)(struct xdp_md *xdp_md) = (void *)188;
  * Returns
  * 	0 on success, or a negative error in case of failure.
  */
-static long (*bpf_xdp_load_bytes)(struct xdp_md *xdp_md, __u32 offset, void *buf, __u32 len) = (void *)189;
+static long (*bpf_xdp_load_bytes)(struct xdp_md *xdp_md, __u32 offset, void *buf, __u32 len) = (void *) 189;
 
 /*
  * bpf_xdp_store_bytes
@@ -4335,7 +4335,7 @@ static long (*bpf_xdp_load_bytes)(struct xdp_md *xdp_md, __u32 offset, void *buf
  * Returns
  * 	0 on success, or a negative error in case of failure.
  */
-static long (*bpf_xdp_store_bytes)(struct xdp_md *xdp_md, __u32 offset, void *buf, __u32 len) = (void *)190;
+static long (*bpf_xdp_store_bytes)(struct xdp_md *xdp_md, __u32 offset, void *buf, __u32 len) = (void *) 190;
 
 /*
  * bpf_copy_from_user_task
@@ -4349,7 +4349,7 @@ static long (*bpf_xdp_store_bytes)(struct xdp_md *xdp_md, __u32 offset, void *bu
  * 	0 on success, or a negative error in case of failure. On error
  * 	*dst* buffer is zeroed out.
  */
-static long (*bpf_copy_from_user_task)(void *dst, __u32 size, const void *user_ptr, struct task_struct *tsk, __u64 flags) = (void *)191;
+static long (*bpf_copy_from_user_task)(void *dst, __u32 size, const void *user_ptr, struct task_struct *tsk, __u64 flags) = (void *) 191;
 
 /*
  * bpf_skb_set_tstamp
@@ -4383,7 +4383,7 @@ static long (*bpf_copy_from_user_task)(void *dst, __u32 size, const void *user_p
  * 	**-EINVAL** for invalid input
  * 	**-EOPNOTSUPP** for unsupported protocol
  */
-static long (*bpf_skb_set_tstamp)(struct __sk_buff *skb, __u64 tstamp, __u32 tstamp_type) = (void *)192;
+static long (*bpf_skb_set_tstamp)(struct __sk_buff *skb, __u64 tstamp, __u32 tstamp_type) = (void *) 192;
 
 /*
  * bpf_ima_file_hash
@@ -4397,7 +4397,7 @@ static long (*bpf_skb_set_tstamp)(struct __sk_buff *skb, __u64 tstamp, __u32 tst
  * 	**-EOPNOTSUP** if the hash calculation failed or **-EINVAL** if
  * 	invalid arguments are passed.
  */
-static long (*bpf_ima_file_hash)(struct file *file, void *dst, __u32 size) = (void *)193;
+static long (*bpf_ima_file_hash)(struct file *file, void *dst, __u32 size) = (void *) 193;
 
 /*
  * bpf_kptr_xchg
@@ -4412,7 +4412,7 @@ static long (*bpf_ima_file_hash)(struct file *file, void *dst, __u32 size) = (vo
  * 	corresponding release function, or moved into a BPF map before
  * 	program exit.
  */
-static void *(*bpf_kptr_xchg)(void *map_value, void *ptr) = (void *)194;
+static void *(*bpf_kptr_xchg)(void *map_value, void *ptr) = (void *) 194;
 
 /*
  * bpf_map_lookup_percpu_elem
@@ -4424,7 +4424,7 @@ static void *(*bpf_kptr_xchg)(void *map_value, void *ptr) = (void *)194;
  * 	Map value associated to *key* on *cpu*, or **NULL** if no entry
  * 	was found or *cpu* is invalid.
  */
-static void *(*bpf_map_lookup_percpu_elem)(void *map, const void *key, __u32 cpu) = (void *)195;
+static void *(*bpf_map_lookup_percpu_elem)(void *map, const void *key, __u32 cpu) = (void *) 195;
 
 /*
  * bpf_skc_to_mptcp_sock
@@ -4434,7 +4434,7 @@ static void *(*bpf_map_lookup_percpu_elem)(void *map, const void *key, __u32 cpu
  * Returns
  * 	*sk* if casting is valid, or **NULL** otherwise.
  */
-static struct mptcp_sock *(*bpf_skc_to_mptcp_sock)(void *sk) = (void *)196;
+static struct mptcp_sock *(*bpf_skc_to_mptcp_sock)(void *sk) = (void *) 196;
 
 /*
  * bpf_dynptr_from_mem
@@ -4449,7 +4449,7 @@ static struct mptcp_sock *(*bpf_skc_to_mptcp_sock)(void *sk) = (void *)196;
  * 	0 on success, -E2BIG if the size exceeds DYNPTR_MAX_SIZE,
  * 	-EINVAL if flags is not 0.
  */
-static long (*bpf_dynptr_from_mem)(void *data, __u32 size, __u64 flags, struct bpf_dynptr *ptr) = (void *)197;
+static long (*bpf_dynptr_from_mem)(void *data, __u32 size, __u64 flags, struct bpf_dynptr *ptr) = (void *) 197;
 
 /*
  * bpf_ringbuf_reserve_dynptr
@@ -4464,7 +4464,7 @@ static long (*bpf_dynptr_from_mem)(void *data, __u32 size, __u64 flags, struct b
  * Returns
  * 	0 on success, or a negative error in case of failure.
  */
-static long (*bpf_ringbuf_reserve_dynptr)(void *ringbuf, __u32 size, __u64 flags, struct bpf_dynptr *ptr) = (void *)198;
+static long (*bpf_ringbuf_reserve_dynptr)(void *ringbuf, __u32 size, __u64 flags, struct bpf_dynptr *ptr) = (void *) 198;
 
 /*
  * bpf_ringbuf_submit_dynptr
@@ -4479,7 +4479,7 @@ static long (*bpf_ringbuf_reserve_dynptr)(void *ringbuf, __u32 size, __u64 flags
  * Returns
  * 	Nothing. Always succeeds.
  */
-static void (*bpf_ringbuf_submit_dynptr)(struct bpf_dynptr *ptr, __u64 flags) = (void *)199;
+static void (*bpf_ringbuf_submit_dynptr)(struct bpf_dynptr *ptr, __u64 flags) = (void *) 199;
 
 /*
  * bpf_ringbuf_discard_dynptr
@@ -4493,7 +4493,7 @@ static void (*bpf_ringbuf_submit_dynptr)(struct bpf_dynptr *ptr, __u64 flags) = 
  * Returns
  * 	Nothing. Always succeeds.
  */
-static void (*bpf_ringbuf_discard_dynptr)(struct bpf_dynptr *ptr, __u64 flags) = (void *)200;
+static void (*bpf_ringbuf_discard_dynptr)(struct bpf_dynptr *ptr, __u64 flags) = (void *) 200;
 
 /*
  * bpf_dynptr_read
@@ -4507,7 +4507,7 @@ static void (*bpf_ringbuf_discard_dynptr)(struct bpf_dynptr *ptr, __u64 flags) =
  * 	of *src*'s data, -EINVAL if *src* is an invalid dynptr or if
  * 	*flags* is not 0.
  */
-static long (*bpf_dynptr_read)(void *dst, __u32 len, const struct bpf_dynptr *src, __u32 offset, __u64 flags) = (void *)201;
+static long (*bpf_dynptr_read)(void *dst, __u32 len, const struct bpf_dynptr *src, __u32 offset, __u64 flags) = (void *) 201;
 
 /*
  * bpf_dynptr_write
@@ -4532,7 +4532,7 @@ static long (*bpf_dynptr_read)(void *dst, __u32 len, const struct bpf_dynptr *sr
  * 	is a read-only dynptr or if *flags* is not correct. For skb-type dynptrs,
  * 	other errors correspond to errors returned by **bpf_skb_store_bytes**\ ().
  */
-static long (*bpf_dynptr_write)(const struct bpf_dynptr *dst, __u32 offset, void *src, __u32 len, __u64 flags) = (void *)202;
+static long (*bpf_dynptr_write)(const struct bpf_dynptr *dst, __u32 offset, void *src, __u32 len, __u64 flags) = (void *) 202;
 
 /*
  * bpf_dynptr_data
@@ -4550,7 +4550,7 @@ static long (*bpf_dynptr_write)(const struct bpf_dynptr *dst, __u32 offset, void
  * 	read-only, if the dynptr is invalid, or if the offset and length
  * 	is out of bounds.
  */
-static void *(*bpf_dynptr_data)(const struct bpf_dynptr *ptr, __u32 offset, __u32 len) = (void *)203;
+static void *(*bpf_dynptr_data)(const struct bpf_dynptr *ptr, __u32 offset, __u32 len) = (void *) 203;
 
 /*
  * bpf_tcp_raw_gen_syncookie_ipv4
@@ -4574,7 +4574,7 @@ static void *(*bpf_dynptr_data)(const struct bpf_dynptr *ptr, __u32 offset, __u3
  *
  * 	**-EINVAL** if *th_len* is invalid.
  */
-static __s64 (*bpf_tcp_raw_gen_syncookie_ipv4)(struct iphdr *iph, struct tcphdr *th, __u32 th_len) = (void *)204;
+static __s64 (*bpf_tcp_raw_gen_syncookie_ipv4)(struct iphdr *iph, struct tcphdr *th, __u32 th_len) = (void *) 204;
 
 /*
  * bpf_tcp_raw_gen_syncookie_ipv6
@@ -4600,7 +4600,7 @@ static __s64 (*bpf_tcp_raw_gen_syncookie_ipv4)(struct iphdr *iph, struct tcphdr 
  *
  * 	**-EPROTONOSUPPORT** if CONFIG_IPV6 is not builtin.
  */
-static __s64 (*bpf_tcp_raw_gen_syncookie_ipv6)(struct ipv6hdr *iph, struct tcphdr *th, __u32 th_len) = (void *)205;
+static __s64 (*bpf_tcp_raw_gen_syncookie_ipv6)(struct ipv6hdr *iph, struct tcphdr *th, __u32 th_len) = (void *) 205;
 
 /*
  * bpf_tcp_raw_check_syncookie_ipv4
@@ -4619,7 +4619,7 @@ static __s64 (*bpf_tcp_raw_gen_syncookie_ipv6)(struct ipv6hdr *iph, struct tcphd
  *
  * 	**-EACCES** if the SYN cookie is not valid.
  */
-static long (*bpf_tcp_raw_check_syncookie_ipv4)(struct iphdr *iph, struct tcphdr *th) = (void *)206;
+static long (*bpf_tcp_raw_check_syncookie_ipv4)(struct iphdr *iph, struct tcphdr *th) = (void *) 206;
 
 /*
  * bpf_tcp_raw_check_syncookie_ipv6
@@ -4640,7 +4640,7 @@ static long (*bpf_tcp_raw_check_syncookie_ipv4)(struct iphdr *iph, struct tcphdr
  *
  * 	**-EPROTONOSUPPORT** if CONFIG_IPV6 is not builtin.
  */
-static long (*bpf_tcp_raw_check_syncookie_ipv6)(struct ipv6hdr *iph, struct tcphdr *th) = (void *)207;
+static long (*bpf_tcp_raw_check_syncookie_ipv6)(struct ipv6hdr *iph, struct tcphdr *th) = (void *) 207;
 
 /*
  * bpf_ktime_get_tai_ns
@@ -4655,7 +4655,7 @@ static long (*bpf_tcp_raw_check_syncookie_ipv6)(struct ipv6hdr *iph, struct tcph
  * Returns
  * 	Current *ktime*.
  */
-static __u64 (*bpf_ktime_get_tai_ns)(void) = (void *)208;
+static __u64 (*bpf_ktime_get_tai_ns)(void) = (void *) 208;
 
 /*
  * bpf_user_ringbuf_drain
@@ -4697,7 +4697,7 @@ static __u64 (*bpf_ktime_get_tai_ns)(void) = (void *)208;
  * 	larger than the size of the ring buffer, or which cannot fit
  * 	within a struct bpf_dynptr.
  */
-static long (*bpf_user_ringbuf_drain)(void *map, void *callback_fn, void *ctx, __u64 flags) = (void *)209;
+static long (*bpf_user_ringbuf_drain)(void *map, void *callback_fn, void *ctx, __u64 flags) = (void *) 209;
 
 /*
  * bpf_cgrp_storage_get
@@ -4731,7 +4731,7 @@ static long (*bpf_user_ringbuf_drain)(void *map, void *callback_fn, void *ctx, _
  * 	**NULL** if not found or there was an error in adding
  * 	a new bpf_local_storage.
  */
-static void *(*bpf_cgrp_storage_get)(void *map, struct cgroup *cgroup, void *value, __u64 flags) = (void *)210;
+static void *(*bpf_cgrp_storage_get)(void *map, struct cgroup *cgroup, void *value, __u64 flags) = (void *) 210;
 
 /*
  * bpf_cgrp_storage_delete
@@ -4743,4 +4743,6 @@ static void *(*bpf_cgrp_storage_get)(void *map, struct cgroup *cgroup, void *val
  *
  * 	**-ENOENT** if the bpf_local_storage cannot be found.
  */
-static long (*bpf_cgrp_storage_delete)(void *map, struct cgroup *cgroup) = (void *)211;
+static long (*bpf_cgrp_storage_delete)(void *map, struct cgroup *cgroup) = (void *) 211;
+
+

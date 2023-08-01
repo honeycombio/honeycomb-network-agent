@@ -47,3 +47,8 @@ apply-greetings:
 .PHONY: unapply-greetings
 unapply-greetings:
 	kubectl delete -f smoke-tests/greetings.yaml
+
+.PHONY: update-headers
+update-headers:
+	cd bpf/headers && ./update.sh
+	@echo "*** Also update bpf_tracing.h file! ***"
