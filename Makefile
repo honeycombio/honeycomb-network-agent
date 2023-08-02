@@ -9,7 +9,7 @@ IMG_NAME ?= hny/ebpf-agent
 IMG_TAG ?= local
 
 .PHONY: generate
-generate: export CFLAGS := $(BPF_HEADERS)
+generate: export CFLAGS := $(BPF_HEADERS) -DBPF_NO_PRESERVE_ACCESS_INDEX
 generate:
 	go generate ./...
 
