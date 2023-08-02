@@ -16,7 +16,7 @@ Recommended:
 ## Local Development
 
 When making changes to C files, run `make docker-generate` to update the generated go files.
-For example, run it after changing the `socket_event` struct in `tcp_probe.c`.
+For example, run it after changing the `tcp_event` struct in `tcp_probe.c`.
 
 When building with `make docker-build`, the generated files are included in the build but not updated locally.
 
