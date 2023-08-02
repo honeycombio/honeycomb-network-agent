@@ -20,6 +20,8 @@ For example, run it after changing the `socket_event` struct in `tcp_probe.c`.
 
 When building with `make docker-build`, the generated files are included in the build but not updated locally.
 
+To run a locally-built image in Kubernetes on Docker Desktop, run `make mac-docker-build`.
+
 ## To pull a published image from ghcr
 
 Docker images are found in [`ghcr.io/honeycombio/ebpf-agent:latest`](https://github.com/honeycombio/honeycomb-ebpf-agent/pkgs/container/ebpf-agent).
@@ -135,3 +137,16 @@ Update the version in `bpf/headers/update.sh`.
 `make update-headers` or run `cd bpf/headers && ./update.sh`
 
 Fix line in `bpf_tracing.h` from `#include <bpf/bpf_helpers.h>` to `#include "bpf_helpers.h"`
+
+## Generating vmlinux.h files
+
+`vmlinux.h` files contain all the linux types and structs to interop with a linux OS, e.g. the raw Socket class.
+
+We need a version for each supported architecture (eg arm & amd) and it's generated from a real linux distro.
+
+Steps to generate `vmlinux.h` files:
+
+- Start a ubuntu VM (not docker, use virtualbox, multipass, ec2, etc)
+- Install additional linux commands so libbpf can work - `apt install linux-tools-$(uname -r)`
+- Use libbpf to generate the vmlinux.h file - `bpftool btf dump file /sys/kernel/btf/vmlinux format c`
+- Check in output vmlinux.h, note which architecture in file format - eg `bpf/headers/vmlinux-arm64.h`
