@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -9,19 +10,12 @@ import (
 	"github.com/honeycombio/libhoney-go"
 )
 
-const Version string = "0.0.1"
 const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
 func main() {
-	log.Printf("Starting Honeycomb eBPF agent v%s\n", Version)
+	log.Printf("Starting Honeycomb eBPF agent v%s\n", utils.Version())
 
-	// Try to detect host kernel kernelVersion
-	kernelVersion, err := utils.HostKernelVersion()
-	if err != nil {
-		log.Fatalf("Failed to get host kernel version: %v", err)
-	}
-	log.Printf("Host kernel version: %s\n", kernelVersion)
 
 	apikey := os.Getenv("HONEYCOMB_API_KEY")
 	if apikey == "" {
@@ -40,6 +34,8 @@ func main() {
 		Dataset: dataset,
 		APIHost: endpoint,
 	})
+	// appends libhoney's user-agent (TODO: doesn't work, no useragent right now)
+	libhoney.UserAgentAddition = fmt.Sprintf("hny/ebpf-agent/%s", utils.Version())
 	defer libhoney.Close()
 
 	// setup probes
