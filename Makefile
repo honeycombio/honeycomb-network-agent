@@ -26,6 +26,24 @@ build: generate
 docker-build:
 	docker build --tag $(IMG_NAME):$(IMG_TAG) .
 
+### Local Mac Build for Kubernetes on Docker Desktop
+
+# needed until BTF is enabled for Docker Desktop
+# see https://github.com/docker/for-mac/issues/6800
+
+.PHONY: mac-generate
+mac-generate: export CFLAGS := $(BPF_HEADERS) -DBPF_NO_PRESERVE_ACCESS_INDEX
+mac-generate:
+	go generate ./...
+
+.PHONY: mac-build
+mac-build: mac-generate
+	CGO_ENABLED=0 GOOS=linux go build -o hny-ebpf-agent main.go
+
+.PHONY: mac-docker-build
+mac-docker-build:
+	docker build --tag $(IMG_NAME):$(IMG_TAG) -f Dockerfile.mac .
+
 ### Testing targets
 
 # deploy ebpf agent daemonset to already-running cluster with env vars from .env file
