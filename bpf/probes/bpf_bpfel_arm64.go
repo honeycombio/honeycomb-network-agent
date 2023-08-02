@@ -13,7 +13,7 @@ import (
 	"github.com/cilium/ebpf"
 )
 
-type bpfSocketEvent struct {
+type bpfTcpEvent struct {
 	StartTime uint64
 	EndTime   uint64
 	Daddr     uint32
