@@ -8,6 +8,8 @@ import (
 	"github.com/honeycombio/ebpf-agent/bpf/probes"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const Version string = "0.0.2"
@@ -54,8 +56,20 @@ func main() {
 
 	defer libhoney.Close()
 
+	// creates the in-cluster config
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		panic(err.Error())
+	}
+	// creates the clientset
+	client, err := kubernetes.NewForConfig(config)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
 	// setup probes
-	probes.Setup()
+	probes.Setup(client)
 }
 
 func getEnvOrDefault(key string, defaultValue string) string {

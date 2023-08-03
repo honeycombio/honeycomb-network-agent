@@ -9,21 +9,23 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/honeycombio/libhoney-go"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf tcp_probe.c
 
 const mapKey uint32 = 0
 
-func Setup() {
+func Setup(client *kubernetes.Clientset) {
 	// Load pre-compiled programs and maps into the kernel.
 	objs := bpfObjects{}
 	if err := loadBpfObjects(&objs, nil); err != nil {
@@ -74,22 +76,11 @@ func Setup() {
 
 		// log.Printf("event: %+v\n", event)
 
-		sendEvent(event)
+		sendEvent(event, client)
 	}
 }
 
-func getPodByIPAddr(ipAddr string) v1.Pod {
-	// creates the in-cluster config
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		panic(err.Error())
-	}
-	// creates the clientset
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err.Error())
-	}
-
+func getPodByIPAddr(client *kubernetes.Clientset, ipAddr string) v1.Pod {
 	pods, _ := client.CoreV1().Pods(v1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 
 	var matchedPod v1.Pod
@@ -103,22 +94,79 @@ func getPodByIPAddr(ipAddr string) v1.Pod {
 	return matchedPod
 }
 
+func getServiceForPod(client *kubernetes.Clientset, inputPod v1.Pod) v1.Service {
+	// get list of services
+	services, _ := client.CoreV1().Services(v1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+	var matchedService v1.Service
+	// loop over services
+	for _, service := range services.Items {
+		set := labels.Set(service.Spec.Selector)
+		listOptions := metav1.ListOptions{LabelSelector: set.AsSelector().String()}
+		pods, err := client.CoreV1().Pods(v1.NamespaceAll).List(context.TODO(), listOptions)
+		if err != nil {
+			log.Println(err)
+		}
+		for _, pod := range pods.Items {
+			if pod.Name == inputPod.Name {
+				matchedService = service
+			}
+		}
+	}
+
+	return matchedService
+}
+
+func getNodeByPod(client *kubernetes.Clientset, pod v1.Pod) *v1.Node {
+	node, _ := client.CoreV1().Nodes().Get(context.TODO(), pod.Spec.NodeName, metav1.GetOptions{})
+	return node
+}
+
 // Send event to Honeycomb
-func sendEvent(event bpfTcpEvent) {
+func sendEvent(event bpfTcpEvent, client *kubernetes.Clientset) {
 
 	sourceIpAddr := intToIP(event.Saddr).String()
 	destIpAddr := intToIP(event.Daddr).String()
 
-	destPod := getPodByIPAddr(destIpAddr)
-	sourcePod := getPodByIPAddr(sourceIpAddr)
+	destPod := getPodByIPAddr(client, destIpAddr)
+	sourcePod := getPodByIPAddr(client, sourceIpAddr)
+	sourceNode := getNodeByPod(client, sourcePod)
 
 	ev := libhoney.NewEvent()
 	ev.AddField("name", "tcp_event")
 	ev.AddField("duration_ms", (event.EndTime-event.StartTime)/1_000_000) // convert ns to ms
-	ev.AddField("source", fmt.Sprintf("%s:%d", sourceIpAddr, event.Sport))
-	ev.AddField("dest", fmt.Sprintf("%s:%d", destIpAddr, event.Dport))
-	ev.AddField("k8s.pod.dest.name", destPod.Name)
-	ev.AddField("k8s.pod.source.name", sourcePod.Name)
+	// IP Address / port
+	ev.AddField(string(semconv.NetSockHostAddrKey), sourceIpAddr)
+	ev.AddField("destination.address", destIpAddr)
+	ev.AddField(string(semconv.NetHostPortKey), event.Sport)
+	ev.AddField("destination.port", event.Dport)
+
+	// dest pod
+	ev.AddField(fmt.Sprintf("destination.%s", semconv.K8SPodNameKey), destPod.Name)
+	ev.AddField(fmt.Sprintf("destination.%s", semconv.K8SPodUIDKey), destPod.UID)
+
+	// source pod
+	ev.AddField(string(semconv.K8SPodNameKey), sourcePod.Name)
+	ev.AddField(string(semconv.K8SPodUIDKey), sourcePod.UID)
+
+	// namespace
+	ev.AddField(string(semconv.K8SNamespaceNameKey), sourcePod.Namespace)
+
+	// service
+	// no semconv for service yet
+	ev.AddField("k8s.service.name", getServiceForPod(client, sourcePod).Name)
+
+	// node
+	ev.AddField(string(semconv.K8SNodeNameKey), sourceNode.Name)
+	ev.AddField(string(semconv.K8SNodeUIDKey), sourceNode.UID)
+
+	// container names
+	if len(sourcePod.Spec.Containers) > 0 {
+		var containerNames []string
+		for _, container := range sourcePod.Spec.Containers {
+			containerNames = append(containerNames, container.Name)
+		}
+		ev.AddField(string(semconv.K8SContainerNameKey), strings.Join(containerNames, ","))
+	}
 
 	err := ev.Send()
 	if err != nil {
