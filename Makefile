@@ -26,6 +26,11 @@ build: generate
 docker-build:
 	docker build --tag $(IMG_NAME):$(IMG_TAG) .
 
+.PHONY: update-headers
+update-headers:
+	cd bpf/headers && ./update.sh
+	@echo "*** Also update bpf_tracing.h file! ***"
+
 ### Local Mac Build for Kubernetes on Docker Desktop
 
 # needed until BTF is enabled for Docker Desktop
