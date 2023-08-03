@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -138,8 +137,6 @@ func sendEvent(event bpfTcpEvent, client *kubernetes.Clientset) {
 	ev.AddField("server.socket.dest.address", destIpAddr)
 	ev.AddField("server.port", event.Sport)
 	ev.AddField("server.dest.port", event.Dport)
-
-	ev.AddField("dest", fmt.Sprintf("%s:%d", destIpAddr, event.Dport))
 
 	// dest pod
 	ev.AddField("k8s.pod.dest.name", destPod.Name)
