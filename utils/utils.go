@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/cilium/ebpf/features"
 )
@@ -30,4 +31,9 @@ func HostKernelVersion() (KernelVersion, error) {
 		return 0, err
 	}
 	return KernelVersion(code), nil
+}
+
+func HostBtfEnabled() bool {
+	_, err := os.Stat("/sys/kernel/btf/vmlinux")
+	return err == nil
 }
