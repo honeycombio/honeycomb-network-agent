@@ -47,7 +47,7 @@ func main() {
 	// appends libhoney's user-agent (TODO: doesn't work, no useragent right now)
 	libhoney.UserAgentAddition = fmt.Sprintf("hny/ebpf-agent/%s", Version)
 
-	// add agent and kernel version fields to all libhoney events
+	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", Version)
 	libhoney.AddField("meta.kernel_version", kernelVersion)
 	libhoney.AddField("meta.btf_enabled", btfEnabled)
