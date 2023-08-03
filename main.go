@@ -10,7 +10,7 @@ import (
 	"github.com/honeycombio/libhoney-go"
 )
 
-const Version = "0.0.1"
+const Version string = "0.0.1"
 const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
