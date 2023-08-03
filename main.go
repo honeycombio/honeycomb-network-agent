@@ -10,12 +10,12 @@ import (
 	"github.com/honeycombio/libhoney-go"
 )
 
-const agentVersion = "0.0.1"
+const Version = "0.0.1"
 const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
 func main() {
-	log.Printf("Starting Honeycomb eBPF agent v%s\n", agentVersion)
+	log.Printf("Starting Honeycomb eBPF agent v%s\n", Version)
 
 	kernelVersion, err := utils.HostKernelVersion()
 	if err != nil {
@@ -45,10 +45,10 @@ func main() {
 	})
 
 	// appends libhoney's user-agent (TODO: doesn't work, no useragent right now)
-	libhoney.UserAgentAddition = fmt.Sprintf("hny/ebpf-agent/%s", agentVersion)
+	libhoney.UserAgentAddition = fmt.Sprintf("hny/ebpf-agent/%s", Version)
 
 	// add agent and kernel version fields to all libhoney events
-	libhoney.AddField("honeycomb.agent_version", agentVersion)
+	libhoney.AddField("honeycomb.agent_version", Version)
 	libhoney.AddField("meta.kernel_version", kernelVersion)
 	libhoney.AddField("meta.btf_enabled", btfEnabled)
 
