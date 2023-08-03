@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/honeycombio/libhoney-go"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -132,29 +134,30 @@ func sendEvent(event bpfTcpEvent, client *kubernetes.Clientset) {
 	ev := libhoney.NewEvent()
 	ev.AddField("name", "tcp_event")
 	ev.AddField("duration_ms", (event.EndTime-event.StartTime)/1_000_000) // convert ns to ms
-
 	// IP Address / port
-	ev.AddField("server.socket.address", sourceIpAddr)
-	ev.AddField("server.socket.dest.address", destIpAddr)
-	ev.AddField("server.port", event.Sport)
-	ev.AddField("server.dest.port", event.Dport)
+	ev.AddField(string(semconv.NetSockHostAddrKey), sourceIpAddr)
+	ev.AddField("destination.address", destIpAddr)
+	ev.AddField(string(semconv.NetHostPortKey), event.Sport)
+	ev.AddField("destination.port", event.Dport)
 
 	// dest pod
-	ev.AddField("k8s.pod.dest.name", destPod.Name)
-	ev.AddField("k8s.pod.dest.uid", destPod.UID)
+	ev.AddField(fmt.Sprintf("destination.%s", semconv.K8SPodNameKey), destPod.Name)
+	ev.AddField(fmt.Sprintf("destination.%s", semconv.K8SPodUIDKey), destPod.UID)
 
 	// source pod
-	ev.AddField("k8s.pod.name", sourcePod.Name)
-	ev.AddField("k8s.pod.uid", sourcePod.UID)
+	ev.AddField(string(semconv.K8SPodNameKey), sourcePod.Name)
+	ev.AddField(string(semconv.K8SPodUIDKey), sourcePod.UID)
+
 	// namespace
-	ev.AddField("k8s.namespace.name", sourcePod.Namespace)
+	ev.AddField(string(semconv.K8SNamespaceNameKey), sourcePod.Namespace)
 
 	// service
+	// no semconv for service yet
 	ev.AddField("k8s.service.name", getServiceForPod(client, sourcePod).Name)
 
 	// node
-	ev.AddField("k8s.node.name", sourceNode.Name)
-	ev.AddField("k8s.node.uid", sourceNode.UID)
+	ev.AddField(string(semconv.K8SNodeNameKey), sourceNode.Name)
+	ev.AddField(string(semconv.K8SNodeUIDKey), sourceNode.UID)
 
 	// container names
 	if len(sourcePod.Spec.Containers) > 0 {
@@ -162,7 +165,7 @@ func sendEvent(event bpfTcpEvent, client *kubernetes.Clientset) {
 		for _, container := range sourcePod.Spec.Containers {
 			containerNames = append(containerNames, container.Name)
 		}
-		ev.AddField("k8s.container.name", strings.Join(containerNames, ","))
+		ev.AddField(string(semconv.K8SContainerNameKey), strings.Join(containerNames, ","))
 	}
 
 	err := ev.Send()
