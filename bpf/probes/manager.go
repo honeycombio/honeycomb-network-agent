@@ -132,20 +132,29 @@ func sendEvent(event bpfTcpEvent, client *kubernetes.Clientset) {
 	ev := libhoney.NewEvent()
 	ev.AddField("name", "tcp_event")
 	ev.AddField("duration_ms", (event.EndTime-event.StartTime)/1_000_000) // convert ns to ms
-	ev.AddField("source", fmt.Sprintf("%s:%d", sourceIpAddr, event.Sport))
+
+	// IP Address / port
+	ev.AddField("server.socket.address", sourceIpAddr)
+	ev.AddField("server.socket.dest.address", destIpAddr)
+	ev.AddField("server.port", event.Sport)
+	ev.AddField("server.dest.port", event.Dport)
+
 	ev.AddField("dest", fmt.Sprintf("%s:%d", destIpAddr, event.Dport))
+
 	// dest pod
 	ev.AddField("k8s.pod.dest.name", destPod.Name)
 	ev.AddField("k8s.pod.dest.uid", destPod.UID)
+
 	// source pod
-	ev.AddField("k8s.pod.source.name", sourcePod.Name)
-	ev.AddField("k8s.pod.source.uid", sourcePod.UID)
+	ev.AddField("k8s.pod.name", sourcePod.Name)
+	ev.AddField("k8s.pod.uid", sourcePod.UID)
 	// namespace
 	ev.AddField("k8s.namespace.name", sourcePod.Namespace)
-	// service name
+
+	// service
 	ev.AddField("k8s.service.name", getServiceForPod(client, sourcePod).Name)
 
-	// node name, uid
+	// node
 	ev.AddField("k8s.node.name", sourceNode.Name)
 	ev.AddField("k8s.node.uid", sourceNode.UID)
 
