@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
@@ -155,9 +156,13 @@ func sendEvent(event bpfTcpEvent, client *kubernetes.Clientset) {
 	ev.AddField("k8s.node.name", sourceNode.Name)
 	ev.AddField("k8s.node.uid", sourceNode.UID)
 
-	// container name
+	// container names
 	if len(sourcePod.Spec.Containers) > 0 {
-		ev.AddField("k8s.container.name", sourcePod.Spec.Containers[0].Name)
+		var containerNames []string
+		for _, container := range sourcePod.Spec.Containers {
+			containerNames = append(containerNames, container.Name)
+		}
+		ev.AddField("k8s.container.name", strings.Join(containerNames, ","))
 	}
 
 	err := ev.Send()
