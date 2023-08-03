@@ -12,7 +12,6 @@ import (
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
-	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -113,19 +112,7 @@ func sendEvent(event bpfTcpEvent) {
 	destPod := getPodByIPAddr(destIpAddr)
 	sourcePod := getPodByIPAddr(sourceIpAddr)
 
-	agentVersion := utils.Version()
-	kernelVersion, _ := utils.HostKernelVersion()
-	btfEnabled := utils.HostBtfEnabled()
-	log.Printf("honeycomb.agent_version: %s\n", agentVersion)
-	log.Printf("meta.kernel_version: %s\n", kernelVersion)
-	log.Printf("meta.btf_enabled: %t\n", btfEnabled)
-
-	// TODO: kernel version ends up as 331569, though 5.15.49 in log
-
 	ev := libhoney.NewEvent()
-	ev.AddField("honeycomb.agent_version", agentVersion)
-	ev.AddField("meta.kernel_version", kernelVersion)
-	ev.AddField("meta.btf_enabled", btfEnabled)
 	ev.AddField("name", "tcp_event")
 	ev.AddField("duration_ms", (event.EndTime-event.StartTime)/1_000_000) // convert ns to ms
 	ev.AddField("source", fmt.Sprintf("%s:%d", sourceIpAddr, event.Sport))

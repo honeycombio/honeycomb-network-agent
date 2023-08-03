@@ -35,6 +35,5 @@ func HostKernelVersion() (KernelVersion, error) {
 
 func HostBtfEnabled() bool {
 	_, err := os.Stat("/sys/kernel/btf/vmlinux")
-
 	return err == nil
 }

@@ -14,8 +14,17 @@ const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
 func main() {
-	log.Printf("Starting Honeycomb eBPF agent v%s\n", utils.Version())
+	agentVersion := Version()
+	log.Printf("Starting Honeycomb eBPF agent v%s\n", agentVersion)
 
+	kernelVersion, err := utils.HostKernelVersion()
+	if err != nil {
+		log.Fatalf("Failed to get host kernel version: %v", err)
+	}
+	log.Printf("Host kernel version: %s\n", kernelVersion)
+
+	btfEnabled := utils.HostBtfEnabled()
+	log.Printf("BTF enabled: %s\n", btfEnabled)
 
 	apikey := os.Getenv("HONEYCOMB_API_KEY")
 	if apikey == "" {
@@ -34,8 +43,15 @@ func main() {
 		Dataset: dataset,
 		APIHost: endpoint,
 	})
+
 	// appends libhoney's user-agent (TODO: doesn't work, no useragent right now)
-	libhoney.UserAgentAddition = fmt.Sprintf("hny/ebpf-agent/%s", utils.Version())
+	libhoney.UserAgentAddition = fmt.Sprintf("hny/ebpf-agent/%s", agentVersion)
+
+	// add agent and kernel version fields to all libhoney events
+	libhoney.AddField("honeycomb.agent_version", agentVersion)
+	libhoney.AddField("meta.kernel_version", kernelVersion)
+	libhoney.AddField("meta.btf_enabled", btfEnabled)
+
 	defer libhoney.Close()
 
 	// setup probes

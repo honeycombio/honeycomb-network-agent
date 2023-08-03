@@ -1,4 +1,4 @@
-package utils
+package main
 
 // Version is the current version of the ebpf agent
 func Version() string {
