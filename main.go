@@ -10,7 +10,7 @@ import (
 	"github.com/honeycombio/libhoney-go"
 )
 
-const Version string = "0.0.1"
+const Version string = "0.0.2"
 const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
@@ -24,7 +24,7 @@ func main() {
 	log.Printf("Host kernel version: %s\n", kernelVersion)
 
 	btfEnabled := utils.HostBtfEnabled()
-	log.Printf("BTF enabled: %s\n", btfEnabled)
+	log.Printf("BTF enabled: %v\n", btfEnabled)
 
 	apikey := os.Getenv("HONEYCOMB_API_KEY")
 	if apikey == "" {
