@@ -18,7 +18,7 @@
 - maint: update bpf header files to latest (#50) | @JamieDanielson
 - maint(deps): bump github.com/cilium/ebpf from 0.10.0 to 0.11.0 (#21)
 
-## [0.0.2] - 2023-07-27
+## [0.0.2-alpha] - 2023-07-27
 
 ### Enhancements
 
@@ -28,6 +28,6 @@
 
 - maint: add developing notes and comments (#41) | @JamieDanielson
 
-## [0.0.1] - 2023-07-18
+## [0.0.1-alpha] - 2023-07-18
 
 Initial release
