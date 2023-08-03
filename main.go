@@ -49,7 +49,7 @@ func main() {
 
 	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", Version)
-	libhoney.AddField("meta.kernel_version", kernelVersion)
+	libhoney.AddField("meta.kernel_version", kernelVersion.String())
 	libhoney.AddField("meta.btf_enabled", btfEnabled)
 
 	defer libhoney.Close()
