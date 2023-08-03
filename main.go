@@ -10,11 +10,11 @@ import (
 	"github.com/honeycombio/libhoney-go"
 )
 
+const agentVersion = "0.0.1"
 const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
 func main() {
-	agentVersion := Version()
 	log.Printf("Starting Honeycomb eBPF agent v%s\n", agentVersion)
 
 	kernelVersion, err := utils.HostKernelVersion()
