@@ -12,7 +12,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const Version string = "0.0.2"
+const Version string = "0.0.3-alpha"
 const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
