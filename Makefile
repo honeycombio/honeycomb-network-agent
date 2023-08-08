@@ -43,11 +43,11 @@ mac-generate:
 
 .PHONY: mac-build
 mac-build: mac-generate
-	CGO_ENABLED=0 GOOS=linux go build -o hny-ebpf-agent main.go
+	CGO_ENABLED=1 GOOS=linux go build -o hny-ebpf-agent main.go
 
 .PHONY: mac-docker-build
 mac-docker-build:
-	docker build --tag $(IMG_NAME):$(IMG_TAG) -f Dockerfile.mac .
+	docker build --no-cache --tag $(IMG_NAME):$(IMG_TAG) -f Dockerfile.mac .
 
 ### Testing targets
 
