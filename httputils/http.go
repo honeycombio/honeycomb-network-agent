@@ -26,7 +26,7 @@ import (
 	"github.com/honeycombio/libhoney-go"
 )
 
-var iface = flag.String("i", "eth0", "Interface to get packets from")
+var iface = flag.String("i", "any", "Interface to get packets from")
 // for local mac use en0 interface for wifi
 // var iface = flag.String("i", "en0", "Interface to get packets from")
 var fname = flag.String("r", "", "Filename to read from, overrides -i")

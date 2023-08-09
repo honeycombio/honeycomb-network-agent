@@ -74,6 +74,7 @@ spec:
         name: hny-ebpf-agent
     spec:
       serviceAccountName: honeycomb-sa
+      hostNetwork: true
       containers:
         - name: hny-ebpf-agent
           image: hny/ebpf-agent:local
@@ -95,6 +96,14 @@ spec:
               add:
                 - BPF
                 - PERFMON
+                - NET_RAW
+                - NET_ADMIN
+                - SYS_ADMIN
+                - SYS_PTRACE
+                - DAC_OVERRIDE
+                - SYS_RESOURCE
+              drop:
+                - ALL
             # for local debugging
             privileged: true
       imagePullSecrets:
