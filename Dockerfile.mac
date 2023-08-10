@@ -1,5 +1,5 @@
 FROM golang:1.20 as builder
-RUN apt update -yq && apt install -yq clang llvm make libpcap-dev libbpf-dev build-essential
+RUN apt update -yq && apt install -yq make libpcap-dev
 WORKDIR /src
 COPY go.* .
 RUN go mod download
@@ -7,6 +7,6 @@ COPY . .
 RUN make mac-build
 
 FROM ubuntu:22.04
-RUN apt-get update -yq && apt-get install -yq ca-certificates curl clang llvm make libpcap-dev libbpf-dev build-essential golang iproute2
+RUN apt-get update -yq && apt-get install -yq ca-certificates libpcap-dev
 COPY --from=builder /src/hny-ebpf-agent /bin/hny-ebpf-agent
-CMD [ "/bin/hny-ebpf-agent" ]
+ENTRYPOINT [ "/bin/hny-ebpf-agent" ]

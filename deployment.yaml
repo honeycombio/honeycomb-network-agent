@@ -78,7 +78,6 @@ spec:
       containers:
         - name: hny-ebpf-agent
           image: hny/ebpf-agent:local
-          # image: ghcr.io/honeycombio/ebpf-agent:dev
           imagePullPolicy: IfNotPresent
           env:
             - name: HONEYCOMB_API_KEY
@@ -88,23 +87,11 @@ spec:
                   key: api-key
             - name: HONEYCOMB_DATASET
               value: ebpf-agent-go
-            # set to another endpoint if desired
-            - name: HONEYCOMB_API_ENDPOINT
-              value: $HONEYCOMB_API_ENDPOINT
+          args:
+            - --verbose
           securityContext:
             capabilities:
               add:
-                - BPF
-                - PERFMON
                 - NET_RAW
-                - NET_ADMIN
-                - SYS_ADMIN
-                - SYS_PTRACE
-                - DAC_OVERRIDE
-                - SYS_RESOURCE
-              drop:
-                - ALL
-            # for local debugging
-            privileged: true
       imagePullSecrets:
         - name: ghcr

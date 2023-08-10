@@ -42,7 +42,7 @@ mac-generate:
 	go generate ./...
 
 .PHONY: mac-build
-mac-build: mac-generate
+mac-build:
 	CGO_ENABLED=1 GOOS=linux go build -o hny-ebpf-agent main.go
 
 .PHONY: mac-docker-build
