@@ -153,63 +153,61 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 				Error("HTTP-request-body", "Got body err: %s\n", err)
 			}
 			req.Body.Close()
-			ev := libhoney.NewEvent()
-			ev.AddField("name", "http_request_packet")
-			ev.AddField("http.request_method", req.Method)
-			ev.AddField("http.ident", h.ident)
-			ev.AddField("http.request_url", req.RequestURI)
-			ev.AddField("http.request_body", req.Body)
-			ev.AddField("http.request_header", req.Header)
-			ev.AddField("http.h_bytes", h.bytes)
-			ev.AddField("http.request_url", req)
-			ev.AddField("span.kind", "client")
 
-			err = ev.Send()
-			if err != nil {
-				log.Printf("error sending event: %v\n", err)
+			eventAttrs := map[string]string{
+				"name":                 fmt.Sprintf("HTTP %s", req.Method),
+				"http.request_method":  req.Method,
+				"http.request_ident":   h.ident,
+				"http.request_url":     req.RequestURI,
+				"http.request_body":    fmt.Sprintf("%v", req.Body),
+				"http.request_headers": fmt.Sprintf("%v", req.Header),
+				"http.h_request_bytes": string(<-h.bytes),
 			}
 
 			Info("HTTP/%s Request: %s %s (body:%d)\n", h.ident, req.Method, req.URL, s)
 			h.parent.Lock()
 			h.parent.urls = append(h.parent.urls, req.URL.String())
+			h.parent.eventAttrs = eventAttrs
 			h.parent.Unlock()
+		} else {
+			res, err := http.ReadResponse(b, nil)
+			var req string
+			var eventAttrs map[string]string
+			h.parent.Lock()
+			if len(h.parent.urls) == 0 {
+				req = fmt.Sprintf("<no-request-seen>")
 			} else {
-				res, err := http.ReadResponse(b, nil)
-				var req string
-				h.parent.Lock()
-				if len(h.parent.urls) == 0 {
-					req = fmt.Sprintf("<no-request-seen>")
-					} else {
-						req, h.parent.urls = h.parent.urls[0], h.parent.urls[1:]
-					}
-					h.parent.Unlock()
-					if err == io.EOF || err == io.ErrUnexpectedEOF {
-						break
-						} else if err != nil {
-							Error("HTTP-response", "HTTP/%s Response error: %s (%v,%+v)\n", h.ident, err, err, err)
-							continue
-						}
-						body, err := ioutil.ReadAll(res.Body)
-						s := len(body)
-						if err != nil {
-							Error("HTTP-response-body", "HTTP/%s: failed to get body(parsed len:%d): %s\n", h.ident, s, err)
-						}
-						res.Body.Close()
+				req, h.parent.urls = h.parent.urls[0], h.parent.urls[1:]
+				eventAttrs = h.parent.eventAttrs
+			}
+			h.parent.Unlock()
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				break
+			} else if err != nil {
+				Error("HTTP-response", "HTTP/%s Response error: %s (%v,%+v)\n", h.ident, err, err, err)
+				continue
+			}
 
-						ev := libhoney.NewEvent()
-						ev.AddField("name", "http_response_packet")
-						ev.AddField("http.ident", h.ident)
-						ev.AddField("http.response_body", res.Body)
-						ev.AddField("http.response_code", res.StatusCode)
-						ev.AddField("http.response_header", res.Header)
-						ev.AddField("http.h_bytes", h.bytes)
-						ev.AddField("http.request_url", req)
-						ev.AddField("span.kind", "server")
+			body, err := ioutil.ReadAll(res.Body)
+			s := len(body)
+			if err != nil {
+				Error("HTTP-response-body", "HTTP/%s: failed to get body(parsed len:%d): %s\n", h.ident, s, err)
+			}
+			res.Body.Close()
 
-						err = ev.Send()
-						if err != nil {
-							log.Printf("error sending event: %v\n", err)
-						}
+			ev := libhoney.NewEvent()
+			ev.Add(eventAttrs)
+			ev.AddField("http.response_ident", h.ident)
+			ev.AddField("http.response_body", res.Body)
+			ev.AddField("http.response_code", res.StatusCode)
+			ev.AddField("http.response_headers", res.Header)
+			ev.AddField("http.h_response_bytes", h.bytes)
+			ev.AddField("http.response_request_url", req)
+
+			err = ev.Send()
+			if err != nil {
+				log.Printf("error sending event: %v\n", err)
+			}
 
 			sym := ","
 			if res.ContentLength > 0 && res.ContentLength != int64(s) {
@@ -290,7 +288,7 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	stream := &tcpStream{
 		net:        net,
 		transport:  transport,
-		isHTTP:     (tcp.SrcPort == 7777 || tcp.SrcPort == 8000 || tcp.SrcPort == 9000 || tcp.SrcPort == 6001 || tcp.DstPort == 7777 || tcp.DstPort == 8000 || tcp.DstPort == 9000 || tcp.DstPort == 6001) && factory.doHTTP,
+		isHTTP:     factory.doHTTP,
 		reversed:   tcp.SrcPort == 80,
 		tcpstate:   reassembly.NewTCPSimpleFSM(fsmOptions),
 		ident:      fmt.Sprintf("%s:%s", net, transport),
@@ -304,9 +302,9 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 			isClient: true,
 		}
 		stream.server = httpReader{
-			bytes:   make(chan []byte),
-			ident:   fmt.Sprintf("%s %s", net.Reverse(), transport.Reverse()),
-			parent:  stream,
+			bytes:  make(chan []byte),
+			ident:  fmt.Sprintf("%s %s", net.Reverse(), transport.Reverse()),
+			parent: stream,
 		}
 		factory.wg.Add(2)
 		go stream.client.run(&factory.wg)
@@ -347,6 +345,7 @@ type tcpStream struct {
 	urls           []string
 	ident          string
 	sync.Mutex
+	eventAttrs map[string]string
 }
 
 func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassembly.TCPFlowDirection, nextSeq reassembly.Sequence, start *bool, ac reassembly.AssemblerContext) bool {
@@ -535,7 +534,6 @@ func HttpStream() {
 		data := packet.Data()
 		bytes += int64(len(data))
 
-
 		// defrag the IPv4 packet if required
 		if !*nodefrag {
 			ip4Layer := packet.Layer(layers.LayerTypeIPv4)
@@ -608,7 +606,6 @@ func HttpStream() {
 	if outputLevel >= 2 {
 		streamPool.Dump()
 	}
-
 
 	streamFactory.WaitGoRoutines()
 	Debug("%s\n", assembler.Dump())
