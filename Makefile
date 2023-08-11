@@ -20,7 +20,7 @@ docker-generate:
 
 .PHONY: build
 build: generate
-	CGO_ENABLED=0 GOOS=linux go build -o hny-ebpf-agent main.go
+	CGO_ENABLED=1 GOOS=linux go build -o hny-ebpf-agent main.go
 
 .PHONY: docker-build
 docker-build:
@@ -42,7 +42,7 @@ mac-generate:
 	go generate ./...
 
 .PHONY: mac-build
-mac-build:
+mac-build: mac-generate
 	CGO_ENABLED=1 GOOS=linux go build -o hny-ebpf-agent main.go
 
 .PHONY: mac-docker-build

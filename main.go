@@ -4,10 +4,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/honeycombio/ebpf-agent/bpf/probes"
 	"github.com/honeycombio/ebpf-agent/httputils"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const Version string = "0.0.3-alpha"
@@ -55,20 +60,35 @@ func main() {
 	defer libhoney.Close()
 
 	// creates the in-cluster config
-	// config, err := rest.InClusterConfig()
-	// if err != nil {
-	// 	panic(err.Error())
-	// }
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		panic(err.Error())
+	}
 	// creates the clientset
-	// client, err := kubernetes.NewForConfig(config)
+	client, err := kubernetes.NewForConfig(config)
 
 	if err != nil {
 		panic(err.Error())
 	}
 
 	// setup probes
-	// probes.Setup(client)
-	httputils.HttpStream()
+	p := probes.New(client)
+	go p.Start()
+
+	// setup TCP stream reader
+	h := httputils.New()
+	go h.Start()
+
+	log.Println("Agent is ready!")
+
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+	<-signalChannel
+
+	log.Println("Shutting down...")
+	libhoney.Close()
+	p.Stop()
+	h.Stop()
 }
 
 func getEnvOrDefault(key string, defaultValue string) string {

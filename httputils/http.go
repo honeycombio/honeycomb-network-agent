@@ -20,7 +20,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/signal"
 	"path"
 	"strings"
 	"sync"
@@ -447,7 +446,15 @@ func (t *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
 	return false
 }
 
-func HttpStream() {
+type httpStream struct {
+	handle *pcap.Handle
+	packetSource *gopacket.PacketSource
+	streamFactory *tcpStreamFactory
+	streamPool *reassembly.StreamPool
+	assembler *reassembly.Assembler
+}
+
+func New() httpStream {
 	defer util.Run()()
 	var handle *pcap.Handle
 	var err error
@@ -484,19 +491,27 @@ func HttpStream() {
 	packetSource.Lazy = *lazy
 	packetSource.NoCopy = true
 	Info("Starting to read packets\n")
-	count := 0
-	bytes := int64(0)
-	start := time.Now()
-	defragger := ip4defrag.NewIPv4Defragmenter()
 
 	streamFactory := &tcpStreamFactory{}
 	streamPool := reassembly.NewStreamPool(streamFactory)
 	assembler := reassembly.NewAssembler(streamPool)
 
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
+	return httpStream{
+		handle: handle,
+		packetSource: packetSource,
+		streamFactory: streamFactory,
+		streamPool: streamPool,
+		assembler: assembler,
+	}
+}
 
-	for packet := range packetSource.Packets() {
+func (h *httpStream) Start() {
+	count := 0
+	bytes := int64(0)
+	start := time.Now()
+	defragger := ip4defrag.NewIPv4Defragmenter()
+
+	for packet := range h.packetSource.Packets() {
 		count++
 		Debug("PACKET #%d\n", count)
 		data := packet.Data()
@@ -542,11 +557,11 @@ func HttpStream() {
 				CaptureInfo: packet.Metadata().CaptureInfo,
 			}
 			stats.totalsz += len(tcp.Payload)
-			assembler.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &c)
+			h.assembler.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &c)
 		}
 		if count%*statsevery == 0 {
 			ref := packet.Metadata().CaptureInfo.Timestamp
-			flushed, closed := assembler.FlushWithOptions(reassembly.FlushOptions{T: ref.Add(-timeout), TC: ref.Add(-closeTimeout)})
+			flushed, closed := h.assembler.FlushWithOptions(reassembly.FlushOptions{T: ref.Add(-timeout), TC: ref.Add(-closeTimeout)})
 			Debug("Forced flush: %d flushed, %d closed (%s)", flushed, closed, ref)
 		}
 
@@ -557,26 +572,18 @@ func HttpStream() {
 			errorsMapMutex.Unlock()
 			fmt.Fprintf(os.Stderr, "Processed %v packets (%v bytes) in %v (errors: %v, errTypes:%v)\n", count, bytes, time.Since(start), errors, errorMapLen)
 		}
-		select {
-		case <-signalChan:
-			fmt.Fprintf(os.Stderr, "\nCaught SIGINT: aborting\n")
-			done = true
-		default:
-			// NOP: continue
-		}
-		if done {
-			break
-		}
 	}
+}
 
-	closed := assembler.FlushAll()
+func (h *httpStream) Stop() {
+	closed := h.assembler.FlushAll()
 	Debug("Final flush: %d closed", closed)
 	if logLevel >= 2 {
-		streamPool.Dump()
+		h.streamPool.Dump()
 	}
 
-	streamFactory.WaitGoRoutines()
-	Debug("%s\n", assembler.Dump())
+	h.streamFactory.WaitGoRoutines()
+	Debug("%s\n", h.assembler.Dump())
 	if !*nodefrag {
 		fmt.Printf("IPdefrag:\t\t%d\n", stats.ipdefrag)
 	}
