@@ -16,7 +16,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -37,7 +36,6 @@ import (
 )
 
 var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
-var decoder = flag.String("decoder", "", "Name of the decoder to use (default: guess from capture)")
 var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
 var lazy = flag.Bool("lazy", false, "If true, do lazy decoding")
 var nodefrag = flag.Bool("nodefrag", false, "If true, do not do IPv4 defrag")
@@ -48,11 +46,6 @@ var allowmissinginit = flag.Bool("allowmissinginit", true, "Support streams with
 var verbose = flag.Bool("verbose", false, "Be verbose")
 var debug = flag.Bool("debug", false, "Display debug information")
 var quiet = flag.Bool("quiet", false, "Be quiet regarding errors")
-
-// http
-var nohttp = flag.Bool("nohttp", false, "Disable HTTP parsing")
-var output = flag.String("output", "", "Path to create file for HTTP 200 OK responses")
-var writeincomplete = flag.Bool("writeincomplete", false, "Write incomplete response")
 
 // capture
 var iface = flag.String("i", "any", "Interface to read packets from")
@@ -89,6 +82,10 @@ const timeout time.Duration = time.Minute * 5     // Pending bytes: TODO: from C
 type httpReader struct {
 	ident    string
 	isClient bool
+	srcIp    string
+	srcPort  string
+	dstIp    string
+	dstPort  string
 	bytes    chan []byte
 	data     []byte
 	parent   *tcpStream
@@ -108,7 +105,7 @@ func (h *httpReader) Read(p []byte) (int, error) {
 	return l, nil
 }
 
-var outputLevel int
+var logLevel int
 var errorsMap map[string]uint
 var errorsMapMutex sync.Mutex
 var errors uint
@@ -120,17 +117,17 @@ func Error(t string, s string, a ...interface{}) {
 	nb, _ := errorsMap[t]
 	errorsMap[t] = nb + 1
 	errorsMapMutex.Unlock()
-	if outputLevel >= 0 {
+	if logLevel >= 0 {
 		fmt.Printf(s, a...)
 	}
 }
 func Info(s string, a ...interface{}) {
-	if outputLevel >= 1 {
+	if logLevel >= 1 {
 		fmt.Printf(s, a...)
 	}
 }
 func Debug(s string, a ...interface{}) {
-	if outputLevel >= 2 {
+	if logLevel >= 2 {
 		fmt.Printf(s, a...)
 	}
 }
@@ -147,69 +144,71 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 				Error("HTTP-request", "HTTP/%s Request error: %s (%v,%+v)\n", h.ident, err, err, err)
 				continue
 			}
-			body, err := ioutil.ReadAll(req.Body)
+			body, err := io.ReadAll(req.Body)
 			s := len(body)
 			if err != nil {
 				Error("HTTP-request-body", "Got body err: %s\n", err)
 			}
 			req.Body.Close()
-			ev := libhoney.NewEvent()
-			ev.AddField("name", "http_request_packet")
-			ev.AddField("http.request_method", req.Method)
-			ev.AddField("http.ident", h.ident)
-			ev.AddField("http.request_url", req.RequestURI)
-			ev.AddField("http.request_body", req.Body)
-			ev.AddField("http.request_header", req.Header)
-			ev.AddField("http.h_bytes", h.bytes)
-			ev.AddField("http.request_url", req)
-			ev.AddField("span.kind", "client")
 
-			err = ev.Send()
-			if err != nil {
-				log.Printf("error sending event: %v\n", err)
+			eventAttrs := map[string]string{
+				"name":                     fmt.Sprintf("HTTP %s", req.Method),
+				"http.request_method":      req.Method,
+				"http.request_ident":       h.ident,
+				"http.request_source_ip":   h.srcIp,
+				"http.request_source_port": h.srcPort,
+				"http.request_dest_ip":     h.dstIp,
+				"http.request_dest_port":   h.dstPort,
+				"http.request_url":         req.RequestURI,
+				"http.request_body":        fmt.Sprintf("%v", req.Body),
+				"http.request_headers":     fmt.Sprintf("%v", req.Header),
+				"http.h_request_bytes":     string(<-h.bytes),
 			}
 
 			Info("HTTP/%s Request: %s %s (body:%d)\n", h.ident, req.Method, req.URL, s)
 			h.parent.Lock()
 			h.parent.urls = append(h.parent.urls, req.URL.String())
+			h.parent.eventAttrs = eventAttrs
 			h.parent.Unlock()
+		} else {
+			res, err := http.ReadResponse(b, nil)
+			var req string
+			var eventAttrs map[string]string
+			h.parent.Lock()
+			if len(h.parent.urls) == 0 {
+				req = fmt.Sprintf("<no-request-seen>")
 			} else {
-				res, err := http.ReadResponse(b, nil)
-				var req string
-				h.parent.Lock()
-				if len(h.parent.urls) == 0 {
-					req = fmt.Sprintf("<no-request-seen>")
-					} else {
-						req, h.parent.urls = h.parent.urls[0], h.parent.urls[1:]
-					}
-					h.parent.Unlock()
-					if err == io.EOF || err == io.ErrUnexpectedEOF {
-						break
-						} else if err != nil {
-							Error("HTTP-response", "HTTP/%s Response error: %s (%v,%+v)\n", h.ident, err, err, err)
-							continue
-						}
-						body, err := ioutil.ReadAll(res.Body)
-						s := len(body)
-						if err != nil {
-							Error("HTTP-response-body", "HTTP/%s: failed to get body(parsed len:%d): %s\n", h.ident, s, err)
-						}
-						res.Body.Close()
+				req, h.parent.urls = h.parent.urls[0], h.parent.urls[1:]
+				eventAttrs = h.parent.eventAttrs
+			}
+			h.parent.Unlock()
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				break
+			} else if err != nil {
+				Error("HTTP-response", "HTTP/%s Response error: %s (%v,%+v)\n", h.ident, err, err, err)
+				continue
+			}
 
-						ev := libhoney.NewEvent()
-						ev.AddField("name", "http_response_packet")
-						ev.AddField("http.ident", h.ident)
-						ev.AddField("http.response_body", res.Body)
-						ev.AddField("http.response_code", res.StatusCode)
-						ev.AddField("http.response_header", res.Header)
-						ev.AddField("http.h_bytes", h.bytes)
-						ev.AddField("http.request_url", req)
-						ev.AddField("span.kind", "server")
+			body, err := io.ReadAll(res.Body)
+			s := len(body)
+			if err != nil {
+				Error("HTTP-response-body", "HTTP/%s: failed to get body(parsed len:%d): %s\n", h.ident, s, err)
+			}
+			res.Body.Close()
 
-						err = ev.Send()
-						if err != nil {
-							log.Printf("error sending event: %v\n", err)
-						}
+			ev := libhoney.NewEvent()
+			ev.Add(eventAttrs)
+			ev.AddField("http.response_ident", h.ident)
+			ev.AddField("http.response_body", res.Body)
+			ev.AddField("http.response_code", res.StatusCode)
+			ev.AddField("http.response_headers", res.Header)
+			ev.AddField("http.h_response_bytes", h.bytes)
+			ev.AddField("http.response_request_url", req)
+
+			err = ev.Send()
+			if err != nil {
+				log.Printf("error sending event: %v\n", err)
+			}
 
 			sym := ","
 			if res.ContentLength > 0 && res.ContentLength != int64(s) {
@@ -221,17 +220,13 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 			}
 			encoding := res.Header["Content-Encoding"]
 			Info("HTTP/%s Response: %s URL:%s (%d%s%d%s) -> %s\n", h.ident, res.Status, req, res.ContentLength, sym, s, contentType, encoding)
-			if (err == nil || *writeincomplete) && *output != "" {
+			if err == nil {
 				base := url.QueryEscape(path.Base(req))
 				if err != nil {
 					base = "incomplete-" + base
 				}
-				base = path.Join(*output, base)
 				if len(base) > 250 {
 					base = base[:250] + "..."
-				}
-				if base == *output {
-					base = path.Join(*output, "noname")
 				}
 				target := base
 				n := 0
@@ -278,40 +273,44 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
  * The TCP factory: returns a new Stream
  */
 type tcpStreamFactory struct {
-	wg     sync.WaitGroup
-	doHTTP bool
+	wg sync.WaitGroup
 }
 
 func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.TCP, ac reassembly.AssemblerContext) reassembly.Stream {
 	Debug("* NEW: %s %s\n", net, transport)
 	fsmOptions := reassembly.TCPSimpleFSMOptions{
-		SupportMissingEstablishment: *allowmissinginit,
+		SupportMissingEstablishment: true,
 	}
 	stream := &tcpStream{
 		net:        net,
 		transport:  transport,
-		isHTTP:     (tcp.SrcPort == 7777 || tcp.SrcPort == 8000 || tcp.SrcPort == 9000 || tcp.SrcPort == 6001 || tcp.DstPort == 7777 || tcp.DstPort == 8000 || tcp.DstPort == 9000 || tcp.DstPort == 6001) && factory.doHTTP,
-		reversed:   tcp.SrcPort == 80,
 		tcpstate:   reassembly.NewTCPSimpleFSM(fsmOptions),
 		ident:      fmt.Sprintf("%s:%s", net, transport),
 		optchecker: reassembly.NewTCPOptionCheck(),
 	}
-	if stream.isHTTP {
-		stream.client = httpReader{
-			bytes:    make(chan []byte),
-			ident:    fmt.Sprintf("%s %s", net, transport),
-			parent:   stream,
-			isClient: true,
-		}
-		stream.server = httpReader{
-			bytes:   make(chan []byte),
-			ident:   fmt.Sprintf("%s %s", net.Reverse(), transport.Reverse()),
-			parent:  stream,
-		}
-		factory.wg.Add(2)
-		go stream.client.run(&factory.wg)
-		go stream.server.run(&factory.wg)
+
+	stream.client = httpReader{
+		bytes:    make(chan []byte),
+		ident:    fmt.Sprintf("%s %s", net, transport),
+		parent:   stream,
+		isClient: true,
+		srcIp:    fmt.Sprintf("%s", net.Src()),
+		dstIp:    fmt.Sprintf("%s", net.Dst()),
+		srcPort:  fmt.Sprintf("%s", transport.Src()),
+		dstPort:  fmt.Sprintf("%s", transport.Dst()),
 	}
+	stream.server = httpReader{
+		bytes:   make(chan []byte),
+		ident:   fmt.Sprintf("%s %s", net.Reverse(), transport.Reverse()),
+		parent:  stream,
+		srcIp:   fmt.Sprintf("%s", net.Reverse().Src()),
+		dstIp:   fmt.Sprintf("%s", net.Reverse().Dst()),
+		srcPort: fmt.Sprintf("%s", transport.Reverse().Src()),
+		dstPort: fmt.Sprintf("%s", transport.Reverse().Dst()),
+	}
+	factory.wg.Add(2)
+	go stream.client.run(&factory.wg)
+	go stream.server.run(&factory.wg)
 	return stream
 }
 
@@ -340,13 +339,12 @@ type tcpStream struct {
 	fsmerr         bool
 	optchecker     reassembly.TCPOptionCheck
 	net, transport gopacket.Flow
-	isHTTP         bool
-	reversed       bool
 	client         httpReader
 	server         httpReader
 	urls           []string
 	ident          string
 	sync.Mutex
+	eventAttrs map[string]string
 }
 
 func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassembly.TCPFlowDirection, nextSeq reassembly.Sequence, start *bool, ac reassembly.AssemblerContext) bool {
@@ -431,23 +429,20 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 		return
 	}
 	data := sg.Fetch(length)
-	if t.isHTTP {
-		if length > 0 {
-			if dir == reassembly.TCPDirClientToServer && !t.reversed {
-				t.client.bytes <- data
-			} else {
-				t.server.bytes <- data
-			}
+
+	if length > 0 {
+		if dir == reassembly.TCPDirClientToServer {
+			t.client.bytes <- data
+		} else {
+			t.server.bytes <- data
 		}
 	}
 }
 
 func (t *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
 	Debug("%s: Connection closed\n", t.ident)
-	if t.isHTTP {
-		close(t.client.bytes)
-		close(t.server.bytes)
-	}
+	close(t.client.bytes)
+	close(t.server.bytes)
 	// do not remove the connection to allow last ACK
 	return false
 }
@@ -456,45 +451,26 @@ func HttpStream() {
 	defer util.Run()()
 	var handle *pcap.Handle
 	var err error
+
+	// Set logging level
 	if *debug {
-		outputLevel = 2
+		logLevel = 2
 	} else if *verbose {
-		outputLevel = 1
+		logLevel = 1
 	} else if *quiet {
-		outputLevel = -1
+		logLevel = -1
 	}
 	errorsMap = make(map[string]uint)
+	// Set up pcap packet capture
 	if *fname != "" {
-		if handle, err = pcap.OpenOffline(*fname); err != nil {
-			log.Fatal("PCAP OpenOffline error:", err)
-		}
+		log.Printf("Reading from pcap dump %q", *fname)
+		handle, err = pcap.OpenOffline(*fname)
 	} else {
-		// This is a little complicated because we want to allow all possible options
-		// for creating the packet capture handle... instead of all this you can
-		// just call pcap.OpenLive if you want a simple handle.
-		inactive, err := pcap.NewInactiveHandle(*iface)
-		if err != nil {
-			log.Fatalf("could not create: %v", err)
-		}
-		defer inactive.CleanUp()
-		if err = inactive.SetSnapLen(*snaplen); err != nil {
-			log.Fatalf("could not set snap length: %v", err)
-		} else if err = inactive.SetPromisc(*promisc); err != nil {
-			log.Fatalf("could not set promisc mode: %v", err)
-		} else if err = inactive.SetTimeout(time.Second); err != nil {
-			log.Fatalf("could not set timeout: %v", err)
-		}
-		if *tstype != "" {
-			if t, err := pcap.TimestampSourceFromString(*tstype); err != nil {
-				log.Fatalf("Supported timestamp types: %v", inactive.SupportedTimestamps())
-			} else if err := inactive.SetTimestampSource(t); err != nil {
-				log.Fatalf("Supported timestamp types: %v", inactive.SupportedTimestamps())
-			}
-		}
-		if handle, err = inactive.Activate(); err != nil {
-			log.Fatal("PCAP Activate error:", err)
-		}
-		defer handle.Close()
+		log.Printf("Starting capture on interface %q", *iface)
+		handle, err = pcap.OpenLive(*iface, int32(*snaplen), true, pcap.BlockForever)
+	}
+	if err != nil {
+		log.Fatal(err)
 	}
 	if len(flag.Args()) > 0 {
 		bpffilter := strings.Join(flag.Args(), " ")
@@ -504,37 +480,27 @@ func HttpStream() {
 		}
 	}
 
-	var dec gopacket.Decoder
-	var ok bool
-	decoder_name := *decoder
-	if decoder_name == "" {
-		decoder_name = fmt.Sprintf("%s", handle.LinkType())
-	}
-	if dec, ok = gopacket.DecodersByLayerName[decoder_name]; !ok {
-		log.Fatalln("No decoder named", decoder_name)
-	}
-	source := gopacket.NewPacketSource(handle, dec)
-	source.Lazy = *lazy
-	source.NoCopy = true
+	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+	packetSource.Lazy = *lazy
+	packetSource.NoCopy = true
 	Info("Starting to read packets\n")
 	count := 0
 	bytes := int64(0)
 	start := time.Now()
 	defragger := ip4defrag.NewIPv4Defragmenter()
 
-	streamFactory := &tcpStreamFactory{doHTTP: !*nohttp}
+	streamFactory := &tcpStreamFactory{}
 	streamPool := reassembly.NewStreamPool(streamFactory)
 	assembler := reassembly.NewAssembler(streamPool)
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 
-	for packet := range source.Packets() {
+	for packet := range packetSource.Packets() {
 		count++
 		Debug("PACKET #%d\n", count)
 		data := packet.Data()
 		bytes += int64(len(data))
-
 
 		// defrag the IPv4 packet if required
 		if !*nodefrag {
@@ -605,10 +571,9 @@ func HttpStream() {
 
 	closed := assembler.FlushAll()
 	Debug("Final flush: %d closed", closed)
-	if outputLevel >= 2 {
+	if logLevel >= 2 {
 		streamPool.Dump()
 	}
-
 
 	streamFactory.WaitGoRoutines()
 	Debug("%s\n", assembler.Dump())
