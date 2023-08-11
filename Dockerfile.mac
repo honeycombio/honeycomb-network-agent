@@ -1,5 +1,5 @@
 FROM golang:1.20 as builder
-RUN apt update -yq && apt install -yq make libpcap-dev
+RUN apt update -yq && apt install -yq clang llvm make libpcap-dev
 WORKDIR /src
 COPY go.* .
 RUN go mod download
