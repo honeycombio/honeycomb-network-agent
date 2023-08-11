@@ -5,6 +5,13 @@ REPODIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 # Build the list of header directories to compile the bpf program
 BPF_HEADERS += -I${REPODIR}/bpf/headers
 
+# Disable BTF if the kernel doesn't support it (eg local dev on Docker Desktop)
+# needed until BTF is enabled for Docker Desktop
+# see https://github.com/docker/for-mac/issues/6800
+ifeq (,$(wildcard /sys/kernel/btf/vmlinux))
+	BPF_HEADERS += -DBPF_NO_PRESERVE_ACCESS_INDEX
+endif
+
 IMG_NAME ?= hny/ebpf-agent
 IMG_TAG ?= local
 
@@ -30,24 +37,6 @@ docker-build:
 update-headers:
 	cd bpf/headers && ./update.sh
 	@echo "*** Also update bpf_tracing.h file! ***"
-
-### Local Mac Build for Kubernetes on Docker Desktop
-
-# needed until BTF is enabled for Docker Desktop
-# see https://github.com/docker/for-mac/issues/6800
-
-.PHONY: mac-generate
-mac-generate: export CFLAGS := $(BPF_HEADERS) -DBPF_NO_PRESERVE_ACCESS_INDEX
-mac-generate:
-	go generate ./...
-
-.PHONY: mac-build
-mac-build: mac-generate
-	CGO_ENABLED=1 GOOS=linux go build -o hny-ebpf-agent main.go
-
-.PHONY: mac-docker-build
-mac-docker-build:
-	docker build --no-cache --tag $(IMG_NAME):$(IMG_TAG) -f Dockerfile.mac .
 
 ### Testing targets
 

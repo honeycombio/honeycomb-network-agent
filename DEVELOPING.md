@@ -20,8 +20,6 @@ For example, run it after changing the `tcp_event` struct in `tcp_probe.c`.
 
 When building with `make docker-build`, the generated files are included in the build but not updated locally.
 
-To run a locally-built image in Kubernetes on Docker Desktop, run `make mac-docker-build`.
-
 ## To pull a published image from ghcr
 
 Docker images are found in [`ghcr.io/honeycombio/ebpf-agent:latest`](https://github.com/honeycombio/honeycomb-ebpf-agent/pkgs/container/ebpf-agent).
