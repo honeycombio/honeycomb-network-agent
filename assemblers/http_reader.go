@@ -182,7 +182,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 						log.Printf("%s: failed to save %s (l:%d): %s\n", h.ident, target, w, err)
 					} else {
 						// Info("%s: Saved %s (l:%d)\n", h.ident, target, w)
-						log.Fatalf("%s: Saved %s (l:%d)\n", h.ident, target, w)
+						log.Printf("%s: Saved %s (l:%d)\n", h.ident, target, w)
 					}
 				}
 			}

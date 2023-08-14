@@ -117,7 +117,7 @@ func (h *tcpAssembler) Start() {
 	for packet := range h.packetSource.Packets() {
 		count++
 		// Debug("PACKET #%d\n", count)
-		log.Fatalf("PACKET #%d\n", count)
+		log.Printf("PACKET #%d\n", count)
 		data := packet.Data()
 		bytes += int64(len(data))
 
