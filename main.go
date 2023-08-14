@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/honeycombio/ebpf-agent/bpf/probes"
+	"github.com/honeycombio/ebpf-agent/httputils"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	"k8s.io/client-go/kubernetes"
@@ -69,7 +72,22 @@ func main() {
 	}
 
 	// setup probes
-	probes.Setup(client)
+	p := probes.New(client)
+	go p.Start()
+	defer p.Stop()
+
+	// setup TCP stream reader
+	h := httputils.New()
+	go h.Start()
+	defer h.Stop()
+
+	log.Println("Agent is ready!")
+
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+	<-signalChannel
+
+	log.Println("Shutting down...")
 }
 
 func getEnvOrDefault(key string, defaultValue string) string {
