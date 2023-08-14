@@ -74,10 +74,12 @@ func main() {
 	// setup probes
 	p := probes.New(client)
 	go p.Start()
+	defer p.Stop()
 
 	// setup TCP stream reader
 	h := httputils.New()
 	go h.Start()
+	defer h.Stop()
 
 	log.Println("Agent is ready!")
 
@@ -86,9 +88,6 @@ func main() {
 	<-signalChannel
 
 	log.Println("Shutting down...")
-	libhoney.Close()
-	p.Stop()
-	h.Stop()
 }
 
 func getEnvOrDefault(key string, defaultValue string) string {
