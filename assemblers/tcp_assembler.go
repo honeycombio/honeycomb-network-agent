@@ -61,39 +61,37 @@ func NewTcpAssembler(config config) tcpAssembler {
 	var err error
 
 	// Set logging level
-	if config.debug {
+	if *debug {
 		logLevel = 2
-	} else if config.verbose {
+	} else if *verbose {
 		logLevel = 1
-	} else if config.quiet {
+	} else if *quiet {
 		logLevel = -1
 	}
 	errorsMap = make(map[string]uint)
 	// Set up pcap packet capture
-	if config.fname != "" {
-		log.Printf("Reading from pcap dump %q", config.fname)
-		handle, err = pcap.OpenOffline(config.fname)
+	if *fname != "" {
+		log.Printf("Reading from pcap dump %q", *fname)
+		handle, err = pcap.OpenOffline(*fname)
 	} else {
-		log.Printf("Starting capture on interface %q", config.iface)
-		handle, err = pcap.OpenLive(config.iface, int32(config.snaplen), true, pcap.BlockForever)
+		log.Printf("Starting capture on interface %q", *iface)
+		handle, err = pcap.OpenLive(*iface, int32(*snaplen), true, pcap.BlockForever)
 	}
 	if err != nil {
 		log.Fatal(err)
 	}
 	if len(flag.Args()) > 0 {
 		bpffilter := strings.Join(flag.Args(), " ")
-		// Info("Using BPF filter %q\n", bpffilter)
-		log.Printf("Using BPF filter %q\n", bpffilter)
+		Info("Using BPF filter %q\n", bpffilter)
 		if err = handle.SetBPFFilter(bpffilter); err != nil {
 			log.Fatal("BPF filter error:", err)
 		}
 	}
 
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	packetSource.Lazy = config.lazy
+	packetSource.Lazy = *lazy
 	packetSource.NoCopy = true
-	// Info("Starting to read packets\n")
-	log.Printf("Starting to read packets\n")
+	Info("Starting to read packets\n")
 
 	streamFactory := &tcpStreamFactory{}
 	streamPool := reassembly.NewStreamPool(streamFactory)

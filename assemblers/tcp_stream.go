@@ -2,7 +2,6 @@ package assemblers
 
 import (
 	"fmt"
-	"log"
 	"sync"
 
 	"github.com/google/gopacket"
@@ -50,12 +49,10 @@ func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassem
 	if *checksum {
 		c, err := tcp.ComputeChecksum()
 		if err != nil {
-			// Error("ChecksumCompute", "%s: Got error computing checksum: %s\n", t.ident, err)
-			log.Printf("ChecksumCompute", "%s: Got error computing checksum: %s\n", t.ident, err)
+			Error("ChecksumCompute", "%s: Got error computing checksum: %s\n", t.ident, err)
 			accept = false
 		} else if c != 0x0 {
-			// Error("Checksum", "%s: Invalid checksum: 0x%x\n", t.ident, c)
-			log.Printf("Checksum", "%s: Invalid checksum: 0x%x\n", t.ident, c)
+			Error("Checksum", "%s: Invalid checksum: 0x%x\n", t.ident, c)
 			accept = false
 		}
 	}
@@ -99,8 +96,7 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 	} else {
 		ident = fmt.Sprintf("%v %v(%s): ", t.net.Reverse(), t.transport.Reverse(), dir)
 	}
-	// Debug("%s: SG reassembled packet with %d bytes (start:%v,end:%v,skip:%d,saved:%d,nb:%d,%d,overlap:%d,%d)\n", ident, length, start, end, skip, saved, sgStats.Packets, sgStats.Chunks, sgStats.OverlapBytes, sgStats.OverlapPackets)
-	log.Printf("%s: SG reassembled packet with %d bytes (start:%v,end:%v,skip:%d,saved:%d,nb:%d,%d,overlap:%d,%d)\n", ident, length, start, end, skip, saved, sgStats.Packets, sgStats.Chunks, sgStats.OverlapBytes, sgStats.OverlapPackets)
+	Debug("%s: SG reassembled packet with %d bytes (start:%v,end:%v,skip:%d,saved:%d,nb:%d,%d,overlap:%d,%d)\n", ident, length, start, end, skip, saved, sgStats.Packets, sgStats.Chunks, sgStats.OverlapBytes, sgStats.OverlapPackets)
 	if skip == -1 && *allowmissinginit {
 		// this is allowed
 	} else if skip != 0 {
@@ -119,8 +115,7 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 }
 
 func (t *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
-	// Debug("%s: Connection closed\n", t.ident)
-	log.Printf("%s: Connection closed\n", t.ident)
+	Debug("%s: Connection closed\n", t.ident)
 	close(t.client.bytes)
 	close(t.server.bytes)
 	// do not remove the connection to allow last ACK

@@ -2,7 +2,6 @@ package assemblers
 
 import (
 	"fmt"
-	"log"
 	"sync"
 
 	"github.com/google/gopacket"
@@ -15,8 +14,7 @@ type tcpStreamFactory struct {
 }
 
 func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.TCP, ac reassembly.AssemblerContext) reassembly.Stream {
-	// Debug("* NEW: %s %s\n", net, transport)
-	log.Printf("* NEW: %s %s\n", net, transport)
+	Debug("* NEW: %s %s\n", net, transport)
 	fsmOptions := reassembly.TCPSimpleFSMOptions{
 		SupportMissingEstablishment: true,
 	}

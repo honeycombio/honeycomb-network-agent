@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -52,15 +51,13 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			} else if err != nil {
-				// Error("HTTP-request", "HTTP/%s Request error: %s (%v,%+v)\n", h.ident, err, err, err)
-				log.Printf("HTTP/%s Request error: %s (%v,%+v)\n", h.ident, err, err, err)
+				Error("HTTP-request", "HTTP/%s Request error: %s (%v,%+v)\n", h.ident, err, err, err)
 				continue
 			}
 			body, err := io.ReadAll(req.Body)
 			s := len(body)
 			if err != nil {
-				// Error("HTTP-request-body", "Got body err: %s\n", err)
-				log.Printf("Got body err: %s\n", err)
+				Error("HTTP-request-body", "Got body err: %s\n", err)
 			}
 			req.Body.Close()
 
@@ -78,8 +75,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 				"http.h_request_bytes":     string(<-h.bytes),
 			}
 
-			// Info("HTTP/%s Request: %s %s (body:%d)\n", h.ident, req.Method, req.URL, s)
-			log.Printf("HTTP/%s Request: %s %s (body:%d)\n", h.ident, req.Method, req.URL, s)
+			Info("HTTP/%s Request: %s %s (body:%d)\n", h.ident, req.Method, req.URL, s)
 			h.parent.Lock()
 			h.parent.urls = append(h.parent.urls, req.URL.String())
 			h.parent.eventAttrs = eventAttrs
@@ -99,16 +95,14 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			} else if err != nil {
-				// Error("HTTP-response", "HTTP/%s Response error: %s (%v,%+v)\n", h.ident, err, err, err)
-				log.Panicf("HTTP/%s Response error: %s (%v,%+v)\n", h.ident, err, err, err)
+				Error("HTTP-response", "HTTP/%s Response error: %s (%v,%+v)\n", h.ident, err, err, err)
 				continue
 			}
 
 			body, err := io.ReadAll(res.Body)
 			s := len(body)
 			if err != nil {
-				// Error("HTTP-response-body", "HTTP/%s: failed to get body(parsed len:%d): %s\n", h.ident, s, err)
-				log.Printf("HTTP/%s: failed to get body(parsed len:%d): %s\n", h.ident, s, err)
+				Error("HTTP-response-body", "HTTP/%s: failed to get body(parsed len:%d): %s\n", h.ident, s, err)
 			}
 			res.Body.Close()
 
@@ -123,7 +117,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 
 			err = ev.Send()
 			if err != nil {
-				log.Printf("error sending event: %v\n", err)
+				Error("Error sending even", "error sending event: %e\n", err)
 			}
 
 			sym := ","
@@ -135,8 +129,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 				contentType = []string{http.DetectContentType(body)}
 			}
 			encoding := res.Header["Content-Encoding"]
-			// Info("HTTP/%s Response: %s URL:%s (%d%s%d%s) -> %s\n", h.ident, res.Status, req, res.ContentLength, sym, s, contentType, encoding)
-			log.Printf("HTTP/%s Response: %s URL:%s (%d%s%d%s) -> %s\n", h.ident, res.Status, req, res.ContentLength, sym, s, contentType, encoding)
+			Info("HTTP/%s Response: %s URL:%s (%d%s%d%s) -> %s\n", h.ident, res.Status, req, res.ContentLength, sym, s, contentType, encoding)
 			if err == nil {
 				base := url.QueryEscape(path.Base(req))
 				if err != nil {
@@ -158,8 +151,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 				}
 				f, err := os.Create(target)
 				if err != nil {
-					// Error("HTTP-create", "Cannot create %s: %s\n", target, err)
-					log.Printf("Cannot create %s: %s\n", target, err)
+					Error("HTTP-create", "Cannot create %s: %s\n", target, err)
 					continue
 				}
 				var r io.Reader
@@ -167,8 +159,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 				if len(encoding) > 0 && (encoding[0] == "gzip" || encoding[0] == "deflate") {
 					r, err = gzip.NewReader(r)
 					if err != nil {
-						// Error("HTTP-gunzip", "Failed to gzip decode: %s", err)
-						log.Fatalf("Failed to gzip decode: %s", err)
+						Error("HTTP-gunzip", "Failed to gzip decode: %s", err)
 					}
 				}
 				if err == nil {
@@ -178,11 +169,9 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 					}
 					f.Close()
 					if err != nil {
-						// Error("HTTP-save", "%s: failed to save %s (l:%d): %s\n", h.ident, target, w, err)
-						log.Printf("%s: failed to save %s (l:%d): %s\n", h.ident, target, w, err)
+						Error("HTTP-save", "%s: failed to save %s (l:%d): %s\n", h.ident, target, w, err)
 					} else {
-						// Info("%s: Saved %s (l:%d)\n", h.ident, target, w)
-						log.Printf("%s: Saved %s (l:%d)\n", h.ident, target, w)
+						Info("%s: Saved %s (l:%d)\n", h.ident, target, w)
 					}
 				}
 			}
