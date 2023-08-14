@@ -60,24 +60,27 @@ func main() {
 	defer libhoney.Close()
 
 	// creates the in-cluster config
-	config, err := rest.InClusterConfig()
+	k8sConfig, err := rest.InClusterConfig()
 	if err != nil {
 		panic(err.Error())
 	}
+
 	// creates the clientset
-	client, err := kubernetes.NewForConfig(config)
+	k8sClient, err := kubernetes.NewForConfig(k8sConfig)
 
 	if err != nil {
 		panic(err.Error())
 	}
 
 	// setup probes
-	p := probes.New(client)
+	p := probes.New(k8sClient)
 	go p.Start()
 	defer p.Stop()
 
+	agentConfig := assemblers.NewConfig()
+
 	// setup TCP stream reader
-	assember := assemblers.NewTcpAssembler()
+	assember := assemblers.NewTcpAssembler(*agentConfig)
 	go assember.Start()
 	defer assember.Stop()
 

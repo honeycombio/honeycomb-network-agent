@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/gopacket"
-	"github.com/google/gopacket/examples/util"
 	"github.com/google/gopacket/ip4defrag"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
@@ -35,28 +34,6 @@ var stats struct {
 	overlapPackets      int
 }
 
-const closeTimeout time.Duration = time.Hour * 24 // Closing inactive: TODO: from CLI
-const timeout time.Duration = time.Minute * 5     // Pending bytes: TODO: from CLI
-
-var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
-var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
-var lazy = flag.Bool("lazy", false, "If true, do lazy decoding")
-var nodefrag = flag.Bool("nodefrag", false, "If true, do not do IPv4 defrag")
-var checksum = flag.Bool("checksum", false, "Check TCP checksum")
-var nooptcheck = flag.Bool("nooptcheck", true, "Do not check TCP options (useful to ignore MSS on captures with TSO)")
-var ignorefsmerr = flag.Bool("ignorefsmerr", true, "Ignore TCP FSM errors")
-var allowmissinginit = flag.Bool("allowmissinginit", true, "Support streams without SYN/SYN+ACK/ACK sequence")
-var verbose = flag.Bool("verbose", false, "Be verbose")
-var debug = flag.Bool("debug", false, "Display debug information")
-var quiet = flag.Bool("quiet", false, "Be quiet regarding errors")
-
-// capture
-var iface = flag.String("i", "any", "Interface to read packets from")
-var fname = flag.String("r", "", "Filename to read from, overrides -i")
-var snaplen = flag.Int("s", 65536, "Snap length (number of bytes max to read per packet")
-var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
-var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
-
 var logLevel int
 var errorsMap map[string]uint
 var errorsMapMutex sync.Mutex
@@ -71,6 +48,7 @@ func (c *Context) GetCaptureInfo() gopacket.CaptureInfo {
 }
 
 type tcpAssembler struct {
+	config *config
 	handle *pcap.Handle
 	packetSource *gopacket.PacketSource
 	streamFactory *tcpStreamFactory
@@ -78,27 +56,26 @@ type tcpAssembler struct {
 	assembler *reassembly.Assembler
 }
 
-func NewTcpAssembler() tcpAssembler {
-	defer util.Run()()
+func NewTcpAssembler(config config) tcpAssembler {
 	var handle *pcap.Handle
 	var err error
 
 	// Set logging level
-	if *debug {
+	if config.debug {
 		logLevel = 2
-	} else if *verbose {
+	} else if config.verbose {
 		logLevel = 1
-	} else if *quiet {
+	} else if config.quiet {
 		logLevel = -1
 	}
 	errorsMap = make(map[string]uint)
 	// Set up pcap packet capture
-	if *fname != "" {
-		log.Printf("Reading from pcap dump %q", *fname)
-		handle, err = pcap.OpenOffline(*fname)
+	if config.fname != "" {
+		log.Printf("Reading from pcap dump %q", config.fname)
+		handle, err = pcap.OpenOffline(config.fname)
 	} else {
-		log.Printf("Starting capture on interface %q", *iface)
-		handle, err = pcap.OpenLive(*iface, int32(*snaplen), true, pcap.BlockForever)
+		log.Printf("Starting capture on interface %q", config.iface)
+		handle, err = pcap.OpenLive(config.iface, int32(config.snaplen), true, pcap.BlockForever)
 	}
 	if err != nil {
 		log.Fatal(err)
@@ -113,7 +90,7 @@ func NewTcpAssembler() tcpAssembler {
 	}
 
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	packetSource.Lazy = *lazy
+	packetSource.Lazy = config.lazy
 	packetSource.NoCopy = true
 	// Info("Starting to read packets\n")
 	log.Printf("Starting to read packets\n")
@@ -145,7 +122,7 @@ func (h *tcpAssembler) Start() {
 		bytes += int64(len(data))
 
 		// defrag the IPv4 packet if required
-		if !*nodefrag {
+		if !h.config.nodefrag {
 			ip4Layer := packet.Layer(layers.LayerTypeIPv4)
 			if ip4Layer == nil {
 				continue
@@ -176,7 +153,7 @@ func (h *tcpAssembler) Start() {
 		tcp := packet.Layer(layers.LayerTypeTCP)
 		if tcp != nil {
 			tcp := tcp.(*layers.TCP)
-			if *checksum {
+			if h.config.checksum {
 				err := tcp.SetNetworkLayerForChecksum(packet.NetworkLayer())
 				if err != nil {
 					log.Fatalf("Failed to set network layer for checksum: %s\n", err)
@@ -188,15 +165,15 @@ func (h *tcpAssembler) Start() {
 			stats.totalsz += len(tcp.Payload)
 			h.assembler.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &c)
 		}
-		if count%*statsevery == 0 {
+		if count%h.config.statsevery == 0 {
 			ref := packet.Metadata().CaptureInfo.Timestamp
-			flushed, closed := h.assembler.FlushWithOptions(reassembly.FlushOptions{T: ref.Add(-timeout), TC: ref.Add(-closeTimeout)})
+			flushed, closed := h.assembler.FlushWithOptions(reassembly.FlushOptions{T: ref.Add(-h.config.timeout), TC: ref.Add(-h.config.closeTimeout)})
 			// Debug("Forced flush: %d flushed, %d closed (%s)", flushed, closed, ref)
 			log.Printf("Forced flush: %d flushed, %d closed (%s)", flushed, closed, ref)
 		}
 
-		done := *maxcount > 0 && count >= *maxcount
-		if count%*statsevery == 0 || done {
+		done := h.config.maxcount > 0 && count >= h.config.maxcount
+		if count%h.config.statsevery == 0 || done {
 			errorsMapMutex.Lock()
 			errorMapLen := len(errorsMap)
 			errorsMapMutex.Unlock()
@@ -216,7 +193,7 @@ func (h *tcpAssembler) Stop() {
 	h.streamFactory.WaitGoRoutines()
 	// Debug("%s\n", h.assembler.Dump())
 	log.Printf("%s\n", h.assembler.Dump())
-	if !*nodefrag {
+	if !h.config.nodefrag {
 		fmt.Printf("IPdefrag:\t\t%d\n", stats.ipdefrag)
 	}
 	fmt.Printf("TCP stats:\n")
