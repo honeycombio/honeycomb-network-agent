@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/honeycombio/ebpf-agent/assemblers"
 	"github.com/honeycombio/ebpf-agent/bpf/probes"
-	"github.com/honeycombio/ebpf-agent/httputils"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	"k8s.io/client-go/kubernetes"
@@ -77,9 +77,9 @@ func main() {
 	defer p.Stop()
 
 	// setup TCP stream reader
-	h := httputils.New()
-	go h.Start()
-	defer h.Stop()
+	assember := assemblers.NewTcpAssembler()
+	go assember.Start()
+	defer assember.Stop()
 
 	log.Println("Agent is ready!")
 
