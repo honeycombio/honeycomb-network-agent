@@ -19,7 +19,7 @@ type tcpStream struct {
 	urls           []string
 	ident          string
 	sync.Mutex
-	eventAttrs map[string]string
+	requestsSeen map[string]map[string]string
 }
 
 func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassembly.TCPFlowDirection, nextSeq reassembly.Sequence, start *bool, ac reassembly.AssemblerContext) bool {

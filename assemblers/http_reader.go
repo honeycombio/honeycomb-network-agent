@@ -41,7 +41,6 @@ func (h *httpReader) Read(p []byte) (int, error) {
 	return l, nil
 }
 
-
 func (h *httpReader) run(wg *sync.WaitGroup) {
 	defer wg.Done()
 	b := bufio.NewReader(h)
@@ -77,19 +76,32 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 
 			Info("HTTP/%s Request: %s %s (body:%d)\n", h.ident, req.Method, req.URL, s)
 			h.parent.Lock()
-			h.parent.urls = append(h.parent.urls, req.URL.String())
-			h.parent.eventAttrs = eventAttrs
+			if h.parent.requestsSeen != nil {
+				h.parent.requestsSeen[h.ident] = eventAttrs
+			} else {
+				h.parent.requestsSeen = map[string]map[string]string{
+					h.ident: eventAttrs,
+				}
+			}
 			h.parent.Unlock()
+
 		} else {
 			res, err := http.ReadResponse(b, nil)
-			var req string
+			var responseInfo string
 			var eventAttrs map[string]string
+			var ok bool
+			requestIdent := fmt.Sprintf("%s->%s %s->%s", h.dstIp, h.srcIp, h.dstPort, h.srcPort)
 			h.parent.Lock()
-			if len(h.parent.urls) == 0 {
-				req = fmt.Sprintf("<no-request-seen>")
+			if len(h.parent.requestsSeen) == 0 {
+				responseInfo = fmt.Sprintf("<no-requests-seen>")
 			} else {
-				req, h.parent.urls = h.parent.urls[0], h.parent.urls[1:]
-				eventAttrs = h.parent.eventAttrs
+				eventAttrs, ok = h.parent.requestsSeen[requestIdent]
+				if ok {
+					delete(h.parent.requestsSeen, requestIdent)
+				} else {
+					responseInfo = fmt.Sprintf("no corresponsding request for %s", requestIdent)
+				}
+
 			}
 			h.parent.Unlock()
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
@@ -113,25 +125,21 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 			ev.AddField("http.response_code", res.StatusCode)
 			ev.AddField("http.response_headers", res.Header)
 			ev.AddField("http.h_response_bytes", h.bytes)
-			ev.AddField("http.response_request_url", req)
+			ev.AddField("http.response_info", responseInfo)
+			ev.AddField("http.response_mutex", h.srcIp)
+			ev.AddField("http.response_source_ip", h.srcIp)
+			ev.AddField("http.response_source_port", h.srcPort)
+			ev.AddField("http.response_dest_ip", h.dstIp)
+			ev.AddField("http.response_dest_port", h.dstPort)
 
 			err = ev.Send()
 			if err != nil {
 				Error("Error sending even", "error sending event: %e\n", err)
 			}
 
-			sym := ","
-			if res.ContentLength > 0 && res.ContentLength != int64(s) {
-				sym = "!="
-			}
-			contentType, ok := res.Header["Content-Type"]
-			if !ok {
-				contentType = []string{http.DetectContentType(body)}
-			}
 			encoding := res.Header["Content-Encoding"]
-			Info("HTTP/%s Response: %s URL:%s (%d%s%d%s) -> %s\n", h.ident, res.Status, req, res.ContentLength, sym, s, contentType, encoding)
 			if err == nil {
-				base := url.QueryEscape(path.Base(req))
+				base := url.QueryEscape(path.Base(eventAttrs["http.request_url"]))
 				if err != nil {
 					base = "incomplete-" + base
 				}

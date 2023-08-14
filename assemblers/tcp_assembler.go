@@ -48,12 +48,12 @@ func (c *Context) GetCaptureInfo() gopacket.CaptureInfo {
 }
 
 type tcpAssembler struct {
-	config *config
-	handle *pcap.Handle
-	packetSource *gopacket.PacketSource
+	config        *config
+	handle        *pcap.Handle
+	packetSource  *gopacket.PacketSource
 	streamFactory *tcpStreamFactory
-	streamPool *reassembly.StreamPool
-	assembler *reassembly.Assembler
+	streamPool    *reassembly.StreamPool
+	assembler     *reassembly.Assembler
 }
 
 func NewTcpAssembler(config config) tcpAssembler {
@@ -98,11 +98,12 @@ func NewTcpAssembler(config config) tcpAssembler {
 	assembler := reassembly.NewAssembler(streamPool)
 
 	return tcpAssembler{
-		handle: handle,
-		packetSource: packetSource,
+		config:        &config,
+		handle:        handle,
+		packetSource:  packetSource,
 		streamFactory: streamFactory,
-		streamPool: streamPool,
-		assembler: assembler,
+		streamPool:    streamPool,
+		assembler:     assembler,
 	}
 }
 
@@ -111,14 +112,12 @@ func (h *tcpAssembler) Start() {
 	bytes := int64(0)
 	start := time.Now()
 	defragger := ip4defrag.NewIPv4Defragmenter()
-
 	for packet := range h.packetSource.Packets() {
 		count++
 		// Debug("PACKET #%d\n", count)
 		log.Printf("PACKET #%d\n", count)
 		data := packet.Data()
 		bytes += int64(len(data))
-
 		// defrag the IPv4 packet if required
 		if !h.config.nodefrag {
 			ip4Layer := packet.Layer(layers.LayerTypeIPv4)
