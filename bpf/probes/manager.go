@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/honeycombio/libhoney-go"
+	"github.com/rs/zerolog/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +27,7 @@ const mapKey uint32 = 0
 
 type manager struct {
 	bpfObjects bpfObjects
-	probes 	   []link.Link
+	probes     []link.Link
 	reader     *perf.Reader
 	client     *kubernetes.Clientset
 }
@@ -36,35 +36,35 @@ func New(client *kubernetes.Clientset) manager {
 	// Load pre-compiled programs and maps into the kernel.
 	objs := bpfObjects{}
 	if err := loadBpfObjects(&objs, nil); err != nil {
-		log.Fatalf("loading objects: %v", err)
+		log.Fatal().Err(err).Msg("failed loading objects")
 	}
 	defer objs.Close()
 
 	// Deploy tcp_connect kprobe
 	kprobeTcpConnect, err := link.Kprobe("tcp_connect", objs.KprobeTcpConnect, nil)
 	if err != nil {
-		log.Fatalf("opening kprobe: %s", err)
+		log.Fatal().Err(err).Msg("failed opening kprobe")
 	}
 	defer kprobeTcpConnect.Close()
 
 	// Deploy tcp_close kprobe
 	kprobeTcpClose, err := link.Kprobe("tcp_close", objs.KprobeTcpClose, nil)
 	if err != nil {
-		log.Fatal("failed to open kretprobe: %s", err)
+		log.Fatal().Err(err).Msg("failed to open kretprobe")
 	}
 	defer kprobeTcpClose.Close()
 
 	// Setup perf event reader to read probe events
 	reader, err := perf.NewReader(objs.Events, os.Getpagesize())
 	if err != nil {
-		log.Fatalf("failed creating perf reader: %v", err)
+		log.Fatal().Err(err).Msg("failed creating perf reader")
 	}
 
 	return manager{
 		bpfObjects: objs,
-		probes: []link.Link{ kprobeTcpConnect, kprobeTcpClose },
-		reader: reader,
-		client: client,
+		probes:     []link.Link{kprobeTcpConnect, kprobeTcpClose},
+		reader:     reader,
+		client:     client,
 	}
 }
 
@@ -85,7 +85,7 @@ func (m *manager) Start() {
 		}
 
 		if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &event); err != nil {
-			log.Println("error parsing perf event", err)
+			log.Error().Err(err).Msg("error parsing perf event")
 			continue
 		}
 
@@ -127,7 +127,7 @@ func getServiceForPod(client *kubernetes.Clientset, inputPod v1.Pod) v1.Service 
 		listOptions := metav1.ListOptions{LabelSelector: set.AsSelector().String()}
 		pods, err := client.CoreV1().Pods(v1.NamespaceAll).List(context.TODO(), listOptions)
 		if err != nil {
-			log.Println(err)
+			log.Error().Err(err).Msg("Error getting pods")
 		}
 		for _, pod := range pods.Items {
 			if pod.Name == inputPod.Name {

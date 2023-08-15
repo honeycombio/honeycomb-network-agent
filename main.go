@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,6 +10,7 @@ import (
 	"github.com/honeycombio/ebpf-agent/bpf/probes"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
+	"github.com/rs/zerolog/log"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -24,7 +24,7 @@ func main() {
 
 	kernelVersion, err := utils.HostKernelVersion()
 	if err != nil {
-		log.Fatalf("Failed to get host kernel version: %v", err)
+		log.Fatal().Err(err).Msg("Failed to get host kernel version")
 	}
 	log.Printf("Host kernel version: %s\n", kernelVersion)
 
@@ -33,7 +33,7 @@ func main() {
 
 	apikey := os.Getenv("HONEYCOMB_API_KEY")
 	if apikey == "" {
-		log.Fatalf("Honeycomb API key not set, unable to send events\n")
+		log.Fatal().Msg("Honeycomb API key not set, unable to send events\n")
 	}
 
 	dataset := getEnvOrDefault("HONEYCOMB_DATASET", defaultDataset)
@@ -84,13 +84,13 @@ func main() {
 	go assember.Start()
 	defer assember.Stop()
 
-	log.Println("Agent is ready!")
+	log.Print("Agent is ready!")
 
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
 	<-signalChannel
 
-	log.Println("Shutting down...")
+	log.Print("Shutting down...")
 }
 
 func getEnvOrDefault(key string, defaultValue string) string {

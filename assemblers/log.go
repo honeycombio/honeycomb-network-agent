@@ -1,6 +1,6 @@
 package assemblers
 
-import "fmt"
+import "github.com/rs/zerolog/log"
 
 func Error(t string, s string, a ...interface{}) {
 	errorsMapMutex.Lock()
@@ -9,16 +9,16 @@ func Error(t string, s string, a ...interface{}) {
 	errorsMap[t] = nb + 1
 	errorsMapMutex.Unlock()
 	if logLevel >= 0 {
-		fmt.Printf(s, a...)
+		log.Error().Msgf(s, a...)
 	}
 }
 func Info(s string, a ...interface{}) {
 	if logLevel >= 1 {
-		fmt.Printf(s, a...)
+		log.Info().Msgf(s, a...)
 	}
 }
 func Debug(s string, a ...interface{}) {
 	if logLevel >= 2 {
-		fmt.Printf(s, a...)
+		log.Debug().Msgf(s, a...)
 	}
 }

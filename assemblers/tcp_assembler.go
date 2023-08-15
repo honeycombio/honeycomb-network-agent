@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 	"sync"
@@ -16,6 +15,7 @@ import (
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/reassembly"
 	"github.com/honeycombio/libhoney-go"
+	"github.com/rs/zerolog/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
@@ -82,13 +82,13 @@ func NewTcpAssembler(config config) tcpAssembler {
 		handle, err = pcap.OpenLive(*iface, int32(*snaplen), true, pcap.BlockForever)
 	}
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Send()
 	}
 	if len(flag.Args()) > 0 {
 		bpffilter := strings.Join(flag.Args(), " ")
 		Info("Using BPF filter %q\n", bpffilter)
 		if err = handle.SetBPFFilter(bpffilter); err != nil {
-			log.Fatal("BPF filter error:", err)
+			log.Fatal().Err(err).Msg("BPF filter error")
 		}
 	}
 
@@ -137,7 +137,7 @@ func (h *tcpAssembler) Start() {
 			l := ip4.Length
 			newip4, err := defragger.DefragIPv4(ip4)
 			if err != nil {
-				log.Fatalln("Error while de-fragmenting", err)
+				log.Fatal().Err(err).Msg("Error while de-fragmenting")
 			} else if newip4 == nil {
 				// Debug("Fragment...\n")
 				log.Printf("Fragment...\n")
@@ -162,7 +162,7 @@ func (h *tcpAssembler) Start() {
 			if h.config.checksum {
 				err := tcp.SetNetworkLayerForChecksum(packet.NetworkLayer())
 				if err != nil {
-					log.Fatalf("Failed to set network layer for checksum: %s\n", err)
+					log.Fatal().Err(err).Msg("Failed to set network layer for checksum")
 				}
 			}
 			c := Context{
