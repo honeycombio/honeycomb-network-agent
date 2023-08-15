@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log"
@@ -15,9 +14,6 @@ import (
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -107,9 +103,9 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clien
 		select {
 		case event := <-events:
 
-			dstPod := getPodByIPAddr(client, event.DstIp)
-			srcPod := getPodByIPAddr(client, event.SrcIp)
-			srcNode := getNodeByPod(client, srcPod)
+			dstPod := utils.GetPodByIPAddr(client, event.DstIp)
+			srcPod := utils.GetPodByIPAddr(client, event.SrcIp)
+			srcNode := utils.GetNodeByPod(client, srcPod)
 
 			ev := libhoney.NewEvent()
 			ev.AddField("duration_ms", event.Duration.Microseconds())
@@ -147,7 +143,7 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clien
 
 			// service
 			// no semconv for service yet
-			ev.AddField("k8s.service.name", getServiceForPod(client, srcPod).Name)
+			ev.AddField("k8s.service.name", utils.GetServiceForPod(client, srcPod).Name)
 
 			// node
 			ev.AddField(string(semconv.K8SNodeNameKey), srcNode.Name)
@@ -174,47 +170,6 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clien
 			}
 		}
 	}
-}
-
-func getPodByIPAddr(client *kubernetes.Clientset, ipAddr string) v1.Pod {
-	pods, _ := client.CoreV1().Pods(v1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
-
-	var matchedPod v1.Pod
-
-	for _, pod := range pods.Items {
-		if ipAddr == pod.Status.PodIP {
-			matchedPod = pod
-		}
-	}
-
-	return matchedPod
-}
-
-func getServiceForPod(client *kubernetes.Clientset, inputPod v1.Pod) v1.Service {
-	// get list of services
-	services, _ := client.CoreV1().Services(v1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
-	var matchedService v1.Service
-	// loop over services
-	for _, service := range services.Items {
-		set := labels.Set(service.Spec.Selector)
-		listOptions := metav1.ListOptions{LabelSelector: set.AsSelector().String()}
-		pods, err := client.CoreV1().Pods(v1.NamespaceAll).List(context.TODO(), listOptions)
-		if err != nil {
-			log.Println(err)
-		}
-		for _, pod := range pods.Items {
-			if pod.Name == inputPod.Name {
-				matchedService = service
-			}
-		}
-	}
-
-	return matchedService
-}
-
-func getNodeByPod(client *kubernetes.Clientset, pod v1.Pod) *v1.Node {
-	node, _ := client.CoreV1().Nodes().Get(context.TODO(), pod.Spec.NodeName, metav1.GetOptions{})
-	return node
 }
 
 func getBodySize(r io.ReadCloser) int {
