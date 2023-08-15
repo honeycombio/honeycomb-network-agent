@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/honeycombio/ebpf-agent/assemblers"
@@ -103,14 +102,10 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clien
 		select {
 		case event := <-events:
 
-			dstPod := utils.GetPodByIPAddr(client, event.DstIp)
-			srcPod := utils.GetPodByIPAddr(client, event.SrcIp)
-			srcNode := utils.GetNodeByPod(client, srcPod)
-
 			ev := libhoney.NewEvent()
 			ev.AddField("duration_ms", event.Duration.Microseconds())
-			ev.AddField("http.source_ip", event.SrcIp)
-			ev.AddField("http.destination_ip", event.DstIp)
+			ev.AddField(string(semconv.NetSockHostAddrKey), event.SrcIp)
+			ev.AddField("destination.address", event.DstIp)
 			if event.Request != nil {
 				ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
 				ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
@@ -130,33 +125,9 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clien
 				ev.AddField("http.response.missing", "no response on this event")
 			}
 
-			// dest pod
-			ev.AddField(fmt.Sprintf("destination.%s", semconv.K8SPodNameKey), dstPod.Name)
-			ev.AddField(fmt.Sprintf("destination.%s", semconv.K8SPodUIDKey), dstPod.UID)
-
-			// source pod
-			ev.AddField(string(semconv.K8SPodNameKey), srcPod.Name)
-			ev.AddField(string(semconv.K8SPodUIDKey), srcPod.UID)
-
-			// namespace
-			ev.AddField(string(semconv.K8SNamespaceNameKey), srcPod.Namespace)
-
-			// service
-			// no semconv for service yet
-			ev.AddField("k8s.service.name", utils.GetServiceForPod(client, srcPod).Name)
-
-			// node
-			ev.AddField(string(semconv.K8SNodeNameKey), srcNode.Name)
-			ev.AddField(string(semconv.K8SNodeUIDKey), srcNode.UID)
-
-			// container names
-			if len(srcPod.Spec.Containers) > 0 {
-				var containerNames []string
-				for _, container := range srcPod.Spec.Containers {
-					containerNames = append(containerNames, container.Name)
-				}
-				ev.AddField(string(semconv.K8SContainerNameKey), strings.Join(containerNames, ","))
-			}
+			// k8s metadata
+			k8sEventAttrs := utils.GetK8sEventAttrs(client, event.SrcIp, event.DstIp)
+			ev.Add(k8sEventAttrs)
 
 			//TODO: Body size produces a runtime error, commenting out for now.
 			// requestSize := getBodySize(event.request.Body)
