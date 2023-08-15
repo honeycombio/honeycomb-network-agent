@@ -3,6 +3,7 @@ package assemblers
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -14,6 +15,8 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/reassembly"
+	"github.com/honeycombio/libhoney-go"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
 var stats struct {
@@ -225,90 +228,57 @@ func handleHttpEvents(events chan httpEvent) {
 	for {
 		select {
 		case event := <-events:
-			// fmt.Printf("%s\n\n", event)
 
 			// ignore health and ready checks for now
-			if strings.HasPrefix(event.request.RequestURI, "/health") || strings.HasPrefix(event.request.RequestURI, "/ready") {
-				continue
-			}
+			// if strings.HasPrefix(event.request.RequestURI, "/health") || strings.HasPrefix(event.request.RequestURI, "/ready") {
+			// 	continue
+			// }
 
 			log.Printf("request complete: %s %s - %d", event.request.Method, event.request.RequestURI, event.duration.Microseconds())
 
-			// eventAttrs := map[string]string{
-			// 	"name":                     fmt.Sprintf("HTTP %s", req.Method),
-			// 	"http.request_method":      req.Method,
-			// 	"http.request_ident":       h.ident,
-			// 	"http.request_source_ip":   h.srcIp,
-			// 	"http.request_source_port": h.srcPort,
-			// 	"http.request_dest_ip":     h.dstIp,
-			// 	"http.request_dest_port":   h.dstPort,
-			// 	"http.request_url":         req.RequestURI,
-			// 	"http.request_body":        fmt.Sprintf("%v", req.Body),
-			// 	"http.request_headers":     fmt.Sprintf("%v", req.Header),
-			// 	"http.h_request_bytes":     string(<-h.bytes),
-			// }
+			ev := libhoney.NewEvent()
+			ev.AddField("duration_ms", event.duration.Microseconds())
+			ev.AddField("http.source_ip", event.srcIp)
+			ev.AddField("http.destination_ip", event.dstIp)
+			if event.request != nil {
+				ev.AddField("name", fmt.Sprintf("HTTP %s", event.request.Method))
+				ev.AddField(string(semconv.HTTPMethodKey), event.request.Method)
+				ev.AddField(string(semconv.HTTPURLKey), event.request.RequestURI)
+				ev.AddField("http.request.body", fmt.Sprintf("%v", event.request.Body))
+				ev.AddField("http.request.headers", fmt.Sprintf("%v", event.request.Header))
+			} else {
+				ev.AddField("name", "🤷‍♀️")
+				ev.AddField("http.request.wtf", "no request on this event")
+			}
 
-			// ev := libhoney.NewEvent()
-			// ev.Add(eventAttrs)
-			// ev.AddField("http.response_ident", h.ident)
-			// ev.AddField("http.response_body", res.Body)
-			// ev.AddField("http.response_code", res.StatusCode)
-			// ev.AddField("http.response_headers", res.Header)
-			// ev.AddField("http.h_response_bytes", h.bytes)
-			// ev.AddField("http.response_info", responseInfo)
-			// ev.AddField("http.response_mutex", h.srcIp)
-			// ev.AddField("http.response_source_ip", h.srcIp)
-			// ev.AddField("http.response_source_port", h.srcPort)
-			// ev.AddField("http.response_dest_ip", h.dstIp)
-			// ev.AddField("http.response_dest_port", h.dstPort)
+			if event.response != nil {
+				ev.AddField(string(semconv.HTTPStatusCodeKey), event.response.StatusCode)
+				ev.AddField("http.response_body", event.response.Body)
+				ev.AddField("http.response_headers", event.response.Header)
+			} else {
+				ev.AddField("http.response.wtf", "no request on this event")
+			}
 
-			// Do we care about response decoding right now?
-			// encoding := res.Header["Content-Encoding"]
-			// if err == nil {
-			// 	base := url.QueryEscape(path.Base(eventAttrs["http.request_url"]))
-			// 	if err != nil {
-			// 		base = "incomplete-" + base
-			// 	}
-			// 	if len(base) > 250 {
-			// 		base = base[:250] + "..."
-			// 	}
-			// 	target := base
-			// 	n := 0
-			// 	for true {
-			// 		_, err := os.Stat(target)
-			// 		//if os.IsNotExist(err) != nil {
-			// 		if err != nil {
-			// 			break
-			// 		}
-			// 		target = fmt.Sprintf("%s-%d", base, n)
-			// 		n++
-			// 	}
-			// 	f, err := os.Create(target)
-			// 	if err != nil {
-			// 		Error("HTTP-create", "Cannot create %s: %s\n", target, err)
-			// 		continue
-			// 	}
-			// 	var r io.Reader
-			// 	r = bytes.NewBuffer(body)
-			// 	if len(encoding) > 0 && (encoding[0] == "gzip" || encoding[0] == "deflate") {
-			// 		r, err = gzip.NewReader(r)
-			// 		if err != nil {
-			// 			Error("HTTP-gunzip", "Failed to gzip decode: %s", err)
-			// 		}
-			// 	}
-			// 	if err == nil {
-			// 		w, err := io.Copy(f, r)
-			// 		if _, ok := r.(*gzip.Reader); ok {
-			// 			r.(*gzip.Reader).Close()
-			// 		}
-			// 		f.Close()
-			// 		if err != nil {
-			// 			Error("HTTP-save", "%s: failed to save %s (l:%d): %s\n", h.ident, target, w, err)
-			// 		} else {
-			// 			Info("%s: Saved %s (l:%d)\n", h.ident, target, w)
-			// 		}
-			// 	}
-			// }
+			// requestSize := getBodySize(event.request.Body)
+			// ev.AddField("http.request.body.size", requestSize)
+			// responseSize := getBodySize(event.response.Body)
+			// ev.AddField("http.response.body.size", responseSize)
+
+			err := ev.Send()
+			if err != nil {
+				log.Printf("error sending event: %v\n", err)
+			}
 		}
 	}
+}
+
+func getBodySize(r io.ReadCloser) int {
+	length := 0
+	b, err := io.ReadAll(r)
+	if err == nil {
+		length = len(b)
+		r.Close()
+	}
+
+	return length
 }

@@ -11,10 +11,10 @@ type httpMatcher struct {
 }
 
 type entry struct {
-	request  *http.Request
+	request          *http.Request
 	requestTimestamp time.Time
 
-	response *http.Response
+	response          *http.Response
 	responseTimestamp time.Time
 }
 
@@ -35,7 +35,7 @@ func (m *httpMatcher) LoadOrStoreRequest(requestID string, request *http.Request
 
 	// we don't have a response for this request, so store it for later
 	entry := entry{
-		request:  request,
+		request:          request,
 		requestTimestamp: time.Now(),
 	}
 	m.messages.Store(requestID, &entry)
@@ -43,7 +43,6 @@ func (m *httpMatcher) LoadOrStoreRequest(requestID string, request *http.Request
 }
 
 func (m *httpMatcher) LoadOrStoreResponse(requestID string, response *http.Response) *entry {
-
 
 	// check if we already have a request for this response, if yes, return it
 	if e, ok := m.messages.LoadAndDelete(requestID); ok {
@@ -54,7 +53,7 @@ func (m *httpMatcher) LoadOrStoreResponse(requestID string, response *http.Respo
 
 	// we don't have a request for this response, so store it for later
 	entry := entry{
-		response: response,
+		response:          response,
 		responseTimestamp: time.Now(),
 	}
 	m.messages.Store(requestID, &entry)

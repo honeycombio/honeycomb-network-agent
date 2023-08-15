@@ -7,7 +7,9 @@ import (
 
 type httpEvent struct {
 	requestId string
-	request *http.Request
-	response *http.Response
-	duration time.Duration
+	request   *http.Request
+	response  *http.Response
+	duration  time.Duration
+	srcIp     string
+	dstIp     string
 }
