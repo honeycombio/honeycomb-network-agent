@@ -3,14 +3,24 @@ package assemblers
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/reassembly"
 )
 
+var streamId uint64 = 0
+
 type tcpStreamFactory struct {
 	wg sync.WaitGroup
+	httpEvents chan httpEvent
+}
+
+func NewTcpStreamFactory(httpEvents chan httpEvent) tcpStreamFactory {
+	return tcpStreamFactory{
+		httpEvents: httpEvents,
+	}
 }
 
 func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.TCP, ac reassembly.AssemblerContext) reassembly.Stream {
@@ -18,17 +28,21 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	fsmOptions := reassembly.TCPSimpleFSMOptions{
 		SupportMissingEstablishment: true,
 	}
+	streamId := atomic.AddUint64(&streamId, 1)
 	stream := &tcpStream{
+		id:			streamId,
 		net:        net,
 		transport:  transport,
 		tcpstate:   reassembly.NewTCPSimpleFSM(fsmOptions),
-		ident:      fmt.Sprintf("%s:%s", net, transport),
+		ident:      fmt.Sprintf("%s:%s:%d", net, transport, streamId),
 		optchecker: reassembly.NewTCPOptionCheck(),
+		matcher:	newRequestResponseMatcher(),
+		events:    factory.httpEvents,
 	}
 
 	stream.client = httpReader{
 		bytes:    make(chan []byte),
-		ident:    fmt.Sprintf("%s %s", net, transport),
+		// ident:    fmt.Sprintf("%s %s", net, transport),
 		parent:   stream,
 		isClient: true,
 		srcIp:    fmt.Sprintf("%s", net.Src()),
@@ -38,7 +52,7 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	}
 	stream.server = httpReader{
 		bytes:   make(chan []byte),
-		ident:   fmt.Sprintf("%s %s", net.Reverse(), transport.Reverse()),
+		// ident:   fmt.Sprintf("%s %s", net.Reverse(), transport.Reverse()),
 		parent:  stream,
 		srcIp:   fmt.Sprintf("%s", net.Reverse().Src()),
 		dstIp:   fmt.Sprintf("%s", net.Reverse().Dst()),

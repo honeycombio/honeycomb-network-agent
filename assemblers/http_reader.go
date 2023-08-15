@@ -2,21 +2,13 @@ package assemblers
 
 import (
 	"bufio"
-	"bytes"
-	"compress/gzip"
-	"fmt"
 	"io"
 	"net/http"
-	"net/url"
-	"os"
-	"path"
 	"sync"
-
-	"github.com/honeycombio/libhoney-go"
 )
 
 type httpReader struct {
-	ident    string
+	// ident    string
 	isClient bool
 	srcIp    string
 	srcPort  string
@@ -50,139 +42,104 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			} else if err != nil {
-				Error("HTTP-request", "HTTP/%s Request error: %s (%v,%+v)\n", h.ident, err, err, err)
+				// Error("HTTP-request", "HTTP/%s Request error: %s (%v,%+v)\n", h.ident, err, err, err)
 				continue
 			}
-			body, err := io.ReadAll(req.Body)
-			s := len(body)
-			if err != nil {
-				Error("HTTP-request-body", "Got body err: %s\n", err)
-			}
-			req.Body.Close()
+			// body, err := io.ReadAll(req.Body)
+			// s := len(body)
+			// if err != nil {
+			// 	Error("HTTP-request-body", "Got body err: %s\n", err)
+			// }
+			// req.Body.Close()
 
-			eventAttrs := map[string]string{
-				"name":                     fmt.Sprintf("HTTP %s", req.Method),
-				"http.request_method":      req.Method,
-				"http.request_ident":       h.ident,
-				"http.request_source_ip":   h.srcIp,
-				"http.request_source_port": h.srcPort,
-				"http.request_dest_ip":     h.dstIp,
-				"http.request_dest_port":   h.dstPort,
-				"http.request_url":         req.RequestURI,
-				"http.request_body":        fmt.Sprintf("%v", req.Body),
-				"http.request_headers":     fmt.Sprintf("%v", req.Header),
-				"http.h_request_bytes":     string(<-h.bytes),
+			entry := h.parent.matcher.LoadOrStoreRequest(h.parent.ident, req)
+			if entry != nil {
+				// we have a match, process complete request/response pair
+				h.processEvent(entry)
 			}
-
-			Info("HTTP/%s Request: %s %s (body:%d)\n", h.ident, req.Method, req.URL, s)
-			h.parent.Lock()
-			if h.parent.requestsSeen != nil {
-				h.parent.requestsSeen[h.ident] = eventAttrs
-			} else {
-				h.parent.requestsSeen = map[string]map[string]string{
-					h.ident: eventAttrs,
-				}
-			}
-			h.parent.Unlock()
 
 		} else {
 			res, err := http.ReadResponse(b, nil)
-			var responseInfo string
-			var eventAttrs map[string]string
-			var ok bool
-			requestIdent := fmt.Sprintf("%s->%s %s->%s", h.dstIp, h.srcIp, h.dstPort, h.srcPort)
-			h.parent.Lock()
-			if len(h.parent.requestsSeen) == 0 {
-				responseInfo = fmt.Sprintf("<no-requests-seen>")
-			} else {
-				eventAttrs, ok = h.parent.requestsSeen[requestIdent]
-				if ok {
-					delete(h.parent.requestsSeen, requestIdent)
-				} else {
-					responseInfo = fmt.Sprintf("no corresponsding request for %s", requestIdent)
-				}
-
-			}
-			h.parent.Unlock()
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			} else if err != nil {
-				Error("HTTP-response", "HTTP/%s Response error: %s (%v,%+v)\n", h.ident, err, err, err)
+				// Error("HTTP-response", "HTTP/%s Response error: %s (%v,%+v)\n", h.ident, err, err, err)
 				continue
 			}
 
-			body, err := io.ReadAll(res.Body)
-			s := len(body)
-			if err != nil {
-				Error("HTTP-response-body", "HTTP/%s: failed to get body(parsed len:%d): %s\n", h.ident, s, err)
+			// body, err := io.ReadAll(res.Body)
+			// s := len(body)
+			// if err != nil {
+			// 	Error("HTTP-response-body", "HTTP/%s: failed to get body(parsed len:%d): %s\n", h.ident, s, err)
+			// }
+			// res.Body.Close()
+
+			entry := h.parent.matcher.LoadOrStoreResponse(h.parent.ident, res)
+			if entry != nil {
+				// we have a match, process complete request/response pair
+				h.processEvent(entry)
 			}
-			res.Body.Close()
 
-			ev := libhoney.NewEvent()
-			ev.Add(eventAttrs)
-			ev.AddField("http.response_ident", h.ident)
-			ev.AddField("http.response_body", res.Body)
-			ev.AddField("http.response_code", res.StatusCode)
-			ev.AddField("http.response_headers", res.Header)
-			ev.AddField("http.h_response_bytes", h.bytes)
-			ev.AddField("http.response_info", responseInfo)
-			ev.AddField("http.response_mutex", h.srcIp)
-			ev.AddField("http.response_source_ip", h.srcIp)
-			ev.AddField("http.response_source_port", h.srcPort)
-			ev.AddField("http.response_dest_ip", h.dstIp)
-			ev.AddField("http.response_dest_port", h.dstPort)
-
-			err = ev.Send()
 			if err != nil {
 				Error("Error sending even", "error sending event: %e\n", err)
 			}
 
-			encoding := res.Header["Content-Encoding"]
-			if err == nil {
-				base := url.QueryEscape(path.Base(eventAttrs["http.request_url"]))
-				if err != nil {
-					base = "incomplete-" + base
-				}
-				if len(base) > 250 {
-					base = base[:250] + "..."
-				}
-				target := base
-				n := 0
-				for true {
-					_, err := os.Stat(target)
-					//if os.IsNotExist(err) != nil {
-					if err != nil {
-						break
-					}
-					target = fmt.Sprintf("%s-%d", base, n)
-					n++
-				}
-				f, err := os.Create(target)
-				if err != nil {
-					Error("HTTP-create", "Cannot create %s: %s\n", target, err)
-					continue
-				}
-				var r io.Reader
-				r = bytes.NewBuffer(body)
-				if len(encoding) > 0 && (encoding[0] == "gzip" || encoding[0] == "deflate") {
-					r, err = gzip.NewReader(r)
-					if err != nil {
-						Error("HTTP-gunzip", "Failed to gzip decode: %s", err)
-					}
-				}
-				if err == nil {
-					w, err := io.Copy(f, r)
-					if _, ok := r.(*gzip.Reader); ok {
-						r.(*gzip.Reader).Close()
-					}
-					f.Close()
-					if err != nil {
-						Error("HTTP-save", "%s: failed to save %s (l:%d): %s\n", h.ident, target, w, err)
-					} else {
-						Info("%s: Saved %s (l:%d)\n", h.ident, target, w)
-					}
-				}
-			}
+			// Do we care about response decoding right now?
+			// encoding := res.Header["Content-Encoding"]
+			// if err == nil {
+			// 	base := url.QueryEscape(path.Base(eventAttrs["http.request_url"]))
+			// 	if err != nil {
+			// 		base = "incomplete-" + base
+			// 	}
+			// 	if len(base) > 250 {
+			// 		base = base[:250] + "..."
+			// 	}
+			// 	target := base
+			// 	n := 0
+			// 	for true {
+			// 		_, err := os.Stat(target)
+			// 		//if os.IsNotExist(err) != nil {
+			// 		if err != nil {
+			// 			break
+			// 		}
+			// 		target = fmt.Sprintf("%s-%d", base, n)
+			// 		n++
+			// 	}
+			// 	f, err := os.Create(target)
+			// 	if err != nil {
+			// 		Error("HTTP-create", "Cannot create %s: %s\n", target, err)
+			// 		continue
+			// 	}
+			// 	var r io.Reader
+			// 	r = bytes.NewBuffer(body)
+			// 	if len(encoding) > 0 && (encoding[0] == "gzip" || encoding[0] == "deflate") {
+			// 		r, err = gzip.NewReader(r)
+			// 		if err != nil {
+			// 			Error("HTTP-gunzip", "Failed to gzip decode: %s", err)
+			// 		}
+			// 	}
+			// 	if err == nil {
+			// 		w, err := io.Copy(f, r)
+			// 		if _, ok := r.(*gzip.Reader); ok {
+			// 			r.(*gzip.Reader).Close()
+			// 		}
+			// 		f.Close()
+			// 		if err != nil {
+			// 			Error("HTTP-save", "%s: failed to save %s (l:%d): %s\n", h.ident, target, w, err)
+			// 		} else {
+			// 			Info("%s: Saved %s (l:%d)\n", h.ident, target, w)
+			// 		}
+			// 	}
+			// }
 		}
+	}
+}
+
+func (h *httpReader) processEvent(entry *entry) {
+	h.parent.events <- httpEvent{
+		requestId: h.parent.ident,
+		request: entry.request,
+		response: entry.response,
+		duration: entry.responseTimestamp.Sub(entry.requestTimestamp),
 	}
 }

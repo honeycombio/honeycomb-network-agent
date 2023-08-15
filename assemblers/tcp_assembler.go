@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -54,6 +53,7 @@ type tcpAssembler struct {
 	streamFactory *tcpStreamFactory
 	streamPool    *reassembly.StreamPool
 	assembler     *reassembly.Assembler
+	httpEvents    chan httpEvent
 }
 
 func NewTcpAssembler(config config) tcpAssembler {
@@ -93,21 +93,27 @@ func NewTcpAssembler(config config) tcpAssembler {
 	packetSource.NoCopy = true
 	Info("Starting to read packets\n")
 
-	streamFactory := &tcpStreamFactory{}
-	streamPool := reassembly.NewStreamPool(streamFactory)
+	httpEvents := make(chan httpEvent, 10000)
+	streamFactory := NewTcpStreamFactory(httpEvents)
+	streamPool := reassembly.NewStreamPool(&streamFactory)
 	assembler := reassembly.NewAssembler(streamPool)
 
 	return tcpAssembler{
 		config:        &config,
 		handle:        handle,
 		packetSource:  packetSource,
-		streamFactory: streamFactory,
+		streamFactory: &streamFactory,
 		streamPool:    streamPool,
 		assembler:     assembler,
+		httpEvents:    httpEvents,
 	}
 }
 
 func (h *tcpAssembler) Start() {
+
+	// start up http event handler
+	go handleHttpEvents(h.httpEvents)
+
 	count := 0
 	bytes := int64(0)
 	start := time.Now()
@@ -115,7 +121,7 @@ func (h *tcpAssembler) Start() {
 	for packet := range h.packetSource.Packets() {
 		count++
 		// Debug("PACKET #%d\n", count)
-		log.Printf("PACKET #%d\n", count)
+		// log.Printf("PACKET #%d\n", count)
 		data := packet.Data()
 		bytes += int64(len(data))
 		// defrag the IPv4 packet if required
@@ -169,13 +175,13 @@ func (h *tcpAssembler) Start() {
 			log.Printf("Forced flush: %d flushed, %d closed (%s)", flushed, closed, ref)
 		}
 
-		done := h.config.maxcount > 0 && count >= h.config.maxcount
-		if count%h.config.statsevery == 0 || done {
-			errorsMapMutex.Lock()
-			errorMapLen := len(errorsMap)
-			errorsMapMutex.Unlock()
-			fmt.Fprintf(os.Stderr, "Processed %v packets (%v bytes) in %v (errors: %v, errTypes:%v)\n", count, bytes, time.Since(start), errors, errorMapLen)
-		}
+		// done := h.config.maxcount > 0 && count >= h.config.maxcount
+		// if count%h.config.statsevery == 0 || done {
+		// 	errorsMapMutex.Lock()
+		// 	errorMapLen := len(errorsMap)
+		// 	errorsMapMutex.Unlock()
+		// 	fmt.Fprintf(os.Stderr, "Processed %v packets (%v bytes) in %v (errors: %v, errTypes:%v)\n", count, bytes, time.Since(start), errors, errorMapLen)
+		// }
 	}
 }
 
@@ -211,5 +217,51 @@ func (h *tcpAssembler) Stop() {
 	fmt.Printf("Errors: %d\n", errors)
 	for e, _ := range errorsMap {
 		fmt.Printf(" %s:\t\t%d\n", e, errorsMap[e])
+	}
+}
+
+func handleHttpEvents(events chan httpEvent) {
+	for {
+		select {
+		case event := <-events:
+			// fmt.Printf("%s\n\n", event)
+
+			// ignore health and ready checks for now
+			if strings.HasPrefix(event.request.RequestURI, "/health") || strings.HasPrefix(event.request.RequestURI, "/ready") {
+				continue
+			}
+
+			log.Printf("request complete: %s %s - %d", event.request.Method, event.request.RequestURI, event.duration.Microseconds())
+
+
+			// eventAttrs := map[string]string{
+			// 	"name":                     fmt.Sprintf("HTTP %s", req.Method),
+			// 	"http.request_method":      req.Method,
+			// 	"http.request_ident":       h.ident,
+			// 	"http.request_source_ip":   h.srcIp,
+			// 	"http.request_source_port": h.srcPort,
+			// 	"http.request_dest_ip":     h.dstIp,
+			// 	"http.request_dest_port":   h.dstPort,
+			// 	"http.request_url":         req.RequestURI,
+			// 	"http.request_body":        fmt.Sprintf("%v", req.Body),
+			// 	"http.request_headers":     fmt.Sprintf("%v", req.Header),
+			// 	"http.h_request_bytes":     string(<-h.bytes),
+			// }
+
+						// ev := libhoney.NewEvent()
+			// ev.Add(eventAttrs)
+			// ev.AddField("http.response_ident", h.ident)
+			// ev.AddField("http.response_body", res.Body)
+			// ev.AddField("http.response_code", res.StatusCode)
+			// ev.AddField("http.response_headers", res.Header)
+			// ev.AddField("http.h_response_bytes", h.bytes)
+			// ev.AddField("http.response_info", responseInfo)
+			// ev.AddField("http.response_mutex", h.srcIp)
+			// ev.AddField("http.response_source_ip", h.srcIp)
+			// ev.AddField("http.response_source_port", h.srcPort)
+			// ev.AddField("http.response_dest_ip", h.dstIp)
+			// ev.AddField("http.response_dest_port", h.dstPort)
+
+		}
 	}
 }
