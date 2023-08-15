@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/honeycombio/ebpf-agent/assemblers"
 	"github.com/honeycombio/ebpf-agent/bpf/probes"
-	"github.com/honeycombio/ebpf-agent/httputils"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	"k8s.io/client-go/kubernetes"
@@ -60,26 +60,29 @@ func main() {
 	defer libhoney.Close()
 
 	// creates the in-cluster config
-	config, err := rest.InClusterConfig()
+	k8sConfig, err := rest.InClusterConfig()
 	if err != nil {
 		panic(err.Error())
 	}
+
 	// creates the clientset
-	client, err := kubernetes.NewForConfig(config)
+	k8sClient, err := kubernetes.NewForConfig(k8sConfig)
 
 	if err != nil {
 		panic(err.Error())
 	}
 
 	// setup probes
-	p := probes.New(client)
+	p := probes.New(k8sClient)
 	go p.Start()
 	defer p.Stop()
 
+	agentConfig := assemblers.NewConfig()
+
 	// setup TCP stream reader
-	h := httputils.New()
-	go h.Start()
-	defer h.Stop()
+	assember := assemblers.NewTcpAssembler(*agentConfig)
+	go assember.Start()
+	defer assember.Stop()
 
 	log.Println("Agent is ready!")
 
