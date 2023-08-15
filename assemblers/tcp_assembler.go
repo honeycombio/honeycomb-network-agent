@@ -48,12 +48,12 @@ func (c *Context) GetCaptureInfo() gopacket.CaptureInfo {
 }
 
 type tcpAssembler struct {
-	config *config
-	handle *pcap.Handle
-	packetSource *gopacket.PacketSource
+	config        *config
+	handle        *pcap.Handle
+	packetSource  *gopacket.PacketSource
 	streamFactory *tcpStreamFactory
-	streamPool *reassembly.StreamPool
-	assembler *reassembly.Assembler
+	streamPool    *reassembly.StreamPool
+	assembler     *reassembly.Assembler
 }
 
 func NewTcpAssembler(config config) tcpAssembler {
@@ -98,11 +98,12 @@ func NewTcpAssembler(config config) tcpAssembler {
 	assembler := reassembly.NewAssembler(streamPool)
 
 	return tcpAssembler{
-		handle: handle,
-		packetSource: packetSource,
+		handle:        handle,
+		config:        &config,
+		packetSource:  packetSource,
 		streamFactory: streamFactory,
-		streamPool: streamPool,
-		assembler: assembler,
+		streamPool:    streamPool,
+		assembler:     assembler,
 	}
 }
 
