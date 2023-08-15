@@ -88,7 +88,7 @@ spec:
             - name: HONEYCOMB_DATASET
               value: ebpf-agent-go
           args:
-            - --verbose
+            - tcp
           securityContext:
             capabilities:
               add:
