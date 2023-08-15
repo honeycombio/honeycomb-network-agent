@@ -87,8 +87,6 @@ spec:
                   key: api-key
             - name: HONEYCOMB_DATASET
               value: ebpf-agent-go
-            - name: HONEYCOMB_API_ENDPOINT
-              value: https://api-dogfood.honeycomb.io
           args:
             - tcp
           securityContext:

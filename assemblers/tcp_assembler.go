@@ -124,8 +124,6 @@ func (h *tcpAssembler) Start() {
 	defragger := ip4defrag.NewIPv4Defragmenter()
 	for packet := range h.packetSource.Packets() {
 		count++
-		// Debug("PACKET #%d\n", count)
-		// log.Printf("PACKET #%d\n", count)
 		data := packet.Data()
 		bytes += int64(len(data))
 		// defrag the IPv4 packet if required
@@ -228,13 +226,6 @@ func handleHttpEvents(events chan httpEvent) {
 	for {
 		select {
 		case event := <-events:
-
-			// ignore health and ready checks for now
-			// if strings.HasPrefix(event.request.RequestURI, "/health") || strings.HasPrefix(event.request.RequestURI, "/ready") {
-			// 	continue
-			// }
-
-			log.Printf("request complete: %s %s - %d", event.request.Method, event.request.RequestURI, event.duration.Microseconds())
 
 			ev := libhoney.NewEvent()
 			ev.AddField("duration_ms", event.duration.Microseconds())
