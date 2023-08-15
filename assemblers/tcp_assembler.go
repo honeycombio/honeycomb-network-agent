@@ -116,6 +116,7 @@ func NewTcpAssembler(config config) tcpAssembler {
 func (h *tcpAssembler) Start() {
 
 	// start up http event handler
+	// TODO: move this up to main.go level to acces k8s pod metadata
 	go handleHttpEvents(h.httpEvents)
 
 	count := 0
@@ -238,18 +239,19 @@ func handleHttpEvents(events chan httpEvent) {
 				ev.AddField("http.request.body", fmt.Sprintf("%v", event.request.Body))
 				ev.AddField("http.request.headers", fmt.Sprintf("%v", event.request.Header))
 			} else {
-				ev.AddField("name", "🤷‍♀️")
-				ev.AddField("http.request.wtf", "no request on this event")
+				ev.AddField("name", "HTTP")
+				ev.AddField("http.request.missing", "no request on this event")
 			}
 
 			if event.response != nil {
 				ev.AddField(string(semconv.HTTPStatusCodeKey), event.response.StatusCode)
-				ev.AddField("http.response_body", event.response.Body)
-				ev.AddField("http.response_headers", event.response.Header)
+				ev.AddField("http.response.body", event.response.Body)
+				ev.AddField("http.response.headers", event.response.Header)
 			} else {
-				ev.AddField("http.response.wtf", "no request on this event")
+				ev.AddField("http.response.missing", "no request on this event")
 			}
 
+			//TODO: Body size produces a runtime error, commenting out for now.
 			// requestSize := getBodySize(event.request.Body)
 			// ev.AddField("http.request.body.size", requestSize)
 			// responseSize := getBodySize(event.response.Body)
