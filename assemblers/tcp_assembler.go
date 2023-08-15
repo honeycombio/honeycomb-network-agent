@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -175,13 +176,13 @@ func (h *tcpAssembler) Start() {
 			log.Printf("Forced flush: %d flushed, %d closed (%s)", flushed, closed, ref)
 		}
 
-		// done := h.config.maxcount > 0 && count >= h.config.maxcount
-		// if count%h.config.statsevery == 0 || done {
-		// 	errorsMapMutex.Lock()
-		// 	errorMapLen := len(errorsMap)
-		// 	errorsMapMutex.Unlock()
-		// 	fmt.Fprintf(os.Stderr, "Processed %v packets (%v bytes) in %v (errors: %v, errTypes:%v)\n", count, bytes, time.Since(start), errors, errorMapLen)
-		// }
+		done := h.config.maxcount > 0 && count >= h.config.maxcount
+		if count%h.config.statsevery == 0 || done {
+			errorsMapMutex.Lock()
+			errorMapLen := len(errorsMap)
+			errorsMapMutex.Unlock()
+			fmt.Fprintf(os.Stderr, "Processed %v packets (%v bytes) in %v (errors: %v, errTypes:%v)\n", count, bytes, time.Since(start), errors, errorMapLen)
+		}
 	}
 }
 
@@ -233,7 +234,6 @@ func handleHttpEvents(events chan httpEvent) {
 
 			log.Printf("request complete: %s %s - %d", event.request.Method, event.request.RequestURI, event.duration.Microseconds())
 
-
 			// eventAttrs := map[string]string{
 			// 	"name":                     fmt.Sprintf("HTTP %s", req.Method),
 			// 	"http.request_method":      req.Method,
@@ -248,7 +248,7 @@ func handleHttpEvents(events chan httpEvent) {
 			// 	"http.h_request_bytes":     string(<-h.bytes),
 			// }
 
-						// ev := libhoney.NewEvent()
+			// ev := libhoney.NewEvent()
 			// ev.Add(eventAttrs)
 			// ev.AddField("http.response_ident", h.ident)
 			// ev.AddField("http.response_body", res.Body)
@@ -262,6 +262,53 @@ func handleHttpEvents(events chan httpEvent) {
 			// ev.AddField("http.response_dest_ip", h.dstIp)
 			// ev.AddField("http.response_dest_port", h.dstPort)
 
+			// Do we care about response decoding right now?
+			// encoding := res.Header["Content-Encoding"]
+			// if err == nil {
+			// 	base := url.QueryEscape(path.Base(eventAttrs["http.request_url"]))
+			// 	if err != nil {
+			// 		base = "incomplete-" + base
+			// 	}
+			// 	if len(base) > 250 {
+			// 		base = base[:250] + "..."
+			// 	}
+			// 	target := base
+			// 	n := 0
+			// 	for true {
+			// 		_, err := os.Stat(target)
+			// 		//if os.IsNotExist(err) != nil {
+			// 		if err != nil {
+			// 			break
+			// 		}
+			// 		target = fmt.Sprintf("%s-%d", base, n)
+			// 		n++
+			// 	}
+			// 	f, err := os.Create(target)
+			// 	if err != nil {
+			// 		Error("HTTP-create", "Cannot create %s: %s\n", target, err)
+			// 		continue
+			// 	}
+			// 	var r io.Reader
+			// 	r = bytes.NewBuffer(body)
+			// 	if len(encoding) > 0 && (encoding[0] == "gzip" || encoding[0] == "deflate") {
+			// 		r, err = gzip.NewReader(r)
+			// 		if err != nil {
+			// 			Error("HTTP-gunzip", "Failed to gzip decode: %s", err)
+			// 		}
+			// 	}
+			// 	if err == nil {
+			// 		w, err := io.Copy(f, r)
+			// 		if _, ok := r.(*gzip.Reader); ok {
+			// 			r.(*gzip.Reader).Close()
+			// 		}
+			// 		f.Close()
+			// 		if err != nil {
+			// 			Error("HTTP-save", "%s: failed to save %s (l:%d): %s\n", h.ident, target, w, err)
+			// 		} else {
+			// 			Info("%s: Saved %s (l:%d)\n", h.ident, target, w)
+			// 		}
+			// 	}
+			// }
 		}
 	}
 }

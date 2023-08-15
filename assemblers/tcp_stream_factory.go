@@ -13,7 +13,7 @@ import (
 var streamId uint64 = 0
 
 type tcpStreamFactory struct {
-	wg sync.WaitGroup
+	wg         sync.WaitGroup
 	httpEvents chan httpEvent
 }
 
@@ -30,19 +30,18 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	}
 	streamId := atomic.AddUint64(&streamId, 1)
 	stream := &tcpStream{
-		id:			streamId,
+		id:         streamId,
 		net:        net,
 		transport:  transport,
 		tcpstate:   reassembly.NewTCPSimpleFSM(fsmOptions),
 		ident:      fmt.Sprintf("%s:%s:%d", net, transport, streamId),
 		optchecker: reassembly.NewTCPOptionCheck(),
-		matcher:	newRequestResponseMatcher(),
-		events:    factory.httpEvents,
+		matcher:    newRequestResponseMatcher(),
+		events:     factory.httpEvents,
 	}
 
 	stream.client = httpReader{
 		bytes:    make(chan []byte),
-		// ident:    fmt.Sprintf("%s %s", net, transport),
 		parent:   stream,
 		isClient: true,
 		srcIp:    fmt.Sprintf("%s", net.Src()),
@@ -52,7 +51,6 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	}
 	stream.server = httpReader{
 		bytes:   make(chan []byte),
-		// ident:   fmt.Sprintf("%s %s", net.Reverse(), transport.Reverse()),
 		parent:  stream,
 		srcIp:   fmt.Sprintf("%s", net.Reverse().Src()),
 		dstIp:   fmt.Sprintf("%s", net.Reverse().Dst()),
