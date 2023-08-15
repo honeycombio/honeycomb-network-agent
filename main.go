@@ -20,16 +20,17 @@ const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
 func main() {
-	log.Printf("Starting Honeycomb eBPF agent v%s\n", Version)
+	log.Info().Str("agent_version", Version).Msg("Starting Honeycomb eBPF agent")
 
 	kernelVersion, err := utils.HostKernelVersion()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to get host kernel version")
 	}
-	log.Printf("Host kernel version: %s\n", kernelVersion)
-
 	btfEnabled := utils.HostBtfEnabled()
-	log.Printf("BTF enabled: %v\n", btfEnabled)
+	log.Info().
+		Str("kernel_version", kernelVersion.String()).
+		Bool("btf_enabled", btfEnabled).
+		Msg("Detected host kernel")
 
 	apikey := os.Getenv("HONEYCOMB_API_KEY")
 	if apikey == "" {
@@ -37,10 +38,11 @@ func main() {
 	}
 
 	dataset := getEnvOrDefault("HONEYCOMB_DATASET", defaultDataset)
-	log.Printf("Honeycomb dataset: %s\n", dataset)
-
 	endpoint := getEnvOrDefault("HONEYCOMB_API_ENDPOINT", defaultEndpoint)
-	log.Printf("Honeycomb API endpoint: %s\n", endpoint)
+	log.Info().
+		Str("hny_endpoint", endpoint).
+		Str("hny_dataset", dataset).
+		Msg("Honeycomb API config")
 
 	// setup libhoney
 	libhoney.Init(libhoney.Config{
@@ -84,13 +86,13 @@ func main() {
 	go assember.Start()
 	defer assember.Stop()
 
-	log.Print("Agent is ready!")
+	log.Info().Msg("Agent is ready!")
 
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
 	<-signalChannel
 
-	log.Print("Shutting down...")
+	log.Info().Msg("Shutting down...")
 }
 
 func getEnvOrDefault(key string, defaultValue string) string {
