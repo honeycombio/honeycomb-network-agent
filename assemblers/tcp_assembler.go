@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -174,8 +173,11 @@ func (h *tcpAssembler) Start() {
 		if count%h.config.statsevery == 0 {
 			ref := packet.Metadata().CaptureInfo.Timestamp
 			flushed, closed := h.assembler.FlushWithOptions(reassembly.FlushOptions{T: ref.Add(-h.config.timeout), TC: ref.Add(-h.config.closeTimeout)})
-			// Debug("Forced flush: %d flushed, %d closed (%s)", flushed, closed, ref)
-			log.Printf("Forced flush: %d flushed, %d closed (%s)", flushed, closed, ref)
+			log.Debug().
+				Int("flushed", flushed).
+				Int("closed", closed).
+				Time("packet_timestamp", ref).
+				Msg("Forced flush")
 		}
 
 		done := h.config.maxcount > 0 && count >= h.config.maxcount
@@ -183,7 +185,13 @@ func (h *tcpAssembler) Start() {
 			errorsMapMutex.Lock()
 			errorMapLen := len(errorsMap)
 			errorsMapMutex.Unlock()
-			fmt.Fprintf(os.Stderr, "Processed %v packets (%v bytes) in %v (errors: %v, errTypes:%v)\n", count, bytes, time.Since(start), errors, errorMapLen)
+			log.Info().
+				Int("processed_count_since_start", count).
+				Dur("milliseconds_since_start", time.Since(start)*time.Millisecond).
+				Int64("bytes", bytes).
+				Uint("error_count", errors).
+				Int("error_types_count", errorMapLen).
+				Msg("Processed Packets")
 		}
 	}
 }
