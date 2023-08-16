@@ -24,12 +24,12 @@ func newRequestResponseMatcher() httpMatcher {
 	}
 }
 
-func (m *httpMatcher) LoadOrStoreRequest(requestID string, request *http.Request) *entry {
+func (m *httpMatcher) LoadOrStoreRequest(requestID string, timestamp time.Time, request *http.Request) *entry {
 
 	// check if we already have a response for this request, if yes, return it
 	if e, ok := m.messages.LoadAndDelete(requestID); ok {
 		e.(*entry).request = request
-		e.(*entry).requestTimestamp = time.Now()
+		e.(*entry).requestTimestamp = timestamp
 		return e.(*entry)
 	}
 
@@ -42,12 +42,12 @@ func (m *httpMatcher) LoadOrStoreRequest(requestID string, request *http.Request
 	return nil
 }
 
-func (m *httpMatcher) LoadOrStoreResponse(requestID string, response *http.Response) *entry {
+func (m *httpMatcher) LoadOrStoreResponse(requestID string, timestamp time.Time, response *http.Response) *entry {
 
 	// check if we already have a request for this response, if yes, return it
 	if e, ok := m.messages.LoadAndDelete(requestID); ok {
 		e.(*entry).response = response
-		e.(*entry).responseTimestamp = time.Now()
+		e.(*entry).responseTimestamp = timestamp
 		return e.(*entry)
 	}
 

@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"time"
 )
 
 type httpReader struct {
@@ -16,6 +17,7 @@ type httpReader struct {
 	bytes    chan []byte
 	data     []byte
 	parent   *tcpStream
+	timestamp time.Time
 }
 
 func (h *httpReader) Read(p []byte) (int, error) {
@@ -44,7 +46,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 				// Error("HTTP-request", "HTTP/%s Request error: %s (%v,%+v)\n", h.ident, err, err, err)
 				continue
 			}
-			entry := h.parent.matcher.LoadOrStoreRequest(h.parent.ident, req)
+			entry := h.parent.matcher.LoadOrStoreRequest(h.parent.ident, h.timestamp, req)
 			if entry != nil {
 				// we have a match, process complete request/response pair
 				h.processEvent(entry)
@@ -58,7 +60,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 				continue
 			}
 
-			entry := h.parent.matcher.LoadOrStoreResponse(h.parent.ident, res)
+			entry := h.parent.matcher.LoadOrStoreResponse(h.parent.ident, h.timestamp, res)
 			if entry != nil {
 				// we have a match, process complete request/response pair
 				h.processEvent(entry)

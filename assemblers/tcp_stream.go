@@ -109,8 +109,10 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 
 	if length > 0 {
 		if dir == reassembly.TCPDirClientToServer {
+			t.client.timestamp = ac.GetCaptureInfo().Timestamp
 			t.client.bytes <- data
 		} else {
+			t.server.timestamp = ac.GetCaptureInfo().Timestamp
 			t.server.bytes <- data
 		}
 	}
