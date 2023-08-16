@@ -8,6 +8,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/reassembly"
+	"github.com/rs/zerolog/log"
 )
 
 var streamId uint64 = 0
@@ -24,7 +25,10 @@ func NewTcpStreamFactory(httpEvents chan httpEvent) tcpStreamFactory {
 }
 
 func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.TCP, ac reassembly.AssemblerContext) reassembly.Stream {
-	Debug("* NEW: %s %s\n", net, transport)
+	log.Debug().
+		Str("net", net.String()).
+		Str("transport", transport.String()).
+		Msg("NEW tcp stream")
 	fsmOptions := reassembly.TCPSimpleFSMOptions{
 		SupportMissingEstablishment: true,
 	}

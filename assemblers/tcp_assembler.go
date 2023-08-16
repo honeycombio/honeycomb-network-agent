@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/gopacket"
@@ -37,9 +36,6 @@ var stats struct {
 }
 
 var logLevel int
-var errorsMap map[string]uint
-var errorsMapMutex sync.Mutex
-var errors uint
 
 type Context struct {
 	CaptureInfo gopacket.CaptureInfo
@@ -71,7 +67,6 @@ func NewTcpAssembler(config config) tcpAssembler {
 	} else if *quiet {
 		logLevel = -1
 	}
-	errorsMap = make(map[string]uint)
 	// Set up pcap packet capture
 	if *fname != "" {
 		log.Info().
@@ -91,16 +86,21 @@ func NewTcpAssembler(config config) tcpAssembler {
 	}
 	if len(flag.Args()) > 0 {
 		bpffilter := strings.Join(flag.Args(), " ")
-		Info("Using BPF filter %q\n", bpffilter)
+		log.Info().
+			Str("bpf_filter", bpffilter).
+			Msg("Using BPF filter")
 		if err = handle.SetBPFFilter(bpffilter); err != nil {
-			log.Fatal().Err(err).Msg("BPF filter error")
+			log.Fatal().
+				Err(err).
+				Str("bpf_filter", bpffilter).
+				Msg("BPF filter error")
 		}
 	}
 
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	packetSource.Lazy = *lazy
 	packetSource.NoCopy = true
-	Info("Starting to read packets\n")
+	log.Info().Msg("Starting to read packets")
 
 	httpEvents := make(chan httpEvent, 10000)
 	streamFactory := NewTcpStreamFactory(httpEvents)
@@ -188,15 +188,10 @@ func (h *tcpAssembler) Start() {
 
 		done := h.config.maxcount > 0 && count >= h.config.maxcount
 		if count%h.config.statsevery == 0 || done {
-			errorsMapMutex.Lock()
-			errorMapLen := len(errorsMap)
-			errorsMapMutex.Unlock()
 			log.Info().
 				Int("processed_count_since_start", count).
 				Int64("milliseconds_since_start", time.Since(start).Milliseconds()).
 				Int64("bytes", bytes).
-				Uint("error_count", errors).
-				Int("error_types_count", errorMapLen).
 				Msg("Processed Packets")
 		}
 	}
@@ -230,7 +225,6 @@ func (h *tcpAssembler) Stop() {
 		Int("biggest_chunk_bytes", stats.biggestChunkBytes).
 		Int("overlap_packets", stats.overlapPackets).
 		Int("overlap_bytes", stats.overlapBytes).
-		Uint("error_count", errors).
 		Msg("Stop")
 }
 
