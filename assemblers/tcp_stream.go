@@ -11,7 +11,7 @@ import (
 )
 
 type tcpStream struct {
-	id uint64
+	id             uint64
 	tcpstate       *reassembly.TCPSimpleFSM
 	fsmerr         bool
 	optchecker     reassembly.TCPOptionCheck
@@ -21,8 +21,8 @@ type tcpStream struct {
 	urls           []string
 	ident          string
 	sync.Mutex
-	matcher        httpMatcher
-	events chan httpEvent
+	matcher httpMatcher
+	events  chan httpEvent
 }
 
 func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassembly.TCPFlowDirection, nextSeq reassembly.Sequence, start *bool, ac reassembly.AssemblerContext) bool {
