@@ -187,7 +187,7 @@ func (h *tcpAssembler) Start() {
 			errorsMapMutex.Unlock()
 			log.Info().
 				Int("processed_count_since_start", count).
-				Dur("milliseconds_since_start", time.Since(start)*time.Millisecond).
+				Int64("milliseconds_since_start", time.Since(start).Milliseconds()).
 				Int64("bytes", bytes).
 				Uint("error_count", errors).
 				Int("error_types_count", errorMapLen).
