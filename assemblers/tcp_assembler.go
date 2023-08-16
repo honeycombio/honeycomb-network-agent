@@ -74,14 +74,20 @@ func NewTcpAssembler(config config) tcpAssembler {
 	errorsMap = make(map[string]uint)
 	// Set up pcap packet capture
 	if *fname != "" {
-		log.Printf("Reading from pcap dump %q", *fname)
+		log.Info().
+			Str("filename", *fname).
+			Msg("Reading from pcap dump")
 		handle, err = pcap.OpenOffline(*fname)
 	} else {
-		log.Printf("Starting capture on interface %q", *iface)
+		log.Info().
+			Str("interface", *iface).
+			Msg("Starting capture")
 		handle, err = pcap.OpenLive(*iface, int32(*snaplen), true, pcap.BlockForever)
 	}
 	if err != nil {
-		log.Fatal().Err(err).Send()
+		log.Fatal().
+			Err(err).
+			Msg("Failed to open a pcap handle")
 	}
 	if len(flag.Args()) > 0 {
 		bpffilter := strings.Join(flag.Args(), " ")
