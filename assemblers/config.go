@@ -1,6 +1,7 @@
 package assemblers
 
 import (
+	"encoding/json"
 	"flag"
 	"time"
 )
@@ -28,49 +29,55 @@ var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
 var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 
 type config struct {
-	maxcount int
-	statsevery int
-	lazy bool
-	nodefrag bool
-	checksum bool
-	nooptcheck bool
-	ignorefsmerr bool
-	allowmissinginit bool
-	verbose bool
-	debug bool
-	quiet bool
-
-	iface string
-	fname string
-	snaplen int
-	tstype string
-	promisc bool
-
-	closeTimeout time.Duration
-	timeout time.Duration
+	Maxcount         int
+	Statsevery       int
+	Lazy             bool
+	Nodefrag         bool
+	Checksum         bool
+	Nooptcheck       bool
+	Ignorefsmerr     bool
+	Allowmissinginit bool
+	Verbose          bool
+	Debug            bool
+	Quiet            bool
+	Interface        string
+	FileName         string
+	Snaplen          int
+	TsType           string
+	Promiscuous      bool
+	CloseTimeout     time.Duration
+	Timeout          time.Duration
 }
 
 func NewConfig() *config {
-	return &config{
-		maxcount: *maxcount,
-		statsevery: *statsevery,
-		lazy: *lazy,
-		nodefrag: *nodefrag,
-		checksum: *checksum,
-		nooptcheck: *nooptcheck,
-		ignorefsmerr: *ignorefsmerr,
-		allowmissinginit: *allowmissinginit,
-		verbose: *verbose,
-		debug: *debug,
-		quiet: *quiet,
-
-		iface: *iface,
-		fname: *fname,
-		snaplen: *snaplen,
-		tstype: *tstype,
-		promisc: *promisc,
-
-		closeTimeout: closeTimeout,
-		timeout: timeout,
+	c := &config{
+		Maxcount:         *maxcount,
+		Statsevery:       *statsevery,
+		Lazy:             *lazy,
+		Nodefrag:         *nodefrag,
+		Checksum:         *checksum,
+		Nooptcheck:       *nooptcheck,
+		Ignorefsmerr:     *ignorefsmerr,
+		Allowmissinginit: *allowmissinginit,
+		Verbose:          *verbose,
+		Debug:            *debug,
+		Quiet:            *quiet,
+		Interface:        *iface,
+		FileName:         *fname,
+		Snaplen:          *snaplen,
+		TsType:           *tstype,
+		Promiscuous:      *promisc,
+		CloseTimeout:     closeTimeout,
+		Timeout:          timeout,
 	}
+
+	if c.Debug {
+		b, err := json.MarshalIndent(c, "", "  ")
+		if err != nil {
+			Debug("Failed to marshal agent config: %e", err)
+		} else {
+			Debug("Agent config: %s", string(b))
+		}
+	}
+	return c
 }

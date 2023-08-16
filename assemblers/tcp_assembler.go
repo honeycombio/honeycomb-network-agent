@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -72,6 +71,7 @@ func NewTcpAssembler(config config) tcpAssembler {
 	} else if *quiet {
 		logLevel = -1
 	}
+
 	errorsMap = make(map[string]uint)
 	// Set up pcap packet capture
 	if *fname != "" {
@@ -128,7 +128,7 @@ func (h *tcpAssembler) Start() {
 		data := packet.Data()
 		bytes += int64(len(data))
 		// defrag the IPv4 packet if required
-		if !h.config.nodefrag {
+		if !h.config.Nodefrag {
 			ip4Layer := packet.Layer(layers.LayerTypeIPv4)
 			if ip4Layer == nil {
 				continue
@@ -159,7 +159,7 @@ func (h *tcpAssembler) Start() {
 		tcp := packet.Layer(layers.LayerTypeTCP)
 		if tcp != nil {
 			tcp := tcp.(*layers.TCP)
-			if h.config.checksum {
+			if h.config.Checksum {
 				err := tcp.SetNetworkLayerForChecksum(packet.NetworkLayer())
 				if err != nil {
 					log.Fatalf("Failed to set network layer for checksum: %s\n", err)
@@ -171,19 +171,18 @@ func (h *tcpAssembler) Start() {
 			stats.totalsz += len(tcp.Payload)
 			h.assembler.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &c)
 		}
-		if count%h.config.statsevery == 0 {
+		if count%h.config.Statsevery == 0 {
 			ref := packet.Metadata().CaptureInfo.Timestamp
-			flushed, closed := h.assembler.FlushWithOptions(reassembly.FlushOptions{T: ref.Add(-h.config.timeout), TC: ref.Add(-h.config.closeTimeout)})
-			// Debug("Forced flush: %d flushed, %d closed (%s)", flushed, closed, ref)
-			log.Printf("Forced flush: %d flushed, %d closed (%s)", flushed, closed, ref)
+			flushed, closed := h.assembler.FlushWithOptions(reassembly.FlushOptions{T: ref.Add(-h.config.Timeout), TC: ref.Add(-h.config.CloseTimeout)})
+			Debug("Forced flush: %d flushed, %d closed (%s)", flushed, closed, ref)
 		}
 
-		done := h.config.maxcount > 0 && count >= h.config.maxcount
-		if count%h.config.statsevery == 0 || done {
+		done := h.config.Maxcount > 0 && count >= h.config.Maxcount
+		if count%h.config.Statsevery == 0 || done {
 			errorsMapMutex.Lock()
 			errorMapLen := len(errorsMap)
 			errorsMapMutex.Unlock()
-			fmt.Fprintf(os.Stderr, "Processed %v packets (%v bytes) in %v (errors: %v, errTypes:%v)\n", count, bytes, time.Since(start), errors, errorMapLen)
+			Debug("Processed %v packets (%v bytes) in %v (errors: %v, errTypes:%v)\n", count, bytes, time.Since(start), errors, errorMapLen)
 		}
 	}
 }
@@ -199,7 +198,7 @@ func (h *tcpAssembler) Stop() {
 	h.streamFactory.WaitGoRoutines()
 	// Debug("%s\n", h.assembler.Dump())
 	log.Printf("%s\n", h.assembler.Dump())
-	if !h.config.nodefrag {
+	if !h.config.Nodefrag {
 		fmt.Printf("IPdefrag:\t\t%d\n", stats.ipdefrag)
 	}
 	fmt.Printf("TCP stats:\n")
