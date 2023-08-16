@@ -10,6 +10,7 @@ import (
 	"github.com/honeycombio/ebpf-agent/bpf/probes"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -20,6 +21,12 @@ const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
 func main() {
+	// Set logging level
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if os.Getenv("DEBUG") == "true" {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
 	log.Info().Str("agent_version", Version).Msg("Starting Honeycomb eBPF agent")
 
 	kernelVersion, err := utils.HostKernelVersion()

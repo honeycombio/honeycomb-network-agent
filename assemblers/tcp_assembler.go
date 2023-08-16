@@ -13,6 +13,7 @@ import (
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/reassembly"
 	"github.com/honeycombio/libhoney-go"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
@@ -34,8 +35,6 @@ var stats struct {
 	overlapBytes        int
 	overlapPackets      int
 }
-
-var logLevel int
 
 type Context struct {
 	CaptureInfo gopacket.CaptureInfo
@@ -59,14 +58,6 @@ func NewTcpAssembler(config config) tcpAssembler {
 	var handle *pcap.Handle
 	var err error
 
-	// Set logging level
-	if *debug {
-		logLevel = 2
-	} else if *verbose {
-		logLevel = 1
-	} else if *quiet {
-		logLevel = -1
-	}
 	// Set up pcap packet capture
 	if *fname != "" {
 		log.Info().
@@ -203,7 +194,8 @@ func (h *tcpAssembler) Stop() {
 	log.Debug().
 		Int("closed", closed).
 		Msg("Final flush")
-	if logLevel >= 2 {
+	if zerolog.GlobalLevel() >= zerolog.DebugLevel {
+		// this uses stdlib's log, but oh well
 		h.streamPool.Dump()
 	}
 
