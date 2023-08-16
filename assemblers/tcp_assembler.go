@@ -3,7 +3,6 @@ package assemblers
 import (
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"strings"
@@ -15,8 +14,6 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/reassembly"
-	"github.com/honeycombio/libhoney-go"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
 var stats struct {
@@ -57,10 +54,10 @@ type tcpAssembler struct {
 	streamFactory *tcpStreamFactory
 	streamPool    *reassembly.StreamPool
 	assembler     *reassembly.Assembler
-	httpEvents    chan httpEvent
+	httpEvents    chan HttpEvent
 }
 
-func NewTcpAssembler(config config) tcpAssembler {
+func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
 	var handle *pcap.Handle
 	var err error
 
@@ -97,7 +94,6 @@ func NewTcpAssembler(config config) tcpAssembler {
 	packetSource.NoCopy = true
 	Info("Starting to read packets\n")
 
-	httpEvents := make(chan httpEvent, 10000)
 	streamFactory := NewTcpStreamFactory(httpEvents)
 	streamPool := reassembly.NewStreamPool(&streamFactory)
 	assembler := reassembly.NewAssembler(streamPool)
@@ -116,8 +112,6 @@ func NewTcpAssembler(config config) tcpAssembler {
 func (h *tcpAssembler) Start() {
 
 	// start up http event handler
-	// TODO: move this up to main.go level to acces k8s pod metadata
-	go handleHttpEvents(h.httpEvents)
 
 	count := 0
 	bytes := int64(0)
@@ -221,57 +215,4 @@ func (h *tcpAssembler) Stop() {
 	for e, _ := range errorsMap {
 		fmt.Printf(" %s:\t\t%d\n", e, errorsMap[e])
 	}
-}
-
-func handleHttpEvents(events chan httpEvent) {
-	for {
-		select {
-		case event := <-events:
-
-			ev := libhoney.NewEvent()
-			ev.AddField("duration_ms", event.duration.Microseconds())
-			ev.AddField("http.source_ip", event.srcIp)
-			ev.AddField("http.destination_ip", event.dstIp)
-			if event.request != nil {
-				ev.AddField("name", fmt.Sprintf("HTTP %s", event.request.Method))
-				ev.AddField(string(semconv.HTTPMethodKey), event.request.Method)
-				ev.AddField(string(semconv.HTTPURLKey), event.request.RequestURI)
-				ev.AddField("http.request.body", fmt.Sprintf("%v", event.request.Body))
-				ev.AddField("http.request.headers", fmt.Sprintf("%v", event.request.Header))
-			} else {
-				ev.AddField("name", "HTTP")
-				ev.AddField("http.request.missing", "no request on this event")
-			}
-
-			if event.response != nil {
-				ev.AddField(string(semconv.HTTPStatusCodeKey), event.response.StatusCode)
-				ev.AddField("http.response.body", event.response.Body)
-				ev.AddField("http.response.headers", event.response.Header)
-			} else {
-				ev.AddField("http.response.missing", "no request on this event")
-			}
-
-			//TODO: Body size produces a runtime error, commenting out for now.
-			// requestSize := getBodySize(event.request.Body)
-			// ev.AddField("http.request.body.size", requestSize)
-			// responseSize := getBodySize(event.response.Body)
-			// ev.AddField("http.response.body.size", responseSize)
-
-			err := ev.Send()
-			if err != nil {
-				log.Printf("error sending event: %v\n", err)
-			}
-		}
-	}
-}
-
-func getBodySize(r io.ReadCloser) int {
-	length := 0
-	b, err := io.ReadAll(r)
-	if err == nil {
-		length = len(b)
-		r.Close()
-	}
-
-	return length
 }

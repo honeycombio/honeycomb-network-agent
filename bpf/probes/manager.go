@@ -5,14 +5,13 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"os"
-	"strings"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
+	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	v1 "k8s.io/api/core/v1"
@@ -27,7 +26,7 @@ const mapKey uint32 = 0
 
 type manager struct {
 	bpfObjects bpfObjects
-	probes 	   []link.Link
+	probes     []link.Link
 	reader     *perf.Reader
 	client     *kubernetes.Clientset
 }
@@ -62,9 +61,9 @@ func New(client *kubernetes.Clientset) manager {
 
 	return manager{
 		bpfObjects: objs,
-		probes: []link.Link{ kprobeTcpConnect, kprobeTcpClose },
-		reader: reader,
-		client: client,
+		probes:     []link.Link{kprobeTcpConnect, kprobeTcpClose},
+		reader:     reader,
+		client:     client,
 	}
 }
 
@@ -150,10 +149,6 @@ func sendEvent(event bpfTcpEvent, client *kubernetes.Clientset) {
 	sourceIpAddr := intToIP(event.Saddr).String()
 	destIpAddr := intToIP(event.Daddr).String()
 
-	destPod := getPodByIPAddr(client, destIpAddr)
-	sourcePod := getPodByIPAddr(client, sourceIpAddr)
-	sourceNode := getNodeByPod(client, sourcePod)
-
 	ev := libhoney.NewEvent()
 	ev.AddField("name", "tcp_event")
 	ev.AddField("duration_ms", (event.EndTime-event.StartTime)/1_000_000) // convert ns to ms
@@ -163,33 +158,9 @@ func sendEvent(event bpfTcpEvent, client *kubernetes.Clientset) {
 	ev.AddField(string(semconv.NetHostPortKey), event.Sport)
 	ev.AddField("destination.port", event.Dport)
 
-	// dest pod
-	ev.AddField(fmt.Sprintf("destination.%s", semconv.K8SPodNameKey), destPod.Name)
-	ev.AddField(fmt.Sprintf("destination.%s", semconv.K8SPodUIDKey), destPod.UID)
-
-	// source pod
-	ev.AddField(string(semconv.K8SPodNameKey), sourcePod.Name)
-	ev.AddField(string(semconv.K8SPodUIDKey), sourcePod.UID)
-
-	// namespace
-	ev.AddField(string(semconv.K8SNamespaceNameKey), sourcePod.Namespace)
-
-	// service
-	// no semconv for service yet
-	ev.AddField("k8s.service.name", getServiceForPod(client, sourcePod).Name)
-
-	// node
-	ev.AddField(string(semconv.K8SNodeNameKey), sourceNode.Name)
-	ev.AddField(string(semconv.K8SNodeUIDKey), sourceNode.UID)
-
-	// container names
-	if len(sourcePod.Spec.Containers) > 0 {
-		var containerNames []string
-		for _, container := range sourcePod.Spec.Containers {
-			containerNames = append(containerNames, container.Name)
-		}
-		ev.AddField(string(semconv.K8SContainerNameKey), strings.Join(containerNames, ","))
-	}
+	// k8s metadata
+	k8sEventAttrs := utils.GetK8sEventAttrs(client, sourceIpAddr, destIpAddr)
+	ev.Add(k8sEventAttrs)
 
 	err := ev.Send()
 	if err != nil {
