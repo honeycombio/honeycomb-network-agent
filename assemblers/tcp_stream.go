@@ -7,6 +7,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/reassembly"
+	"github.com/rs/zerolog/log"
 )
 
 type tcpStream struct {
@@ -86,7 +87,10 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 		stats.biggestChunkPackets = sgStats.Packets
 	}
 	if sgStats.OverlapBytes != 0 && sgStats.OverlapPackets == 0 {
-		fmt.Printf("bytes:%d, pkts:%d\n", sgStats.OverlapBytes, sgStats.OverlapPackets)
+		log.Fatal().
+			Int("bytes", sgStats.OverlapBytes).
+			Int("packets", sgStats.OverlapPackets).
+			Msg("Invalid overlap")
 		panic("Invalid overlap")
 	}
 	stats.overlapBytes += sgStats.OverlapBytes

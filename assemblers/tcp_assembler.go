@@ -199,36 +199,33 @@ func (h *tcpAssembler) Start() {
 func (h *tcpAssembler) Stop() {
 	closed := h.assembler.FlushAll()
 	// Debug("Final flush: %d closed", closed)
-	log.Printf("Final flush: %d closed", closed)
+	log.Debug().
+		Int("closed", closed).
+		Msg("Final flush")
 	if logLevel >= 2 {
 		h.streamPool.Dump()
 	}
 
 	h.streamFactory.WaitGoRoutines()
-	// Debug("%s\n", h.assembler.Dump())
 	log.Printf("%s\n", h.assembler.Dump())
-	if !h.config.nodefrag {
-		fmt.Printf("IPdefrag:\t\t%d\n", stats.ipdefrag)
-	}
-	fmt.Printf("TCP stats:\n")
-	fmt.Printf(" missed bytes:\t\t%d\n", stats.missedBytes)
-	fmt.Printf(" total packets:\t\t%d\n", stats.pkt)
-	fmt.Printf(" rejected FSM:\t\t%d\n", stats.rejectFsm)
-	fmt.Printf(" rejected Options:\t%d\n", stats.rejectOpt)
-	fmt.Printf(" reassembled bytes:\t%d\n", stats.sz)
-	fmt.Printf(" total TCP bytes:\t%d\n", stats.totalsz)
-	fmt.Printf(" conn rejected FSM:\t%d\n", stats.rejectConnFsm)
-	fmt.Printf(" reassembled chunks:\t%d\n", stats.reassembled)
-	fmt.Printf(" out-of-order packets:\t%d\n", stats.outOfOrderPackets)
-	fmt.Printf(" out-of-order bytes:\t%d\n", stats.outOfOrderBytes)
-	fmt.Printf(" biggest-chunk packets:\t%d\n", stats.biggestChunkPackets)
-	fmt.Printf(" biggest-chunk bytes:\t%d\n", stats.biggestChunkBytes)
-	fmt.Printf(" overlap packets:\t%d\n", stats.overlapPackets)
-	fmt.Printf(" overlap bytes:\t\t%d\n", stats.overlapBytes)
-	fmt.Printf("Errors: %d\n", errors)
-	for e, _ := range errorsMap {
-		fmt.Printf(" %s:\t\t%d\n", e, errorsMap[e])
-	}
+	log.Debug().
+		Int("IPdefrag", stats.ipdefrag).
+		Int("missed_bytes", stats.missedBytes).
+		Int("total_packets", stats.pkt).
+		Int("rejected_FSM", stats.rejectFsm).
+		Int("rejected_Options", stats.rejectOpt).
+		Int("reassembled_bytes", stats.sz).
+		Int("total_TCP_bytes", stats.totalsz).
+		Int("conn_rejected_FSM", stats.rejectConnFsm).
+		Int("reassembled_chunks", stats.reassembled).
+		Int("out_of_order_packets", stats.outOfOrderPackets).
+		Int("out_of_order_bytes", stats.outOfOrderBytes).
+		Int("biggest_chunk_packets", stats.biggestChunkPackets).
+		Int("biggest_chunk_bytes", stats.biggestChunkBytes).
+		Int("overlap_packets", stats.overlapPackets).
+		Int("overlap_bytes", stats.overlapBytes).
+		Uint("error_count", errors).
+		Msg("Stop")
 }
 
 func handleHttpEvents(events chan httpEvent) {
