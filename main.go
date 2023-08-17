@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,6 +13,7 @@ import (
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -89,7 +91,9 @@ func main() {
 	agentConfig := assemblers.NewConfig()
 
 	// setup TCP stream reader
-	assember := assemblers.NewTcpAssembler(*agentConfig)
+	httpEvents := make(chan assemblers.HttpEvent, 10000)
+	assember := assemblers.NewTcpAssembler(*agentConfig, httpEvents)
+	go handleHttpEvents(httpEvents, k8sClient)
 	go assember.Start()
 	defer assember.Stop()
 
@@ -100,6 +104,70 @@ func main() {
 	<-signalChannel
 
 	log.Info().Msg("Shutting down...")
+}
+
+func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clientset) {
+	for {
+		select {
+		case event := <-events:
+
+			// create libhoney event
+			ev := libhoney.NewEvent()
+
+			// common attributes
+			ev.AddField("duration_ms", event.Duration.Microseconds())
+			ev.AddField(string(semconv.NetSockHostAddrKey), event.SrcIp)
+			ev.AddField("destination.address", event.DstIp)
+
+			// request attributes
+			if event.Request != nil {
+				ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
+				ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
+				ev.AddField(string(semconv.HTTPURLKey), event.Request.RequestURI)
+				ev.AddField("http.request.body", fmt.Sprintf("%v", event.Request.Body))
+				ev.AddField("http.request.headers", fmt.Sprintf("%v", event.Request.Header))
+				ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
+			} else {
+				ev.AddField("name", "HTTP")
+				ev.AddField("http.request.missing", "no request on this event")
+			}
+
+			// response attributes
+			if event.Response != nil {
+				ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
+				ev.AddField("http.response.body", event.Response.Body)
+				ev.AddField("http.response.headers", event.Response.Header)
+			} else {
+				ev.AddField("http.response.missing", "no response on this event")
+			}
+
+			// k8s attributes
+			k8sEventAttrs := utils.GetK8sEventAttrs(client, event.SrcIp, event.DstIp)
+			ev.Add(k8sEventAttrs)
+
+			//TODO: Body size produces a runtime error, commenting out for now.
+			// requestSize := getBodySize(event.request.Body)
+			// ev.AddField("http.request.body.size", requestSize)
+			// responseSize := getBodySize(event.response.Body)
+			// ev.AddField("http.response.body.size", responseSize)
+
+			err := ev.Send()
+			if err != nil {
+				log.Printf("error sending event: %v\n", err)
+			}
+		}
+	}
+}
+
+func getBodySize(r io.ReadCloser) int {
+	length := 0
+	b, err := io.ReadAll(r)
+	if err == nil {
+		length = len(b)
+		r.Close()
+	}
+
+	return length
 }
 
 func getEnvOrDefault(key string, defaultValue string) string {

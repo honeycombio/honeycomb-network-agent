@@ -5,11 +5,11 @@ import (
 	"time"
 )
 
-type httpEvent struct {
-	requestId string
-	request   *http.Request
-	response  *http.Response
-	duration  time.Duration
-	srcIp     string
-	dstIp     string
+type HttpEvent struct {
+	RequestId string
+	Request   *http.Request
+	Response  *http.Response
+	Duration  time.Duration
+	SrcIp     string
+	DstIp     string
 }

@@ -15,10 +15,10 @@ var streamId uint64 = 0
 
 type tcpStreamFactory struct {
 	wg         sync.WaitGroup
-	httpEvents chan httpEvent
+	httpEvents chan HttpEvent
 }
 
-func NewTcpStreamFactory(httpEvents chan httpEvent) tcpStreamFactory {
+func NewTcpStreamFactory(httpEvents chan HttpEvent) tcpStreamFactory {
 	return tcpStreamFactory{
 		httpEvents: httpEvents,
 	}
