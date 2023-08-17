@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"flag"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 const closeTimeout time.Duration = time.Hour * 24
@@ -74,9 +76,9 @@ func NewConfig() *config {
 	if c.Debug {
 		b, err := json.MarshalIndent(c, "", "  ")
 		if err != nil {
-			Debug("Failed to marshal agent config: %e", err)
+			log.Debug().Err(err).Msg("Failed to marshal agent config")
 		} else {
-			Debug("Agent config: %s", string(b))
+			log.Debug().RawJSON("Agent config", b)
 		}
 	}
 	return c

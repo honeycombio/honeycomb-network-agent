@@ -2,10 +2,7 @@ package assemblers
 
 import (
 	"flag"
-	"fmt"
-	"log"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/gopacket"
@@ -13,6 +10,8 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/reassembly"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 var stats struct {
@@ -32,11 +31,6 @@ var stats struct {
 	overlapBytes        int
 	overlapPackets      int
 }
-
-var logLevel int
-var errorsMap map[string]uint
-var errorsMapMutex sync.Mutex
-var errors uint
 
 type Context struct {
 	CaptureInfo gopacket.CaptureInfo
@@ -60,39 +54,40 @@ func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
 	var handle *pcap.Handle
 	var err error
 
-	// Set logging level
-	if *debug {
-		logLevel = 2
-	} else if *verbose {
-		logLevel = 1
-	} else if *quiet {
-		logLevel = -1
-	}
-
-	errorsMap = make(map[string]uint)
 	// Set up pcap packet capture
 	if *fname != "" {
-		log.Printf("Reading from pcap dump %q", *fname)
+		log.Info().
+			Str("filename", *fname).
+			Msg("Reading from pcap dump")
 		handle, err = pcap.OpenOffline(*fname)
 	} else {
-		log.Printf("Starting capture on interface %q", *iface)
+		log.Info().
+			Str("interface", *iface).
+			Msg("Starting capture")
 		handle, err = pcap.OpenLive(*iface, int32(*snaplen), true, pcap.BlockForever)
 	}
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().
+			Err(err).
+			Msg("Failed to open a pcap handle")
 	}
 	if len(flag.Args()) > 0 {
 		bpffilter := strings.Join(flag.Args(), " ")
-		Info("Using BPF filter %q\n", bpffilter)
+		log.Info().
+			Str("bpf_filter", bpffilter).
+			Msg("Using BPF filter")
 		if err = handle.SetBPFFilter(bpffilter); err != nil {
-			log.Fatal("BPF filter error:", err)
+			log.Fatal().
+				Err(err).
+				Str("bpf_filter", bpffilter).
+				Msg("BPF filter error")
 		}
 	}
 
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	packetSource.Lazy = *lazy
 	packetSource.NoCopy = true
-	Info("Starting to read packets\n")
+	log.Info().Msg("Starting to read packets")
 
 	streamFactory := NewTcpStreamFactory(httpEvents)
 	streamPool := reassembly.NewStreamPool(&streamFactory)
@@ -131,16 +126,16 @@ func (h *tcpAssembler) Start() {
 			l := ip4.Length
 			newip4, err := defragger.DefragIPv4(ip4)
 			if err != nil {
-				log.Fatalln("Error while de-fragmenting", err)
+				log.Fatal().Err(err).Msg("Error while de-fragmenting")
 			} else if newip4 == nil {
-				// Debug("Fragment...\n")
-				log.Printf("Fragment...\n")
+				log.Debug().Msg("Fragment...\n")
 				continue // packet fragment, we don't have whole packet yet.
 			}
 			if newip4.Length != l {
 				stats.ipdefrag++
-				// Debug("Decoding re-assembled packet: %s\n", newip4.NextLayerType())
-				log.Printf("Decoding re-assembled packet: %s\n", newip4.NextLayerType())
+				log.Debug().
+					Str("network_layer_type", newip4.NextLayerType().String()).
+					Msg("Decoding re-assembled packet")
 				pb, ok := packet.(gopacket.PacketBuilder)
 				if !ok {
 					panic("Not a PacketBuilder")
@@ -156,7 +151,7 @@ func (h *tcpAssembler) Start() {
 			if h.config.Checksum {
 				err := tcp.SetNetworkLayerForChecksum(packet.NetworkLayer())
 				if err != nil {
-					log.Fatalf("Failed to set network layer for checksum: %s\n", err)
+					log.Fatal().Err(err).Msg("Failed to set network layer for checksum")
 				}
 			}
 			c := Context{
@@ -168,15 +163,20 @@ func (h *tcpAssembler) Start() {
 		if count%h.config.Statsevery == 0 {
 			ref := packet.Metadata().CaptureInfo.Timestamp
 			flushed, closed := h.assembler.FlushWithOptions(reassembly.FlushOptions{T: ref.Add(-h.config.Timeout), TC: ref.Add(-h.config.CloseTimeout)})
-			Debug("Forced flush: %d flushed, %d closed (%s)", flushed, closed, ref)
+			log.Debug().
+				Int("flushed", flushed).
+				Int("closed", closed).
+				Time("packet_timestamp", ref).
+				Msg("Forced flush")
 		}
 
 		done := h.config.Maxcount > 0 && count >= h.config.Maxcount
 		if count%h.config.Statsevery == 0 || done {
-			errorsMapMutex.Lock()
-			errorMapLen := len(errorsMap)
-			errorsMapMutex.Unlock()
-			Debug("Processed %v packets (%v bytes) in %v (errors: %v, errTypes:%v)\n", count, bytes, time.Since(start), errors, errorMapLen)
+			log.Info().
+				Int("processed_count_since_start", count).
+				Int64("milliseconds_since_start", time.Since(start).Milliseconds()).
+				Int64("bytes", bytes).
+				Msg("Processed Packets")
 		}
 	}
 }
@@ -184,34 +184,31 @@ func (h *tcpAssembler) Start() {
 func (h *tcpAssembler) Stop() {
 	closed := h.assembler.FlushAll()
 	// Debug("Final flush: %d closed", closed)
-	log.Printf("Final flush: %d closed", closed)
-	if logLevel >= 2 {
+	log.Debug().
+		Int("closed", closed).
+		Msg("Final flush")
+	if zerolog.GlobalLevel() >= zerolog.DebugLevel {
+		// this uses stdlib's log, but oh well
 		h.streamPool.Dump()
 	}
 
 	h.streamFactory.WaitGoRoutines()
-	// Debug("%s\n", h.assembler.Dump())
-	log.Printf("%s\n", h.assembler.Dump())
-	if !h.config.Nodefrag {
-		fmt.Printf("IPdefrag:\t\t%d\n", stats.ipdefrag)
-	}
-	fmt.Printf("TCP stats:\n")
-	fmt.Printf(" missed bytes:\t\t%d\n", stats.missedBytes)
-	fmt.Printf(" total packets:\t\t%d\n", stats.pkt)
-	fmt.Printf(" rejected FSM:\t\t%d\n", stats.rejectFsm)
-	fmt.Printf(" rejected Options:\t%d\n", stats.rejectOpt)
-	fmt.Printf(" reassembled bytes:\t%d\n", stats.sz)
-	fmt.Printf(" total TCP bytes:\t%d\n", stats.totalsz)
-	fmt.Printf(" conn rejected FSM:\t%d\n", stats.rejectConnFsm)
-	fmt.Printf(" reassembled chunks:\t%d\n", stats.reassembled)
-	fmt.Printf(" out-of-order packets:\t%d\n", stats.outOfOrderPackets)
-	fmt.Printf(" out-of-order bytes:\t%d\n", stats.outOfOrderBytes)
-	fmt.Printf(" biggest-chunk packets:\t%d\n", stats.biggestChunkPackets)
-	fmt.Printf(" biggest-chunk bytes:\t%d\n", stats.biggestChunkBytes)
-	fmt.Printf(" overlap packets:\t%d\n", stats.overlapPackets)
-	fmt.Printf(" overlap bytes:\t\t%d\n", stats.overlapBytes)
-	fmt.Printf("Errors: %d\n", errors)
-	for e, _ := range errorsMap {
-		fmt.Printf(" %s:\t\t%d\n", e, errorsMap[e])
-	}
+	log.Debug().
+		Str("assember_page_usage", h.assembler.Dump()).
+		Int("IPdefrag", stats.ipdefrag).
+		Int("missed_bytes", stats.missedBytes).
+		Int("total_packets", stats.pkt).
+		Int("rejected_FSM", stats.rejectFsm).
+		Int("rejected_Options", stats.rejectOpt).
+		Int("reassembled_bytes", stats.sz).
+		Int("total_TCP_bytes", stats.totalsz).
+		Int("conn_rejected_FSM", stats.rejectConnFsm).
+		Int("reassembled_chunks", stats.reassembled).
+		Int("out_of_order_packets", stats.outOfOrderPackets).
+		Int("out_of_order_bytes", stats.outOfOrderBytes).
+		Int("biggest_chunk_packets", stats.biggestChunkPackets).
+		Int("biggest_chunk_bytes", stats.biggestChunkBytes).
+		Int("overlap_packets", stats.overlapPackets).
+		Int("overlap_bytes", stats.overlapBytes).
+		Msg("Stop")
 }

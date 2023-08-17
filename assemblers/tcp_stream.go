@@ -7,6 +7,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/reassembly"
+	"github.com/rs/zerolog/log"
 )
 
 type tcpStream struct {
@@ -51,10 +52,16 @@ func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassem
 	if *checksum {
 		c, err := tcp.ComputeChecksum()
 		if err != nil {
-			Error("ChecksumCompute", "%s: Got error computing checksum: %s\n", t.ident, err)
+			log.Error().
+				Err(err).
+				Str("tcp_stream_ident", t.ident).
+				Msg("ChecksumCompute")
 			accept = false
 		} else if c != 0x0 {
-			Error("Checksum", "%s: Invalid checksum: 0x%x\n", t.ident, c)
+			log.Error().
+				Str("tcp_stream_ident", t.ident).
+				Uint16("checksum", c).
+				Msg("InvalidChecksum")
 			accept = false
 		}
 	}
@@ -86,7 +93,10 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 		stats.biggestChunkPackets = sgStats.Packets
 	}
 	if sgStats.OverlapBytes != 0 && sgStats.OverlapPackets == 0 {
-		fmt.Printf("bytes:%d, pkts:%d\n", sgStats.OverlapBytes, sgStats.OverlapPackets)
+		log.Fatal().
+			Int("bytes", sgStats.OverlapBytes).
+			Int("packets", sgStats.OverlapPackets).
+			Msg("Invalid overlap")
 		panic("Invalid overlap")
 	}
 	stats.overlapBytes += sgStats.OverlapBytes
@@ -94,11 +104,23 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 
 	var ident string
 	if dir == reassembly.TCPDirClientToServer {
-		ident = fmt.Sprintf("%v %v(%s): ", t.net, t.transport, dir)
+		ident = fmt.Sprintf("%v %v", t.net, t.transport)
 	} else {
-		ident = fmt.Sprintf("%v %v(%s): ", t.net.Reverse(), t.transport.Reverse(), dir)
+		ident = fmt.Sprintf("%v %v", t.net.Reverse(), t.transport.Reverse())
 	}
-	Debug("%s: SG reassembled packet with %d bytes (start:%v,end:%v,skip:%d,saved:%d,nb:%d,%d,overlap:%d,%d)\n", ident, length, start, end, skip, saved, sgStats.Packets, sgStats.Chunks, sgStats.OverlapBytes, sgStats.OverlapPackets)
+	log.Debug().
+		Str("ident", ident).            // ex: "192.168.65.4->192.168.65.4 6443->38304"
+		Str("direction", dir.String()). // ex: "client->server" or "server->client"
+		Int("byte_count", length).
+		Bool("start", start).
+		Bool("end", end).
+		Int("skip", skip).
+		Int("saved", saved).
+		Int("packet_count", sgStats.Packets).
+		Int("chunk_count", sgStats.Chunks).
+		Int("overlap_byte_count", sgStats.OverlapBytes).
+		Int("overlap_packet_count", sgStats.OverlapPackets).
+		Msg("SG reassembled packet")
 	if skip == -1 && *allowmissinginit {
 		// this is allowed
 	} else if skip != 0 {
@@ -119,7 +141,9 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 }
 
 func (t *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
-	Debug("%s: Connection closed\n", t.ident)
+	log.Debug().
+		Str("tcp_stream_ident", t.ident).
+		Msg("Connection closed")
 	close(t.client.bytes)
 	close(t.server.bytes)
 	// do not remove the connection to allow last ACK
