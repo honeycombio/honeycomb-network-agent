@@ -128,14 +128,14 @@ func (h *tcpAssembler) Start() {
 			if err != nil {
 				log.Fatal().Err(err).Msg("Error while de-fragmenting")
 			} else if newip4 == nil {
-				// Debug("Fragment...\n")
-				log.Printf("Fragment...\n")
+				log.Debug().Msg("Fragment...\n")
 				continue // packet fragment, we don't have whole packet yet.
 			}
 			if newip4.Length != l {
 				stats.ipdefrag++
-				// Debug("Decoding re-assembled packet: %s\n", newip4.NextLayerType())
-				log.Printf("Decoding re-assembled packet: %s\n", newip4.NextLayerType())
+				log.Debug().
+					Str("network_layer_type", newip4.NextLayerType().String()).
+					Msg("Decoding re-assembled packet")
 				pb, ok := packet.(gopacket.PacketBuilder)
 				if !ok {
 					panic("Not a PacketBuilder")
@@ -193,8 +193,8 @@ func (h *tcpAssembler) Stop() {
 	}
 
 	h.streamFactory.WaitGoRoutines()
-	log.Printf("%s\n", h.assembler.Dump())
 	log.Debug().
+		Str("assember_page_usage", h.assembler.Dump()).
 		Int("IPdefrag", stats.ipdefrag).
 		Int("missed_bytes", stats.missedBytes).
 		Int("total_packets", stats.pkt).

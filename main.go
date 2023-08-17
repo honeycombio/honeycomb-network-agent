@@ -153,7 +153,9 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clien
 
 			err := ev.Send()
 			if err != nil {
-				log.Printf("error sending event: %v\n", err)
+				log.Debug().
+					Err(err).
+					Msg("error sending event")
 			}
 		}
 	}

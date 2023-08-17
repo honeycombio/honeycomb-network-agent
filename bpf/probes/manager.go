@@ -88,8 +88,6 @@ func (m *manager) Start() {
 			continue
 		}
 
-		// log.Printf("event: %+v\n", event)
-
 		sendEvent(event, m.client)
 	}
 }
@@ -164,7 +162,9 @@ func sendEvent(event bpfTcpEvent, client *kubernetes.Clientset) {
 
 	err := ev.Send()
 	if err != nil {
-		log.Printf("error sending event: %v\n", err)
+		log.Debug().
+			Err(err).
+			Msg("error sending event")
 	}
 }
 
