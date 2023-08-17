@@ -9,14 +9,14 @@ import (
 )
 
 type httpReader struct {
-	isClient bool
-	srcIp    string
-	srcPort  string
-	dstIp    string
-	dstPort  string
-	bytes    chan []byte
-	data     []byte
-	parent   *tcpStream
+	isClient  bool
+	srcIp     string
+	srcPort   string
+	dstIp     string
+	dstPort   string
+	bytes     chan []byte
+	data      []byte
+	parent    *tcpStream
 	timestamp time.Time
 }
 
@@ -74,6 +74,7 @@ func (h *httpReader) processEvent(entry *entry) {
 		RequestId: h.parent.ident,
 		Request:   entry.request,
 		Response:  entry.response,
+		Timestamp: entry.requestTimestamp,
 		Duration:  entry.responseTimestamp.Sub(entry.requestTimestamp),
 		SrcIp:     h.srcIp,
 		DstIp:     h.dstIp,
