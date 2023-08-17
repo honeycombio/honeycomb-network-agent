@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/honeycombio/ebpf-agent/assemblers"
@@ -121,12 +121,15 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clien
 
 			// request attributes
 			if event.Request != nil {
+				bodySizeString := event.Request.Header.Get("Content-Length")
+				bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
 				ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
 				ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
 				ev.AddField(string(semconv.HTTPURLKey), event.Request.RequestURI)
 				ev.AddField("http.request.body", fmt.Sprintf("%v", event.Request.Body))
 				ev.AddField("http.request.headers", fmt.Sprintf("%v", event.Request.Header))
 				ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
+				ev.AddField("http.request.body.size", bodySize)
 			} else {
 				ev.AddField("name", "HTTP")
 				ev.AddField("http.request.missing", "no request on this event")
@@ -134,9 +137,14 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clien
 
 			// response attributes
 			if event.Response != nil {
+				bodySizeString := event.Response.Header.Get("Content-Length")
+				bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
+
 				ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
 				ev.AddField("http.response.body", event.Response.Body)
 				ev.AddField("http.response.headers", event.Response.Header)
+				ev.AddField("http.response.body.size", bodySize)
+
 			} else {
 				ev.AddField("http.response.missing", "no response on this event")
 			}
@@ -144,12 +152,6 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clien
 			// k8s attributes
 			k8sEventAttrs := utils.GetK8sEventAttrs(client, event.SrcIp, event.DstIp)
 			ev.Add(k8sEventAttrs)
-
-			//TODO: Body size produces a runtime error, commenting out for now.
-			// requestSize := getBodySize(event.request.Body)
-			// ev.AddField("http.request.body.size", requestSize)
-			// responseSize := getBodySize(event.response.Body)
-			// ev.AddField("http.response.body.size", responseSize)
 
 			err := ev.Send()
 			if err != nil {
@@ -159,17 +161,6 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clien
 			}
 		}
 	}
-}
-
-func getBodySize(r io.ReadCloser) int {
-	length := 0
-	b, err := io.ReadAll(r)
-	if err == nil {
-		length = len(b)
-		r.Close()
-	}
-
-	return length
 }
 
 func getEnvOrDefault(key string, defaultValue string) string {
