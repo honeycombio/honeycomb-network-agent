@@ -4,15 +4,20 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/rs/zerolog/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
 func GetK8sEventAttrs(client *CachedK8sClient, srcIp string, dstIp string) map[string]any {
+
 	dstPod := client.GetPodByIPAddr(dstIp)
 	srcPod := client.GetPodByIPAddr(srcIp)
 	srcNode := client.GetNodeByPod(srcPod)
 	service := client.GetServiceForPod(srcPod)
-
+	log.Info().
+		Str("src_ip", srcIp).
+		Str("dst_ip", dstIp).
+		Msg("Getting k8s event attrs")
 	k8sEventAttrs := map[string]any{
 		// dest pod
 		fmt.Sprintf("destination.%s", semconv.K8SPodNameKey): dstPod.Name,

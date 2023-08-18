@@ -46,11 +46,11 @@ func (c *CachedK8sClient) Start(ctx context.Context) {
 }
 
 func (c *CachedK8sClient) GetNodes() ([]*v1.Node, error) {
-	return c.nodeInformer.Lister().List(labels.NewSelector())
+	return c.nodeInformer.Lister().List(labels.Everything())
 }
 
 func (c *CachedK8sClient) GetPods() ([]*v1.Pod, error) {
-	return c.podInformer.Lister().List(labels.NewSelector())
+	return c.podInformer.Lister().Pods("").List(labels.Everything())
 }
 
 func (c *CachedK8sClient) GetPodsWithSelector(selector labels.Selector) ([]*v1.Pod, error) {
@@ -58,7 +58,7 @@ func (c *CachedK8sClient) GetPodsWithSelector(selector labels.Selector) ([]*v1.P
 }
 
 func (c *CachedK8sClient) GetServices() ([]*v1.Service, error) {
-	return c.serviceInformer.Lister().List(labels.NewSelector())
+	return c.serviceInformer.Lister().List(labels.Everything())
 }
 
 func (c *CachedK8sClient) GetServicesWithSelector(selector labels.Selector) ([]*v1.Service, error) {
@@ -67,8 +67,9 @@ func (c *CachedK8sClient) GetServicesWithSelector(selector labels.Selector) ([]*
 
 func (c *CachedK8sClient) GetPodByIPAddr(ipAddr string) *v1.Pod {
 	pods, err := c.GetPods()
+	log.Info().Any("pods", pods).Msg("Got these pods")
 	if err != nil {
-		// TODO: handle error
+		log.Error().Str("msg", "failed to get pod by ip address").Msg("failed to get pods")
 	}
 	var matchedPod *v1.Pod
 	for _, pod := range pods {
@@ -82,14 +83,14 @@ func (c *CachedK8sClient) GetPodByIPAddr(ipAddr string) *v1.Pod {
 func (monitor *CachedK8sClient) GetServiceForPod(inputPod *v1.Pod) *v1.Service {
 	services, err := monitor.GetServices()
 	if err != nil {
-		// TODO: handle error
+		log.Error().Str("msg", "failed to get service for pod").Msg("failed to get services")
 	}
 	var matchedService *v1.Service
 	for _, service := range services {
 		set := labels.Set(service.Spec.Selector)
 		pods, err := monitor.GetPodsWithSelector(set.AsSelector())
 		if err != nil {
-			// TODO: handle error
+			log.Error().Str("msg", "failed to get service for pod").Msg("failed to get pods")
 		}
 		for _, pod := range pods {
 			if pod.Name == inputPod.Name {
@@ -103,7 +104,7 @@ func (monitor *CachedK8sClient) GetServiceForPod(inputPod *v1.Pod) *v1.Service {
 func (m *CachedK8sClient) GetNodeByPod(pod *v1.Pod) *v1.Node {
 	nodes, err := m.GetNodes()
 	if err != nil {
-		// TODO: handle error
+		log.Error().Str("msg", "failed to get node by pod").Msg("failed to get nodes")
 	}
 	var matchedNode *v1.Node
 	for _, node := range nodes {
