@@ -37,8 +37,6 @@ See notes on local development in [`DEVELOPING.md`](./DEVELOPING.md)
 
 ```json
 {
-  "dc.duration_ms": 0,
-  "dc.error": false,
   "destination.address": "192.168.65.4",
   "duration_ms": 4937,
   "goroutine_count": 540,
