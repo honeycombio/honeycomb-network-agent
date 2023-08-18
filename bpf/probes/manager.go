@@ -2,7 +2,6 @@ package probes
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
 	"errors"
 	"net"
@@ -14,15 +13,10 @@ import (
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf source/tcp_probe.c
-
-const mapKey uint32 = 0
 
 type manager struct {
 	bpfObjects bpfObjects
@@ -98,47 +92,6 @@ func (m *manager) Stop() {
 	}
 	m.bpfObjects.Close()
 	m.reader.Close()
-}
-
-func getPodByIPAddr(client *kubernetes.Clientset, ipAddr string) v1.Pod {
-	pods, _ := client.CoreV1().Pods(v1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
-
-	var matchedPod v1.Pod
-
-	for _, pod := range pods.Items {
-		if ipAddr == pod.Status.PodIP {
-			matchedPod = pod
-		}
-	}
-
-	return matchedPod
-}
-
-func getServiceForPod(client *kubernetes.Clientset, inputPod v1.Pod) v1.Service {
-	// get list of services
-	services, _ := client.CoreV1().Services(v1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
-	var matchedService v1.Service
-	// loop over services
-	for _, service := range services.Items {
-		set := labels.Set(service.Spec.Selector)
-		listOptions := metav1.ListOptions{LabelSelector: set.AsSelector().String()}
-		pods, err := client.CoreV1().Pods(v1.NamespaceAll).List(context.TODO(), listOptions)
-		if err != nil {
-			log.Error().Err(err).Msg("Error getting pods")
-		}
-		for _, pod := range pods.Items {
-			if pod.Name == inputPod.Name {
-				matchedService = service
-			}
-		}
-	}
-
-	return matchedService
-}
-
-func getNodeByPod(client *kubernetes.Clientset, pod v1.Pod) *v1.Node {
-	node, _ := client.CoreV1().Nodes().Get(context.TODO(), pod.Spec.NodeName, metav1.GetOptions{})
-	return node
 }
 
 // Send event to Honeycomb
