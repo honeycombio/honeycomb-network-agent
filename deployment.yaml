@@ -96,6 +96,6 @@ spec:
                 - PERFMON
                 - NET_RAW
             # for local debugging
-            privileged: true
+            # privileged: true
       imagePullSecrets:
         - name: ghcr
