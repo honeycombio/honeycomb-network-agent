@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -78,13 +79,21 @@ func main() {
 
 	// creates the clientset
 	k8sClient, err := kubernetes.NewForConfig(k8sConfig)
-
 	if err != nil {
 		panic(err.Error())
 	}
 
+	// create k8s monitor that caches k8s objects
+	ctx, done := context.WithCancel(context.Background())
+	defer done()
+	cachedK8sClient := utils.NewCachedK8sClient(ctx, k8sClient)
+	cachedK8sClient.Start(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create cached k8s client")
+	}
+
 	// setup probes
-	p := probes.New(k8sClient)
+	p := probes.New(cachedK8sClient)
 	go p.Start()
 	defer p.Stop()
 
@@ -93,7 +102,7 @@ func main() {
 	// setup TCP stream reader
 	httpEvents := make(chan assemblers.HttpEvent, 10000)
 	assember := assemblers.NewTcpAssembler(*agentConfig, httpEvents)
-	go handleHttpEvents(httpEvents, k8sClient)
+	go handleHttpEvents(httpEvents, cachedK8sClient)
 	go assember.Start()
 	defer assember.Stop()
 
@@ -106,7 +115,7 @@ func main() {
 	log.Info().Msg("Shutting down...")
 }
 
-func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clientset) {
+func handleHttpEvents(events chan assemblers.HttpEvent, client *utils.CachedK8sClient) {
 	for {
 		select {
 		case event := <-events:

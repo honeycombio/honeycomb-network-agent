@@ -28,10 +28,10 @@ type manager struct {
 	bpfObjects bpfObjects
 	probes     []link.Link
 	reader     *perf.Reader
-	client     *kubernetes.Clientset
+	client     *utils.CachedK8sClient
 }
 
-func New(client *kubernetes.Clientset) manager {
+func New(client *utils.CachedK8sClient) manager {
 	// Load pre-compiled programs and maps into the kernel.
 	objs := bpfObjects{}
 	if err := loadBpfObjects(&objs, nil); err != nil {
@@ -142,7 +142,7 @@ func getNodeByPod(client *kubernetes.Clientset, pod v1.Pod) *v1.Node {
 }
 
 // Send event to Honeycomb
-func sendEvent(event bpfTcpEvent, client *kubernetes.Clientset) {
+func sendEvent(event bpfTcpEvent, client *utils.CachedK8sClient) {
 
 	sourceIpAddr := intToIP(event.Saddr).String()
 	destIpAddr := intToIP(event.Daddr).String()
