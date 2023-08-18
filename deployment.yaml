@@ -95,5 +95,7 @@ spec:
                 - BPF
                 - PERFMON
                 - NET_RAW
+            # for local debugging
+            # privileged: true
       imagePullSecrets:
         - name: ghcr
