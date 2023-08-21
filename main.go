@@ -16,9 +16,10 @@ import (
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
 const Version string = "0.0.3-alpha"
@@ -136,9 +137,9 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	// common attributes
 	ev.Timestamp = event.Timestamp
 	ev.AddField("httpEvent_handled_at", time.Now())
-	ev.AddField("httpEvent_handled_latency", time.Now().Sub(event.Timestamp))
+	ev.AddField("httpEvent_handled_latency_ms", time.Now().Sub(event.Timestamp).Milliseconds())
 	ev.AddField("goroutine_count", runtime.NumGoroutine())
-	ev.AddField("duration_ms", event.Duration.Microseconds())
+	ev.AddField("duration_ms", event.Duration.Milliseconds())
 	ev.AddField(string(semconv.NetSockHostAddrKey), event.SrcIp)
 	ev.AddField("destination.address", event.DstIp)
 
