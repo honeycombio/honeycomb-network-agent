@@ -85,7 +85,7 @@ hny-ebpf-agent-bqcvl   1/1     Running   0          94s
 
 To remove the agent:
 
-`make unapply-ebpf-agent` or `kubectl delete -f deployment.yaml`
+`make unapply-ebpf-agent` or `kubectl delete -f smoke-tests/deployment.yaml`
 
 ## Optionally install the "greetings" example app
 

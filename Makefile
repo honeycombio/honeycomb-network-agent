@@ -43,12 +43,12 @@ update-headers:
 # deploy ebpf agent daemonset to already-running cluster with env vars from .env file
 .PHONY: apply-ebpf-agent
 apply-ebpf-agent:
-	envsubst < deployment.yaml | kubectl apply -f -
+	envsubst < smoke-tests/deployment.yaml | kubectl apply -f -
 
 # remove ebpf agent daemonset
 .PHONY: unapply-ebpf-agent
 unapply-ebpf-agent:
-	kubectl delete -f deployment.yaml
+	kubectl delete -f smoke-tests/deployment.yaml
 
 # apply new greetings deployment in already-running cluster
 .PHONY: apply-greetings
