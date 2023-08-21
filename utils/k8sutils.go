@@ -40,8 +40,7 @@ func GetK8sEventAttrs(client *CachedK8sClient, srcIp string, dstIp string) map[s
 		}
 	}
 
-	dstPod := client.GetPodByIPAddr(dstIp)
-	if dstPod != nil {
+	if dstPod := client.GetPodByIPAddr(dstIp); dstPod != nil {
 		k8sEventAttrs[fmt.Sprintf("destination.%s", semconv.K8SPodNameKey)] = dstPod.Name
 		k8sEventAttrs[fmt.Sprintf("destination.%s", semconv.K8SPodUIDKey)] = dstPod.UID
 	}
