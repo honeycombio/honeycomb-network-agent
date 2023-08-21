@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
@@ -11,6 +12,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+const (
+	ResyncTime = time.Minute * 5
+)
+
 type CachedK8sClient struct {
 	factory         informers.SharedInformerFactory
 	nodeInformer    cache.SharedInformer
@@ -18,8 +23,8 @@ type CachedK8sClient struct {
 	serviceInformer cache.SharedInformer
 }
 
-func NewCachedK8sClient(ctx context.Context, client *kubernetes.Clientset) *CachedK8sClient {
-	factory := informers.NewSharedInformerFactory(client, 0)
+func NewCachedK8sClient(client *kubernetes.Clientset) *CachedK8sClient {
+	factory := informers.NewSharedInformerFactory(client, ResyncTime)
 	podInformer := factory.Core().V1().Pods().Informer()
 	serviceInformer := factory.Core().V1().Services().Informer()
 	nodeInformer := factory.Core().V1().Nodes().Informer()
