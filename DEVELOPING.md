@@ -70,7 +70,7 @@ These environment variables get passed in the make command.
 ```sh
 $ make apply-ebpf-agent
 namespace/honeycomb created
-secret/honeycomb-secrets created
+secret/honeycomb created
 secret/ghcr created
 daemonset.apps/hny-ebpf-agent created
 ```

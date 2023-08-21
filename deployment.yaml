@@ -8,7 +8,7 @@ status: {}
 apiVersion: v1
 kind: Secret
 metadata:
-  name: honeycomb-secrets
+  name: honeycomb
   namespace: honeycomb
 type: Opaque
 stringData:
@@ -83,7 +83,7 @@ spec:
             - name: HONEYCOMB_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: honeycomb-secrets
+                  name: honeycomb
                   key: api-key
             - name: HONEYCOMB_DATASET
               value: ebpf-agent-go
