@@ -10,7 +10,7 @@ Docker images are found in [`ghcr.io/honeycombio/ebpf-agent:latest`](https://git
 
 See notes on local development in [`DEVELOPING.md`](./DEVELOPING.md)
 
-## Getting Started
+## Getting Started (Quickstart)
 
 ### Requirements
 
@@ -20,18 +20,40 @@ See notes on local development in [`DEVELOPING.md`](./DEVELOPING.md)
 
 ### Setup
 
-- Copy `.env.example` to new file `.env`
-- In `.env`, set your `HONEYCOMB_API_KEY` with your API Key from Honeycomb
-- In `.env`, set your `GITHUB_TOKEN` (See [To pull a published image from ghcr](./DEVELOPING.md#to-pull-a-published-image-from-ghcr) for more detail)
-- In `deployment.yaml`, set your preferred `HONEYCOMB_DATASET`
-- In `deployment.yaml`, set the image to the version you want to use, e.g. `ghcr.io/honeycombio/ebpf-agent:v0.0.3-alpha`
+Create honeycomb namespace:
+
+```sh
+kubectl apply -f examples/ns.yaml
+```
+
+Create secret for `HONEYCOMB_API_KEY` (alternatively, use `examples/secret-honeycomb.yaml`):
+
+```sh
+export HONEYCOMB_API_KEY=mykey
+kubectl create secret generic honeycomb --from-literal=api-key=$HONEYCOMB_API_KEY --namespace=honeycomb
+```
+
+Create secret for ghcr login (alternatively, use `examples/secret-ghcr.yaml`):
+
+```sh
+export GITHUB_USERNAME=githubusername
+export GITHUB_ACCESS_TOKEN=githubaccesstoken
+kubectl create secret docker-registry ghcr-secret \
+  --docker-server=https://ghcr.io/ \
+  --docker-username=$GITHUB_USERNAME \
+  --docker-password=$GITHUB_ACCESS_TOKEN \
+  --namespace=honeycomb
+```
 
 ### Run
 
-- Apply with one of these methods (See [Deploying the agent to a Kubernetes cluster](./DEVELOPING.md#deploying-the-agent-to-a-kubernetes-cluster) for more detail):
-  - `make apply-ebpf-agent`
-  - `envsubst < deployment.yaml | kubectl apply -f -`
-- Check out your data in Honeycomb!
+```sh
+kubectl apply -f examples/quickstart.yaml
+```
+
+Events should show up in Honeycomb in the `hny-ebpf-agent` dataset.
+
+Alternative options for configuration and running can be found in [Deploying the agent to a Kubernetes cluster](./DEVELOPING.md#deploying-the-agent-to-a-kubernetes-cluster):
 
 ## Example Event
 
