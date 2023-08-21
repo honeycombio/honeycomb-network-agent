@@ -171,7 +171,7 @@ func (h *tcpAssembler) Start() {
 		}
 		if count%h.config.Statsevery == 0 {
 			ref := packet.Metadata().CaptureInfo.Timestamp
-			flushed, closed := h.assembler.FlushWithOptions(reassembly.FlushOptions{T: ref.Add(-h.config.Timeout), TC: ref.Add(-h.config.CloseTimeout)})
+			flushed, closed := h.assembler.FlushCloseOlderThan(time.Now().Add(-h.config.Timeout))
 			log.Info().
 				Int("flushed", flushed).
 				Int("closed", closed).

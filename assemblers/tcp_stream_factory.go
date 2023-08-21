@@ -31,7 +31,7 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	srcPod := factory.k8sClient.GetPodByIPAddr(net.Src().String())
 	dstPod := factory.k8sClient.GetPodByIPAddr(net.Dst().String())
 	shouldTarget := srcPod != nil || dstPod != nil
-	log.Info().
+	log.Debug().
 		Str("net", net.String()).
 		Str("transport", transport.String()).
 		Bool("should_target", shouldTarget).

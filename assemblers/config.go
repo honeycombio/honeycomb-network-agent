@@ -8,8 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const closeTimeout time.Duration = time.Hour * 24
-const timeout time.Duration = time.Minute * 5
+const timeout time.Duration = time.Second * 30
 
 var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
 var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
@@ -69,9 +68,9 @@ func NewConfig() *config {
 		Snaplen:          *snaplen,
 		TsType:           *tstype,
 		Promiscuous:      *promisc,
-		CloseTimeout:     closeTimeout,
 		Timeout:          timeout,
 	}
+	// BUG: force value as it's not being picked up from flags
 	c.Statsevery = 1000
 
 	if c.Debug {
