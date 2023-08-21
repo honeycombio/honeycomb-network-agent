@@ -13,7 +13,6 @@ import (
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
-	"k8s.io/client-go/kubernetes"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf source/tcp_probe.c
