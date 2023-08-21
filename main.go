@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -80,13 +81,18 @@ func main() {
 
 	// creates the clientset
 	k8sClient, err := kubernetes.NewForConfig(k8sConfig)
-
 	if err != nil {
 		panic(err.Error())
 	}
 
+	// create k8s monitor that caches k8s objects
+	ctx, done := context.WithCancel(context.Background())
+	defer done()
+	cachedK8sClient := utils.NewCachedK8sClient(k8sClient)
+	cachedK8sClient.Start(ctx)
+
 	// setup probes
-	p := probes.New(k8sClient)
+	p := probes.New(cachedK8sClient)
 	go p.Start()
 	defer p.Stop()
 
@@ -95,7 +101,7 @@ func main() {
 	// setup TCP stream reader
 	httpEvents := make(chan assemblers.HttpEvent, 10000)
 	assember := assemblers.NewTcpAssembler(*agentConfig, httpEvents)
-	go handleHttpEvents(httpEvents, k8sClient)
+	go handleHttpEvents(httpEvents, cachedK8sClient)
 	go assember.Start()
 	defer assember.Stop()
 
@@ -108,7 +114,7 @@ func main() {
 	log.Info().Msg("Shutting down...")
 }
 
-func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clientset) {
+func handleHttpEvents(events chan assemblers.HttpEvent, client *utils.CachedK8sClient) {
 	ticker := time.NewTicker(time.Second * 10)
 	for {
 		select {
@@ -123,7 +129,7 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clien
 	}
 }
 
-func sendHttpEventToHoneycomb(event assemblers.HttpEvent, client *kubernetes.Clientset) {
+func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.CachedK8sClient) {
 	// create libhoney event
 	ev := libhoney.NewEvent()
 
@@ -166,13 +172,10 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, client *kubernetes.Cli
 		ev.AddField("http.response.missing", "no response on this event")
 	}
 
-	// k8s attributes
-	// TODO: make this faster; the call to the k8s API takes a bit of time and
-	//       slows the processing of the event queue
-	// k8sEventAttrs := utils.GetK8sEventAttrs(client, event.SrcIp, event.DstIp)
-	// ev.Add(k8sEventAttrs)
+	k8sEventAttrs := utils.GetK8sEventAttrs(k8sClient, event.SrcIp, event.DstIp)
+	ev.Add(k8sEventAttrs)
 
-	log.Info().
+	log.Debug().
 		Time("event.timestamp", ev.Timestamp).
 		Str("http.url", event.Request.RequestURI).
 		Msg("Event sent")
