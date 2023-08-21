@@ -175,13 +175,10 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, client *utils.CachedK8
 		ev.AddField("http.response.missing", "no response on this event")
 	}
 
-	// k8s attributes
-	// TODO: make this faster; the call to the k8s API takes a bit of time and
-	//       slows the processing of the event queue
-	// k8sEventAttrs := utils.GetK8sEventAttrs(client, event.SrcIp, event.DstIp)
-	// ev.Add(k8sEventAttrs)
+	k8sEventAttrs := utils.GetK8sEventAttrs(client, event.SrcIp, event.DstIp)
+	ev.Add(k8sEventAttrs)
 
-	log.Info().
+	log.Debug().
 		Time("event.timestamp", ev.Timestamp).
 		Str("http.url", event.Request.RequestURI).
 		Msg("Event sent")
