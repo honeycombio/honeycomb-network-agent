@@ -70,8 +70,6 @@ func NewConfig() *config {
 		Promiscuous:      *promisc,
 		Timeout:          timeout,
 	}
-	// BUG: force value as it's not being picked up from flags
-	c.Statsevery = 1000
 
 	if c.Debug {
 		b, err := json.MarshalIndent(c, "", "  ")
