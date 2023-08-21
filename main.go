@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/honeycombio/ebpf-agent/assemblers"
 	"github.com/honeycombio/ebpf-agent/bpf/probes"
@@ -116,59 +118,78 @@ func main() {
 }
 
 func handleHttpEvents(events chan assemblers.HttpEvent, client *utils.CachedK8sClient) {
+	ticker := time.NewTicker(time.Second * 10)
 	for {
 		select {
 		case event := <-events:
-
-			// create libhoney event
-			ev := libhoney.NewEvent()
-
-			// common attributes
-			ev.AddField("duration_ms", event.Duration.Microseconds())
-			ev.AddField(string(semconv.NetSockHostAddrKey), event.SrcIp)
-			ev.AddField("destination.address", event.DstIp)
-
-			// request attributes
-			if event.Request != nil {
-				bodySizeString := event.Request.Header.Get("Content-Length")
-				bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
-				ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
-				ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
-				ev.AddField(string(semconv.HTTPURLKey), event.Request.RequestURI)
-				ev.AddField("http.request.body", fmt.Sprintf("%v", event.Request.Body))
-				ev.AddField("http.request.headers", fmt.Sprintf("%v", event.Request.Header))
-				ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
-				ev.AddField("http.request.body.size", bodySize)
-			} else {
-				ev.AddField("name", "HTTP")
-				ev.AddField("http.request.missing", "no request on this event")
-			}
-
-			// response attributes
-			if event.Response != nil {
-				bodySizeString := event.Response.Header.Get("Content-Length")
-				bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
-
-				ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
-				ev.AddField("http.response.body", event.Response.Body)
-				ev.AddField("http.response.headers", event.Response.Header)
-				ev.AddField("http.response.body.size", bodySize)
-
-			} else {
-				ev.AddField("http.response.missing", "no response on this event")
-			}
-
-			// k8s attributes
-			k8sEventAttrs := utils.GetK8sEventAttrs(client, event.SrcIp, event.DstIp)
-			ev.Add(k8sEventAttrs)
-
-			err := ev.Send()
-			if err != nil {
-				log.Debug().
-					Err(err).
-					Msg("error sending event")
-			}
+			sendHttpEventToHoneycomb(event, client)
+		case <-ticker.C:
+			log.Info().
+				Int("event queue length", len(events)).
+				Int("goroutines", runtime.NumGoroutine()).
+				Msg("Queue length ticker")
 		}
+	}
+}
+
+func sendHttpEventToHoneycomb(event assemblers.HttpEvent, client *utils.CachedK8sClient) {
+	// create libhoney event
+	ev := libhoney.NewEvent()
+
+	// common attributes
+	ev.Timestamp = event.Timestamp
+	ev.AddField("httpEvent_handled_at", time.Now())
+	ev.AddField("httpEvent_handled_latency", time.Now().Sub(event.Timestamp))
+	ev.AddField("goroutine_count", runtime.NumGoroutine())
+	ev.AddField("duration_ms", event.Duration.Microseconds())
+	ev.AddField(string(semconv.NetSockHostAddrKey), event.SrcIp)
+	ev.AddField("destination.address", event.DstIp)
+
+	// request attributes
+	if event.Request != nil {
+		bodySizeString := event.Request.Header.Get("Content-Length")
+		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
+		ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
+		ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
+		ev.AddField(string(semconv.HTTPURLKey), event.Request.RequestURI)
+		ev.AddField("http.request.body", fmt.Sprintf("%v", event.Request.Body))
+		ev.AddField("http.request.headers", fmt.Sprintf("%v", event.Request.Header))
+		ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
+		ev.AddField("http.request.body.size", bodySize)
+	} else {
+		ev.AddField("name", "HTTP")
+		ev.AddField("http.request.missing", "no request on this event")
+	}
+
+	// response attributes
+	if event.Response != nil {
+		bodySizeString := event.Response.Header.Get("Content-Length")
+		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
+
+		ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
+		ev.AddField("http.response.body", event.Response.Body)
+		ev.AddField("http.response.headers", event.Response.Header)
+		ev.AddField("http.response.body.size", bodySize)
+
+	} else {
+		ev.AddField("http.response.missing", "no response on this event")
+	}
+
+	// k8s attributes
+	// TODO: make this faster; the call to the k8s API takes a bit of time and
+	//       slows the processing of the event queue
+	// k8sEventAttrs := utils.GetK8sEventAttrs(client, event.SrcIp, event.DstIp)
+	// ev.Add(k8sEventAttrs)
+
+	log.Info().
+		Time("event.timestamp", ev.Timestamp).
+		Str("http.url", event.Request.RequestURI).
+		Msg("Event sent")
+	err := ev.Send()
+	if err != nil {
+		log.Debug().
+			Err(err).
+			Msg("error sending event")
 	}
 }
 

@@ -172,7 +172,7 @@ func (h *tcpAssembler) Start() {
 
 		done := h.config.Maxcount > 0 && count >= h.config.Maxcount
 		if count%h.config.Statsevery == 0 || done {
-			log.Info().
+			log.Debug().
 				Int("processed_count_since_start", count).
 				Int64("milliseconds_since_start", time.Since(start).Milliseconds()).
 				Int64("bytes", bytes).
