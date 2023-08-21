@@ -9,7 +9,7 @@ import (
 )
 
 func GetK8sEventAttrs(client *CachedK8sClient, srcIp string, dstIp string) map[string]any {
-	log.Info().
+	log.Debug().
 		Str("src_ip", srcIp).
 		Str("dst_ip", dstIp).
 		Msg("Getting k8s event attrs")
