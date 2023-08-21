@@ -1,7 +1,7 @@
 package assemblers
 
 import (
-	"flag"
+	"fmt"
 	"strings"
 	"time"
 
@@ -10,6 +10,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/reassembly"
+	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -48,9 +49,10 @@ type tcpAssembler struct {
 	streamPool    *reassembly.StreamPool
 	assembler     *reassembly.Assembler
 	httpEvents    chan HttpEvent
+	k8sClient     *utils.CachedK8sClient
 }
 
-func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
+func NewTcpAssembler(config config, httpEvents chan HttpEvent, k8sClient *utils.CachedK8sClient) tcpAssembler {
 	var handle *pcap.Handle
 	var err error
 
@@ -71,25 +73,32 @@ func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
 			Err(err).
 			Msg("Failed to open a pcap handle")
 	}
-	if len(flag.Args()) > 0 {
-		bpffilter := strings.Join(flag.Args(), " ")
-		log.Info().
-			Str("bpf_filter", bpffilter).
-			Msg("Using BPF filter")
-		if err = handle.SetBPFFilter(bpffilter); err != nil {
-			log.Fatal().
-				Err(err).
-				Str("bpf_filter", bpffilter).
-				Msg("BPF filter error")
-		}
+	// if len(flag.Args()) > 0 {
+	// bpffilter := strings.Join(flag.Args(), " ")
+	bpffilter := "tcp"
+	pods := k8sClient.GetPods()
+	hosts := []string{}
+	for _, pod := range pods {
+		hosts = append(hosts, pod.Status.PodIP)
 	}
+	bpffilter += fmt.Sprintf(" and (host %s)", strings.Join(hosts, " or "))
+	log.Info().
+		Str("bpf_filter", bpffilter).
+		Msg("Using BPF filter")
+	if err = handle.SetBPFFilter(bpffilter); err != nil {
+		log.Fatal().
+			Err(err).
+			Str("bpf_filter", bpffilter).
+			Msg("BPF filter error")
+	}
+	// }
 
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	packetSource.Lazy = *lazy
 	packetSource.NoCopy = true
 	log.Info().Msg("Starting to read packets")
 
-	streamFactory := NewTcpStreamFactory(httpEvents)
+	streamFactory := NewTcpStreamFactory(httpEvents, k8sClient)
 	streamPool := reassembly.NewStreamPool(&streamFactory)
 	assembler := reassembly.NewAssembler(streamPool)
 
@@ -163,7 +172,7 @@ func (h *tcpAssembler) Start() {
 		if count%h.config.Statsevery == 0 {
 			ref := packet.Metadata().CaptureInfo.Timestamp
 			flushed, closed := h.assembler.FlushWithOptions(reassembly.FlushOptions{T: ref.Add(-h.config.Timeout), TC: ref.Add(-h.config.CloseTimeout)})
-			log.Debug().
+			log.Info().
 				Int("flushed", flushed).
 				Int("closed", closed).
 				Time("packet_timestamp", ref).

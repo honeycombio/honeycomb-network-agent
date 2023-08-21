@@ -8,6 +8,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/reassembly"
+	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/rs/zerolog/log"
 )
 
@@ -16,19 +17,26 @@ var streamId uint64 = 0
 type tcpStreamFactory struct {
 	wg         sync.WaitGroup
 	httpEvents chan HttpEvent
+	k8sClient  *utils.CachedK8sClient
 }
 
-func NewTcpStreamFactory(httpEvents chan HttpEvent) tcpStreamFactory {
+func NewTcpStreamFactory(httpEvents chan HttpEvent, k8sClient *utils.CachedK8sClient) tcpStreamFactory {
 	return tcpStreamFactory{
 		httpEvents: httpEvents,
+		k8sClient:  k8sClient,
 	}
 }
 
 func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.TCP, ac reassembly.AssemblerContext) reassembly.Stream {
-	log.Debug().
+	srcPod := factory.k8sClient.GetPodByIPAddr(net.Src().String())
+	dstPod := factory.k8sClient.GetPodByIPAddr(net.Dst().String())
+	shouldTarget := srcPod != nil || dstPod != nil
+	log.Info().
 		Str("net", net.String()).
 		Str("transport", transport.String()).
+		Bool("should_target", shouldTarget).
 		Msg("NEW tcp stream")
+
 	fsmOptions := reassembly.TCPSimpleFSMOptions{
 		SupportMissingEstablishment: true,
 	}

@@ -72,6 +72,7 @@ func NewConfig() *config {
 		CloseTimeout:     closeTimeout,
 		Timeout:          timeout,
 	}
+	c.Statsevery = 1000
 
 	if c.Debug {
 		b, err := json.MarshalIndent(c, "", "  ")

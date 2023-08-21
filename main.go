@@ -31,6 +31,7 @@ func main() {
 	if os.Getenv("DEBUG") == "true" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
+	log.Logger = log.Output(zerolog.NewConsoleWriter())
 
 	log.Info().Str("agent_version", Version).Msg("Starting Honeycomb eBPF agent")
 
@@ -100,7 +101,7 @@ func main() {
 
 	// setup TCP stream reader
 	httpEvents := make(chan assemblers.HttpEvent, 10000)
-	assember := assemblers.NewTcpAssembler(*agentConfig, httpEvents)
+	assember := assemblers.NewTcpAssembler(*agentConfig, httpEvents, cachedK8sClient)
 	go handleHttpEvents(httpEvents, cachedK8sClient)
 	go assember.Start()
 	defer assember.Stop()
