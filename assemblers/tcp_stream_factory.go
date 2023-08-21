@@ -29,7 +29,6 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 		Str("net", net.String()).
 		Str("transport", transport.String()).
 		Msg("NEW tcp stream")
-
 	fsmOptions := reassembly.TCPSimpleFSMOptions{
 		SupportMissingEstablishment: true,
 	}
