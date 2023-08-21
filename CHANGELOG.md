@@ -27,6 +27,7 @@
 - Clean up probes manager (#83) | @MikeGoldsmith
 - Update create Github Release job to have write contents access (#58) | @MikeGoldsmith
 - Detect BTF support and disable for local dev (#61) | @MikeGoldsmith
+- Readd contents read permission to release workflow (#101) | @MikeGoldsmith
 
 ## [0.0.3-alpha] - 2023-08-03
 
