@@ -88,11 +88,8 @@ func main() {
 	// create k8s monitor that caches k8s objects
 	ctx, done := context.WithCancel(context.Background())
 	defer done()
-	cachedK8sClient := utils.NewCachedK8sClient(ctx, k8sClient)
+	cachedK8sClient := utils.NewCachedK8sClient(k8sClient)
 	cachedK8sClient.Start(ctx)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create cached k8s client")
-	}
 
 	// setup probes
 	p := probes.New(cachedK8sClient)
@@ -132,7 +129,7 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *utils.CachedK8sC
 	}
 }
 
-func sendHttpEventToHoneycomb(event assemblers.HttpEvent, client *utils.CachedK8sClient) {
+func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.CachedK8sClient) {
 	// create libhoney event
 	ev := libhoney.NewEvent()
 
@@ -175,7 +172,7 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, client *utils.CachedK8
 		ev.AddField("http.response.missing", "no response on this event")
 	}
 
-	k8sEventAttrs := utils.GetK8sEventAttrs(client, event.SrcIp, event.DstIp)
+	k8sEventAttrs := utils.GetK8sEventAttrs(k8sClient, event.SrcIp, event.DstIp)
 	ev.Add(k8sEventAttrs)
 
 	log.Debug().
