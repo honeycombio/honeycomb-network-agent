@@ -86,7 +86,7 @@ spec:
                   name: honeycomb
                   key: api-key
             - name: HONEYCOMB_DATASET
-              value: ebpf-agent-go
+              value: hny-ebpf-agent
           args:
             - tcp
           securityContext:
