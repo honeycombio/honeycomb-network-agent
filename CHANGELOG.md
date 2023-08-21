@@ -5,7 +5,7 @@
 ### Enhancements
 
 - Send request/response body size (#80) | @pkanal
-- More better logging (#72) | @RobbKidd
+- More better logging (#72) | @robbkidd
 - Send user agent as a separate attribute (#79) | @pkanal
 - Use timestamps packet was captured (#75)  | @MikeGoldsmith
 - Print config as indented JSON on startup (#73)  | @MikeGoldsmith
@@ -19,7 +19,7 @@
 
 - Update TCP connection timeout to 30 seconds (#94) | @MikeGoldsmith
 - Time units in telemetry (#95) | @vreynolds
-- Separate event transform function (#81) | @RobbKidd
+- Separate event transform function (#81) | @robbkidd
 
 ### Maintenance
 
