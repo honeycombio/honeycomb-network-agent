@@ -7,7 +7,7 @@
 - Send request/response body size (#80) | @pkanal
 - More better logging (#72) | @RobbKidd
 - Send user agent as a separate attribute (#79) | @pkanal
-- Use timestamps packet was captured instead of when it was proce… (#75)  | @MikeGoldsmith
+- Use timestamps packet was captured (#75)  | @MikeGoldsmith
 - Print config as indented JSON on startup (#73)  | @MikeGoldsmith
 - Add k8s metadata to gopacket events (#71) | @pkanal
 - Request / Response matching (#70) | @pkanal
