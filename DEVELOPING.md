@@ -75,6 +75,8 @@ secret/ghcr created
 daemonset.apps/hny-ebpf-agent created
 ```
 
+If you're on a Mac, try `brew install gettext` if `envsubst` isn't available.
+
 Confirm that the pods are up by using `k9s` or with `kubectl`:
 
 ```sh
