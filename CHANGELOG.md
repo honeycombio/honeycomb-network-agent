@@ -1,5 +1,33 @@
 # Honeycomb eBPF Agent changelog
 
+## [0.0.4-alpha] - 2023-08-21
+
+### Enhancements
+
+- Send request/response body size (#80) | @pkanal
+- More better logging (#72) | @robbkidd
+- Send user agent as a separate attribute (#79) | @pkanal
+- Use timestamps packet was captured (#75)  | @MikeGoldsmith
+- Print config as indented JSON on startup (#73)  | @MikeGoldsmith
+- Add k8s metadata to gopacket events (#71) | @pkanal
+- Request / Response matching (#70) | @pkanal
+- Break up TCP assembly into components and move to assemblers directory (#65) | @MikeGoldsmith
+- Add TCP stream reader using gopacket (#62) | @MikeGoldsmith
+- Add cached k8s client (#84) | @MikeGoldsmith
+
+### Fixes
+
+- Update TCP connection timeout to 30 seconds (#94) | @MikeGoldsmith
+- Time units in telemetry (#95) | @vreynolds
+- Separate event transform function (#81) | @robbkidd
+
+### Maintenance
+
+- Don’t set priviledged mode by default in deployment.yaml (#82) | @MikeGoldsmith
+- Clean up probes manager (#83) | @MikeGoldsmith
+- Update create Github Release job to have write contents access (#58) | @MikeGoldsmith
+- Detect BTF support and disable for local dev (#61) | @MikeGoldsmith
+
 ## [0.0.3-alpha] - 2023-08-03
 
 ### Enhancements
