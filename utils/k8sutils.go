@@ -9,41 +9,41 @@ import (
 )
 
 func GetK8sEventAttrs(client *CachedK8sClient, srcIp string, dstIp string) map[string]any {
-
-	dstPod := client.GetPodByIPAddr(dstIp)
-	srcPod := client.GetPodByIPAddr(srcIp)
-	srcNode := client.GetNodeByPod(srcPod)
-	service := client.GetServiceForPod(srcPod)
 	log.Info().
 		Str("src_ip", srcIp).
 		Str("dst_ip", dstIp).
 		Msg("Getting k8s event attrs")
-	k8sEventAttrs := map[string]any{
-		// dest pod
-		fmt.Sprintf("destination.%s", semconv.K8SPodNameKey): dstPod.Name,
-		fmt.Sprintf("destination.%s", semconv.K8SPodUIDKey):  dstPod.UID,
 
-		// source pod
-		string(semconv.K8SPodNameKey): srcPod.Name,
-		string(semconv.K8SPodUIDKey):  srcPod.UID,
+	k8sEventAttrs := map[string]any{}
 
-		// namespace
-		string(semconv.K8SNamespaceNameKey): srcPod.Namespace,
+	if srcPod := client.GetPodByIPAddr(srcIp); srcPod != nil {
+		k8sEventAttrs[string(semconv.K8SPodNameKey)] = srcPod.Name
+		k8sEventAttrs[string(semconv.K8SPodUIDKey)] = srcPod.UID
+		k8sEventAttrs[string(semconv.K8SNamespaceNameKey)] = srcPod.Namespace
 
-		// service
-		// no semconv for service yet
-		"k8s.service.name": service.Name,
-
-		// node
-		string(semconv.K8SNodeNameKey): srcNode.Name,
-		string(semconv.K8SNodeUIDKey):  srcNode.UID,
-	}
-	if len(srcPod.Spec.Containers) > 0 {
-		var containerNames []string
-		for _, container := range srcPod.Spec.Containers {
-			containerNames = append(containerNames, container.Name)
+		if len(srcPod.Spec.Containers) > 0 {
+			var containerNames []string
+			for _, container := range srcPod.Spec.Containers {
+				containerNames = append(containerNames, container.Name)
+			}
+			k8sEventAttrs[string(semconv.K8SContainerNameKey)] = strings.Join(containerNames, ",")
 		}
-		k8sEventAttrs[string(semconv.K8SContainerNameKey)] = strings.Join(containerNames, ",")
+
+		if srcNode := client.GetNodeByPod(srcPod); srcNode != nil {
+			k8sEventAttrs[string(semconv.K8SNodeNameKey)] = srcNode.Name
+			k8sEventAttrs[string(semconv.K8SNodeUIDKey)] = srcNode.UID
+		}
+
+		if service := client.GetServiceForPod(srcPod); service != nil {
+			// no semconv for service yet
+			k8sEventAttrs["k8s.service.name"] = service.Name
+		}
+	}
+
+	dstPod := client.GetPodByIPAddr(dstIp)
+	if dstPod != nil {
+		k8sEventAttrs[fmt.Sprintf("destination.%s", semconv.K8SPodNameKey)] = dstPod.Name
+		k8sEventAttrs[fmt.Sprintf("destination.%s", semconv.K8SPodUIDKey)] = dstPod.UID
 	}
 
 	return k8sEventAttrs
