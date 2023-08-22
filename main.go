@@ -137,13 +137,17 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	ev.AddField(string(semconv.NetSockHostAddrKey), event.SrcIp)
 	ev.AddField("destination.address", event.DstIp)
 
+	var requestURI string
+
 	// request attributes
 	if event.Request != nil {
+		requestURI = event.Request.RequestURI
+
 		bodySizeString := event.Request.Header.Get("Content-Length")
 		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
 		ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
 		ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
-		ev.AddField(string(semconv.HTTPURLKey), event.Request.RequestURI)
+		ev.AddField(string(semconv.HTTPURLKey), requestURI)
 		ev.AddField("http.request.body", fmt.Sprintf("%v", event.Request.Body))
 		ev.AddField("http.request.headers", fmt.Sprintf("%v", event.Request.Header))
 		ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
@@ -172,7 +176,7 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 
 	log.Debug().
 		Time("event.timestamp", ev.Timestamp).
-		Str("http.url", event.Request.RequestURI).
+		Str("http.url", requestURI).
 		Msg("Event sent")
 	err := ev.Send()
 	if err != nil {
