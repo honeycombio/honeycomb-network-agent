@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-type httpReader struct {
+type tcpReader struct {
 	isClient  bool
 	srcIp     string
 	srcPort   string
@@ -20,7 +20,7 @@ type httpReader struct {
 	timestamp time.Time
 }
 
-func (h *httpReader) Read(p []byte) (int, error) {
+func (h *tcpReader) Read(p []byte) (int, error) {
 	ok := true
 	for ok && len(h.data) == 0 {
 		h.data, ok = <-h.bytes
@@ -34,10 +34,10 @@ func (h *httpReader) Read(p []byte) (int, error) {
 	return l, nil
 }
 
-func (h *httpReader) run(wg *sync.WaitGroup) {
+func (h *tcpReader) run(wg *sync.WaitGroup) {
 	defer wg.Done()
 	b := bufio.NewReader(h)
-	for true {
+	for {
 		if h.isClient {
 			req, err := http.ReadRequest(b)
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
@@ -69,7 +69,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 	}
 }
 
-func (h *httpReader) processEvent(entry *entry) {
+func (h *tcpReader) processEvent(entry *entry) {
 	h.parent.events <- HttpEvent{
 		RequestId: h.parent.ident,
 		Request:   entry.request,
