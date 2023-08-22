@@ -148,8 +148,6 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 		ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
 		ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
 		ev.AddField(string(semconv.HTTPURLKey), requestURI)
-		ev.AddField("http.request.body", fmt.Sprintf("%v", event.Request.Body))
-		ev.AddField("http.request.headers", fmt.Sprintf("%v", event.Request.Header))
 		ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
 		ev.AddField("http.request.body.size", bodySize)
 	} else {
@@ -163,8 +161,6 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
 
 		ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
-		ev.AddField("http.response.body", event.Response.Body)
-		ev.AddField("http.response.headers", event.Response.Header)
 		ev.AddField("http.response.body.size", bodySize)
 
 	} else {
