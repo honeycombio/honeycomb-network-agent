@@ -87,6 +87,9 @@ spec:
                   key: api-key
             - name: HONEYCOMB_DATASET
               value: ebpf-agent-go
+            ## uncomment this to enable debug logs
+            # - name: DEBUG
+            #   value: "true"
           args:
             - tcp
           securityContext:
