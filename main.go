@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/honeycombio/ebpf-agent/assemblers"
-	"github.com/honeycombio/ebpf-agent/bpf/probes"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
@@ -91,11 +90,6 @@ func main() {
 	defer done()
 	cachedK8sClient := utils.NewCachedK8sClient(k8sClient)
 	cachedK8sClient.Start(ctx)
-
-	// setup probes
-	p := probes.New(cachedK8sClient)
-	go p.Start()
-	defer p.Stop()
 
 	agentConfig := assemblers.NewConfig()
 
