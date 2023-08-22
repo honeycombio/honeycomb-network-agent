@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
 type httpReader struct {
@@ -40,7 +38,7 @@ func (h *httpReader) Read(p []byte) (int, error) {
 func (h *httpReader) run(wg *sync.WaitGroup) {
 	defer wg.Done()
 	b := bufio.NewReader(h)
-	for true {
+	for {
 		if h.isClient {
 			req, err := http.ReadRequest(b)
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
@@ -50,9 +48,9 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 			}
 			requestCount := h.parent.counter.incrementRequest()
 			ident := fmt.Sprintf("%s:%d", h.parent.ident, requestCount)
-			log.Info().
-				Str("ident", ident).
-				Msg("Storing request")
+			// log.Info().
+			// 	Str("ident", ident).
+			// 	Msg("Storing request")
 			entry := h.parent.matcher.LoadOrStoreRequest(ident, h.timestamp, req)
 			if entry != nil {
 				// we have a match, process complete request/response pair
@@ -69,9 +67,9 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 
 			responseCount := h.parent.counter.incrementResponse()
 			ident := fmt.Sprintf("%s:%d", h.parent.ident, responseCount)
-			log.Info().
-				Str("ident", ident).
-				Msg("Storing response")
+			// log.Info().
+			// 	Str("ident", ident).
+			// 	Msg("Storing response")
 			entry := h.parent.matcher.LoadOrStoreResponse(ident, h.timestamp, res)
 			if entry != nil {
 				// we have a match, process complete request/response pair
@@ -82,9 +80,9 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 }
 
 func (h *httpReader) processEvent(ident string, entry *entry) {
-	log.Info().
-		Str("ident", ident).
-		Msg("Found match")
+	// log.Info().
+	// 	Str("ident", ident).
+	// 	Msg("Found match")
 	h.parent.events <- HttpEvent{
 		RequestId: ident,
 		Request:   entry.request,

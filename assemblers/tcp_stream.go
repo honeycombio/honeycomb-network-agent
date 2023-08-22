@@ -95,7 +95,7 @@ func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassem
 }
 
 func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.AssemblerContext) {
-	dir, start, end, skip := sg.Info()
+	dir, _, _, skip := sg.Info()
 	length, saved := sg.Lengths()
 	// update stats
 	sgStats := sg.Stats()
@@ -131,35 +131,38 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 	} else {
 		ident = fmt.Sprintf("%v %v", t.net.Reverse(), t.transport.Reverse())
 	}
-	log.Debug().
-		Str("ident", ident).            // ex: "192.168.65.4->192.168.65.4 6443->38304"
-		Str("direction", dir.String()). // ex: "client->server" or "server->client"
-		Int("byte_count", length).
-		Bool("start", start).
-		Bool("end", end).
-		Int("skip", skip).
-		Int("saved", saved).
-		Int("packet_count", sgStats.Packets).
-		Int("chunk_count", sgStats.Chunks).
-		Int("overlap_byte_count", sgStats.OverlapBytes).
-		Int("overlap_packet_count", sgStats.OverlapPackets).
-		Msg("SG reassembled packet")
 	if skip == -1 && *allowmissinginit {
 		// this is allowed
 	} else if skip != 0 {
 		// Missing bytes in stream: do not even try to parse it
 		return
 	}
-	data := sg.Fetch(length)
 
-	if length > 0 {
-		if dir == reassembly.TCPDirClientToServer {
-			t.client.timestamp = ac.GetCaptureInfo().Timestamp
-			t.client.bytes <- data
-		} else {
-			t.server.timestamp = ac.GetCaptureInfo().Timestamp
-			t.server.bytes <- data
-		}
+	if length <= 0 {
+		return
+	}
+
+	log.Info().
+		Str("ident", ident).            // ex: "192.168.65.4->192.168.65.4 6443->38304"
+		Str("direction", dir.String()). // ex: "client->server" or "server->client"
+		Int("byte_count", length).
+		// Bool("start", start).
+		// Bool("end", end).
+		// Int("skip", skip).
+		// Int("saved", saved).
+		// Int("packet_count", sgStats.Packets).
+		// Int("chunk_count", sgStats.Chunks).
+		// Int("overlap_byte_count", sgStats.OverlapBytes).
+		// Int("overlap_packet_count", sgStats.OverlapPackets).
+		Msg("SG reassembled packet")
+
+	data := sg.Fetch(length)
+	if dir == reassembly.TCPDirClientToServer {
+		t.client.timestamp = ac.GetCaptureInfo().Timestamp
+		t.client.bytes <- data
+	} else {
+		t.server.timestamp = ac.GetCaptureInfo().Timestamp
+		t.server.bytes <- data
 	}
 }
 

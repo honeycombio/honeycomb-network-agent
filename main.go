@@ -32,6 +32,7 @@ func main() {
 	if os.Getenv("DEBUG") == "true" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
+	log.Logger = log.Output(zerolog.NewConsoleWriter())
 
 	log.Info().Str("agent_version", Version).Msg("Starting Honeycomb eBPF agent")
 
@@ -101,7 +102,7 @@ func main() {
 
 	// setup TCP stream reader
 	httpEvents := make(chan assemblers.HttpEvent, 10000)
-	assember := assemblers.NewTcpAssembler(*agentConfig, httpEvents)
+	assember := assemblers.NewTcpAssembler(*agentConfig, httpEvents, cachedK8sClient)
 	go handleHttpEvents(httpEvents, cachedK8sClient)
 	go assember.Start()
 	defer assember.Stop()
@@ -131,9 +132,6 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *utils.CachedK8sC
 }
 
 func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.CachedK8sClient) {
-	log.Info().
-		Str("request_id", event.RequestId).
-		Msg("Sending HTTP event to Honeycomb")
 	// create libhoney event
 	ev := libhoney.NewEvent()
 
@@ -179,13 +177,14 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	k8sEventAttrs := utils.GetK8sEventAttrs(k8sClient, event.SrcIp, event.DstIp)
 	ev.Add(k8sEventAttrs)
 
-	log.Debug().
+	log.Info().
 		Time("event.timestamp", ev.Timestamp).
 		Str("http.url", event.Request.RequestURI).
+		Str("request_id", event.RequestId).
 		Msg("Event sent")
 	err := ev.Send()
 	if err != nil {
-		log.Debug().
+		log.Info().
 			Err(err).
 			Msg("error sending event")
 	}
