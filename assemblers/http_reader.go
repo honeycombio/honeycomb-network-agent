@@ -2,10 +2,13 @@ package assemblers
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type httpReader struct {
@@ -43,13 +46,17 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			} else if err != nil {
-				// Error("HTTP-request", "HTTP/%s Request error: %s (%v,%+v)\n", h.ident, err, err, err)
 				continue
 			}
-			entry := h.parent.matcher.LoadOrStoreRequest(h.parent.ident, h.timestamp, req)
+			requestCount := h.parent.counter.incrementRequest()
+			ident := fmt.Sprintf("%s:%d", h.parent.ident, requestCount)
+			log.Info().
+				Str("ident", ident).
+				Msg("Storing request")
+			entry := h.parent.matcher.LoadOrStoreRequest(ident, h.timestamp, req)
 			if entry != nil {
 				// we have a match, process complete request/response pair
-				h.processEvent(entry)
+				h.processEvent(ident, entry)
 			}
 		} else {
 			res, err := http.ReadResponse(b, nil)
@@ -60,18 +67,26 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 				continue
 			}
 
-			entry := h.parent.matcher.LoadOrStoreResponse(h.parent.ident, h.timestamp, res)
+			responseCount := h.parent.counter.incrementResponse()
+			ident := fmt.Sprintf("%s:%d", h.parent.ident, responseCount)
+			log.Info().
+				Str("ident", ident).
+				Msg("Storing response")
+			entry := h.parent.matcher.LoadOrStoreResponse(ident, h.timestamp, res)
 			if entry != nil {
 				// we have a match, process complete request/response pair
-				h.processEvent(entry)
+				h.processEvent(ident, entry)
 			}
 		}
 	}
 }
 
-func (h *httpReader) processEvent(entry *entry) {
+func (h *httpReader) processEvent(ident string, entry *entry) {
+	log.Info().
+		Str("ident", ident).
+		Msg("Found match")
 	h.parent.events <- HttpEvent{
-		RequestId: h.parent.ident,
+		RequestId: ident,
 		Request:   entry.request,
 		Response:  entry.response,
 		Timestamp: entry.requestTimestamp,

@@ -131,6 +131,9 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *utils.CachedK8sC
 }
 
 func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.CachedK8sClient) {
+	log.Info().
+		Str("request_id", event.RequestId).
+		Msg("Sending HTTP event to Honeycomb")
 	// create libhoney event
 	ev := libhoney.NewEvent()
 
