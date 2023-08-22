@@ -26,7 +26,7 @@ docker-generate:
 	docker run --rm -v $(shell pwd):/src hny/ebpf-agent-builder
 
 .PHONY: build
-build: generate
+build:
 	CGO_ENABLED=1 GOOS=linux go build -o hny-ebpf-agent main.go
 
 .PHONY: docker-build
