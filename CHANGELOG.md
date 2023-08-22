@@ -1,5 +1,17 @@
 # Honeycomb eBPF Agent changelog
 
+## [0.0.5-alpha] - 2023-08-22
+
+### Fixes
+
+fix: prevent debug log panic (#108) | @pkanal
+
+### Maintenance
+
+maint: Move stream flushing to ticker (#104) | @MikeGoldsmith
+maint: Don't deploy kprobes for now (#106) | @MikeGoldsmith
+maint: Bump k8s.io libraries to 0.28.0 (#105) | @MikeGoldsmith
+
 ## [0.0.4-alpha] - 2023-08-21
 
 ### Enhancements
