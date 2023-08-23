@@ -29,20 +29,20 @@ type httpReader struct {
 	timestamp time.Time
 }
 
-func (reader *httpReader) Read(p []byte) (int, error) {
+func (h *httpReader) Read(p []byte) (int, error) {
 	var msg message
 	ok := true
-	for ok && len(reader.data) == 0 {
-		msg, ok = <-reader.messages
-		reader.data = msg.data
-		reader.timestamp = msg.timestamp
+	for ok && len(h.data) == 0 {
+		msg, ok = <-h.messages
+		h.data = msg.data
+		h.timestamp = msg.timestamp
 	}
-	if !ok || len(reader.data) == 0 {
+	if !ok || len(h.data) == 0 {
 		return 0, io.EOF
 	}
 
-	l := copy(p, reader.data)
-	reader.data = reader.data[l:]
+	l := copy(p, h.data)
+	h.data = h.data[l:]
 	return l, nil
 }
 
