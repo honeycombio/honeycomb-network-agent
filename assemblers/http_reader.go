@@ -55,7 +55,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			} else if err != nil {
-				log.Warn().
+				log.Debug().
 					Err(err).
 					Str("ident", h.parent.ident).
 					Msg("Error reading HTTP request")
@@ -73,7 +73,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			} else if err != nil {
-				log.Warn().
+				log.Debug().
 					Err(err).
 					Str("ident", h.parent.ident).
 					Msg("Error reading HTTP response")
