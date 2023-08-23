@@ -101,8 +101,3 @@ func (h *httpReader) processEvent(ident string, entry *entry) {
 		DstIp:     h.dstIp,
 	}
 }
-
-func (r *httpReader) sendMessage(message message) {
-	// TODO: check not closed?
-	r.messages <- message
-}

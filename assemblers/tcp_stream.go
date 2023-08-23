@@ -154,15 +154,15 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 	if length > 0 {
 		data := sg.Fetch(length)
 		if dir == reassembly.TCPDirClientToServer {
-			t.client.sendMessage(message{
+			t.client.messages <- message{
 				data:      data,
 				timestamp: ac.GetCaptureInfo().Timestamp,
-			})
+			}
 		} else {
-			t.server.sendMessage(message{
+			t.server.messages <- message{
 				data:      data,
 				timestamp: ac.GetCaptureInfo().Timestamp,
-			})
+			}
 		}
 	}
 }
