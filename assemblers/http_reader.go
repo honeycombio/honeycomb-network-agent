@@ -61,10 +61,10 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 					Msg("Error reading HTTP request")
 				continue
 			}
+
 			requestCount := h.parent.counter.incrementRequest()
 			ident := fmt.Sprintf("%s:%d", h.parent.ident, requestCount)
-			entry := h.parent.matcher.LoadOrStoreRequest(ident, h.timestamp, req)
-			if entry != nil {
+			if entry, ok := h.parent.matcher.GetOrStoreRequest(ident, h.timestamp, req); ok {
 				// we have a match, process complete request/response pair
 				h.processEvent(ident, entry)
 			}
@@ -82,8 +82,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 
 			responseCount := h.parent.counter.incrementResponse()
 			ident := fmt.Sprintf("%s:%d", h.parent.ident, responseCount)
-			entry := h.parent.matcher.LoadOrStoreResponse(ident, h.timestamp, res)
-			if entry != nil {
+			if entry, ok := h.parent.matcher.GetOrStoreResponse(ident, h.timestamp, res); ok {
 				// we have a match, process complete request/response pair
 				h.processEvent(ident, entry)
 			}
