@@ -2,11 +2,19 @@ package assemblers
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
+
+type message struct {
+	data      []byte
+	timestamp time.Time
+}
 
 type httpReader struct {
 	isClient  bool
@@ -17,13 +25,17 @@ type httpReader struct {
 	bytes     chan []byte
 	data      []byte
 	parent    *tcpStream
+	messages  chan message
 	timestamp time.Time
 }
 
 func (h *httpReader) Read(p []byte) (int, error) {
+	var msg message
 	ok := true
 	for ok && len(h.data) == 0 {
-		h.data, ok = <-h.bytes
+		msg, ok = <-h.messages
+		h.data = msg.data
+		h.timestamp = msg.timestamp
 	}
 	if !ok || len(h.data) == 0 {
 		return 0, io.EOF
@@ -36,42 +48,51 @@ func (h *httpReader) Read(p []byte) (int, error) {
 
 func (h *httpReader) run(wg *sync.WaitGroup) {
 	defer wg.Done()
-	b := bufio.NewReader(h)
-	for true {
+	for {
+		b := bufio.NewReader(h)
 		if h.isClient {
 			req, err := http.ReadRequest(b)
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			} else if err != nil {
-				// Error("HTTP-request", "HTTP/%s Request error: %s (%v,%+v)\n", h.ident, err, err, err)
+				log.Debug().
+					Err(err).
+					Str("ident", h.parent.ident).
+					Msg("Error reading HTTP request")
 				continue
 			}
-			entry := h.parent.matcher.LoadOrStoreRequest(h.parent.ident, h.timestamp, req)
-			if entry != nil {
+
+			requestCount := h.parent.counter.incrementRequest()
+			ident := fmt.Sprintf("%s:%d", h.parent.ident, requestCount)
+			if entry, ok := h.parent.matcher.GetOrStoreRequest(ident, h.timestamp, req); ok {
 				// we have a match, process complete request/response pair
-				h.processEvent(entry)
+				h.processEvent(ident, entry)
 			}
 		} else {
 			res, err := http.ReadResponse(b, nil)
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			} else if err != nil {
-				// Error("HTTP-response", "HTTP/%s Response error: %s (%v,%+v)\n", h.ident, err, err, err)
+				log.Debug().
+					Err(err).
+					Str("ident", h.parent.ident).
+					Msg("Error reading HTTP response")
 				continue
 			}
 
-			entry := h.parent.matcher.LoadOrStoreResponse(h.parent.ident, h.timestamp, res)
-			if entry != nil {
+			responseCount := h.parent.counter.incrementResponse()
+			ident := fmt.Sprintf("%s:%d", h.parent.ident, responseCount)
+			if entry, ok := h.parent.matcher.GetOrStoreResponse(ident, h.timestamp, res); ok {
 				// we have a match, process complete request/response pair
-				h.processEvent(entry)
+				h.processEvent(ident, entry)
 			}
 		}
 	}
 }
 
-func (h *httpReader) processEvent(entry *entry) {
+func (h *httpReader) processEvent(ident string, entry *entry) {
 	h.parent.events <- HttpEvent{
-		RequestId: h.parent.ident,
+		RequestId: ident,
 		Request:   entry.request,
 		Response:  entry.response,
 		Timestamp: entry.requestTimestamp,
