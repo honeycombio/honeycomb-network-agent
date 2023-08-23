@@ -1,7 +1,7 @@
 package assemblers
 
 import (
-	"fmt"
+	"flag"
 	"strings"
 	"time"
 
@@ -10,7 +10,6 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/reassembly"
-	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -51,7 +50,7 @@ type tcpAssembler struct {
 	httpEvents    chan HttpEvent
 }
 
-func NewTcpAssembler(config config, httpEvents chan HttpEvent, k8sClient *utils.CachedK8sClient) tcpAssembler {
+func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
 	var handle *pcap.Handle
 	var err error
 
@@ -72,25 +71,18 @@ func NewTcpAssembler(config config, httpEvents chan HttpEvent, k8sClient *utils.
 			Err(err).
 			Msg("Failed to open a pcap handle")
 	}
-	// if len(flag.Args()) > 0 {
-	// bpffilter := strings.Join(flag.Args(), " ")
-	bpffilter := "tcp"
-	pods := k8sClient.GetPodsByNamespace("greetings")
-	hosts := []string{}
-	for _, pod := range pods {
-		hosts = append(hosts, pod.Status.PodIP)
-	}
-	bpffilter += fmt.Sprintf(" and (host %s)", strings.Join(hosts, " or "))
-	log.Info().
-		Str("bpf_filter", bpffilter).
-		Msg("Using BPF filter")
-	if err = handle.SetBPFFilter(bpffilter); err != nil {
-		log.Fatal().
-			Err(err).
+	if len(flag.Args()) > 0 {
+		bpffilter := strings.Join(flag.Args(), " ")
+		log.Info().
 			Str("bpf_filter", bpffilter).
-			Msg("BPF filter error")
+			Msg("Using BPF filter")
+		if err = handle.SetBPFFilter(bpffilter); err != nil {
+			log.Fatal().
+				Err(err).
+				Str("bpf_filter", bpffilter).
+				Msg("BPF filter error")
+		}
 	}
-	// }
 
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	packetSource.Lazy = *lazy
