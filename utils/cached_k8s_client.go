@@ -64,16 +64,6 @@ func (c *CachedK8sClient) GetPods() []*v1.Pod {
 	return pods
 }
 
-func (c *CachedK8sClient) GetPodsByNamespace(namespace string) []*v1.Pod {
-	var pods []*v1.Pod
-	for _, pod := range c.GetPods() {
-		if pod.Namespace == namespace {
-			pods = append(pods, pod)
-		}
-	}
-	return pods
-}
-
 func (c *CachedK8sClient) GetServices() ([]*v1.Service, error) {
 	var services []*v1.Service
 	items := c.serviceInformer.GetStore().List()

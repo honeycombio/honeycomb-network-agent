@@ -172,13 +172,13 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	ev.Add(k8sEventAttrs)
 
 	log.Info().
-		Time("event.timestamp", ev.Timestamp).
 		Str("request_id", event.RequestId).
+		Time("event.timestamp", ev.Timestamp).
 		Str("http.url", requestURI).
 		Msg("Event sent")
 	err := ev.Send()
 	if err != nil {
-		log.Info().
+		log.Warn().
 			Err(err).
 			Msg("error sending event")
 	}
