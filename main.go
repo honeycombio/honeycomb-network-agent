@@ -31,7 +31,8 @@ func main() {
 	if os.Getenv("DEBUG") == "true" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
-	log.Logger = log.Output(zerolog.NewConsoleWriter())
+	// TODO: add a flag to enable human readable logs
+	// log.Logger = log.Output(zerolog.NewConsoleWriter())
 
 	log.Info().Str("agent_version", Version).Msg("Starting Honeycomb eBPF agent")
 
@@ -171,14 +172,14 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	k8sEventAttrs := utils.GetK8sEventAttrs(k8sClient, event.SrcIp, event.DstIp)
 	ev.Add(k8sEventAttrs)
 
-	log.Info().
+	log.Debug().
 		Str("request_id", event.RequestId).
 		Time("event.timestamp", ev.Timestamp).
 		Str("http.url", requestURI).
 		Msg("Event sent")
 	err := ev.Send()
 	if err != nil {
-		log.Warn().
+		log.Debug().
 			Err(err).
 			Msg("error sending event")
 	}
