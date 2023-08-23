@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/honeycombio/ebpf-agent/assemblers"
-	"github.com/honeycombio/ebpf-agent/bpf/probes"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
@@ -22,7 +21,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-const Version string = "0.0.4-alpha"
+const Version string = "0.0.5-alpha"
 const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
@@ -92,11 +91,6 @@ func main() {
 	cachedK8sClient := utils.NewCachedK8sClient(k8sClient)
 	cachedK8sClient.Start(ctx)
 
-	// setup probes
-	p := probes.New(cachedK8sClient)
-	go p.Start()
-	defer p.Stop()
-
 	agentConfig := assemblers.NewConfig()
 
 	// setup TCP stream reader
@@ -143,15 +137,17 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	ev.AddField(string(semconv.NetSockHostAddrKey), event.SrcIp)
 	ev.AddField("destination.address", event.DstIp)
 
+	var requestURI string
+
 	// request attributes
 	if event.Request != nil {
+		requestURI = event.Request.RequestURI
+
 		bodySizeString := event.Request.Header.Get("Content-Length")
 		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
 		ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
 		ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
-		ev.AddField(string(semconv.HTTPURLKey), event.Request.RequestURI)
-		ev.AddField("http.request.body", fmt.Sprintf("%v", event.Request.Body))
-		ev.AddField("http.request.headers", fmt.Sprintf("%v", event.Request.Header))
+		ev.AddField(string(semconv.HTTPURLKey), requestURI)
 		ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
 		ev.AddField("http.request.body.size", bodySize)
 	} else {
@@ -165,8 +161,6 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
 
 		ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
-		ev.AddField("http.response.body", event.Response.Body)
-		ev.AddField("http.response.headers", event.Response.Header)
 		ev.AddField("http.response.body.size", bodySize)
 
 	} else {
@@ -178,7 +172,7 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 
 	log.Debug().
 		Time("event.timestamp", ev.Timestamp).
-		Str("http.url", event.Request.RequestURI).
+		Str("http.url", requestURI).
 		Msg("Event sent")
 	err := ev.Send()
 	if err != nil {
