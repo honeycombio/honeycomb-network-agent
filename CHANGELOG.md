@@ -1,5 +1,21 @@
 # Honeycomb eBPF Agent changelog
 
+## [0.0.6-alpha] - 2023-08-24
+
+### Enhancements
+
+- Clean up pcap handles and allow alternative sources #103 | @MikeGoldsmith
+
+### Fixes
+
+- Improve request / response handling (#117) | @MikeGoldsmith
+- Remove map entry after finding match (#124) | @MikeGoldsmith
+- Remove fields for http body and headers (#113) | @JamieDanielson
+
+### Maintenance
+
+- Fix typo in request counter (#123) | @MikeGoldsmith
+
 ## [0.0.5-alpha] - 2023-08-22
 
 ### Fixes
