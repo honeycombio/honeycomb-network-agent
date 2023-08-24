@@ -32,6 +32,7 @@ func (m *httpMatcher) GetOrStoreRequest(ident string, timestamp time.Time, reque
 	if e, ok := m.messages[ident]; ok {
 		e.request = request
 		e.requestTimestamp = timestamp
+		delete(m.messages, ident)
 		return &e, true
 	}
 
@@ -52,6 +53,7 @@ func (m *httpMatcher) GetOrStoreResponse(ident string, timestamp time.Time, resp
 	if e, ok := m.messages[ident]; ok {
 		e.response = response
 		e.responseTimestamp = timestamp
+		delete(m.messages, ident)
 		return &e, true
 	}
 
