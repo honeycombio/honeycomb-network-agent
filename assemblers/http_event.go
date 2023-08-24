@@ -9,7 +9,8 @@ type HttpEvent struct {
 	RequestId string
 	Request   *http.Request
 	Response  *http.Response
-	Timestamp time.Time
+	Start     time.Time
+	End       time.Time
 	Duration  time.Duration
 	SrcIp     string
 	DstIp     string

@@ -10,9 +10,7 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/honeycombio/ebpf-agent/utils"
-	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog/log"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf source/tcp_probe.c
@@ -96,28 +94,30 @@ func (m *manager) Stop() {
 // Send event to Honeycomb
 func sendEvent(event bpfTcpEvent, client *utils.CachedK8sClient) {
 
-	sourceIpAddr := intToIP(event.Saddr).String()
-	destIpAddr := intToIP(event.Daddr).String()
+	// disable for now as we don't have an otel span for probe events
 
-	ev := libhoney.NewEvent()
-	ev.AddField("name", "tcp_event")
-	ev.AddField("duration_ms", (event.EndTime-event.StartTime)/1_000_000) // convert ns to ms
-	// IP Address / port
-	ev.AddField(string(semconv.NetSockHostAddrKey), sourceIpAddr)
-	ev.AddField("destination.address", destIpAddr)
-	ev.AddField(string(semconv.NetHostPortKey), event.Sport)
-	ev.AddField("destination.port", event.Dport)
+	// sourceIpAddr := intToIP(event.Saddr).String()
+	// destIpAddr := intToIP(event.Daddr).String()
 
-	// k8s metadata
-	k8sEventAttrs := utils.GetK8sEventAttrs(client, sourceIpAddr, destIpAddr)
-	ev.Add(k8sEventAttrs)
+	// ev := libhoney.NewEvent()
+	// ev.AddField("name", "tcp_event")
+	// ev.AddField("duration_ms", (event.EndTime-event.StartTime)/1_000_000) // convert ns to ms
+	// // IP Address / port
+	// ev.AddField(string(semconv.NetSockHostAddrKey), sourceIpAddr)
+	// ev.AddField("destination.address", destIpAddr)
+	// ev.AddField(string(semconv.NetHostPortKey), event.Sport)
+	// ev.AddField("destination.port", event.Dport)
 
-	err := ev.Send()
-	if err != nil {
-		log.Debug().
-			Err(err).
-			Msg("error sending event")
-	}
+	// // k8s metadata
+	// k8sEventAttrs := utils.AddK8sAttrsToSpan(client, sourceIpAddr, destIpAddr)
+	// ev.Add(k8sEventAttrs)
+
+	// err := ev.Send()
+	// if err != nil {
+	// 	log.Debug().
+	// 		Err(err).
+	// 		Msg("error sending event")
+	// }
 }
 
 // intToIP converts IPv4 number to net.IP

@@ -12,18 +12,22 @@ import (
 
 	"github.com/honeycombio/ebpf-agent/assemblers"
 	"github.com/honeycombio/ebpf-agent/utils"
-	"github.com/honeycombio/libhoney-go"
+	"github.com/honeycombio/otel-config-go/otelconfig"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
+const Name string = "hny-ebpf-agent"
 const Version string = "0.0.5-alpha"
 const defaultDataset = "hny-ebpf-agent"
-const defaultEndpoint = "https://api.honeycomb.io"
+const defaultEndpoint = "api.honeycomb.io:443"
 
 func main() {
 	// Set logging level
@@ -58,22 +62,24 @@ func main() {
 		Str("hny_dataset", dataset).
 		Msg("Honeycomb API config")
 
-	// setup libhoney
-	libhoney.Init(libhoney.Config{
-		APIKey:  apikey,
-		Dataset: dataset,
-		APIHost: endpoint,
-	})
-
-	// appends libhoney's user-agent (TODO: doesn't work, no useragent right now)
-	libhoney.UserAgentAddition = fmt.Sprintf("hny/ebpf-agent/%s", Version)
-
-	// configure global fields that are set on all events
-	libhoney.AddField("honeycomb.agent_version", Version)
-	libhoney.AddField("meta.kernel_version", kernelVersion.String())
-	libhoney.AddField("meta.btf_enabled", btfEnabled)
-
-	defer libhoney.Close()
+	otelShutdown, err := otelconfig.ConfigureOpenTelemetry(
+		otelconfig.WithServiceName(Name),
+		otelconfig.WithServiceVersion(Version),
+		otelconfig.WithExporterEndpoint(endpoint),
+		otelconfig.WithHeaders(map[string]string{
+			"x-honeycomb-team":    apikey,
+			"x-honeycomb-dataset": dataset,
+		}),
+		otelconfig.WithResourceAttributes(map[string]string{
+			"honeycomb.agent_version": Version,
+			"meta.kernel_version":     kernelVersion.String(),
+			"meta.btf_enabled":        strconv.FormatBool(btfEnabled),
+		}),
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to configure OpenTelemetry")
+	}
+	defer otelShutdown()
 
 	// creates the in-cluster config
 	k8sConfig, err := rest.InClusterConfig()
@@ -127,62 +133,67 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *utils.CachedK8sC
 }
 
 func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.CachedK8sClient) {
-	// create libhoney event
-	ev := libhoney.NewEvent()
-
-	// common attributes
-	ev.Timestamp = event.Timestamp
-	ev.AddField("httpEvent_handled_at", time.Now())
-	ev.AddField("httpEvent_handled_latency_ms", time.Now().Sub(event.Timestamp).Milliseconds())
-	ev.AddField("goroutine_count", runtime.NumGoroutine())
-	ev.AddField("duration_ms", event.Duration.Milliseconds())
-	ev.AddField(string(semconv.NetSockHostAddrKey), event.SrcIp)
-	ev.AddField("destination.address", event.DstIp)
+	// start new span and set start time from event
+	_, span := otel.Tracer(Name).
+		Start(context.Background(), fmt.Sprintf("HTTP %s", event.Request.Method),
+			trace.WithTimestamp(event.Start),
+			trace.WithAttributes(
+				attribute.String("httpEvent_handled_at", time.Now().String()),
+				attribute.Int64("httpEvent_handled_latency_ms", event.Duration.Milliseconds()),
+				attribute.Int("goroutine_count", runtime.NumGoroutine()),
+				attribute.Int64("duration_ms", event.Duration.Milliseconds()),
+				semconv.NetSockHostAddr(event.SrcIp),
+				attribute.String("destination.address", event.DstIp),
+			),
+		)
 
 	var requestURI string
 
 	// request attributes
 	if event.Request != nil {
 		requestURI = event.Request.RequestURI
-
 		bodySizeString := event.Request.Header.Get("Content-Length")
 		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
-		ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
-		ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
-		ev.AddField(string(semconv.HTTPURLKey), requestURI)
-		ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
-		ev.AddField("http.request.body.size", bodySize)
+		span.SetAttributes(
+			attribute.String("name", fmt.Sprintf("HTTP %s", event.Request.Method)),
+			semconv.HTTPMethod(event.Request.Method),
+			semconv.HTTPURL(requestURI),
+			semconv.UserAgentOriginal(event.Request.Header.Get("User-Agent")),
+			attribute.Int64("http.request.body.size", bodySize),
+		)
 	} else {
-		ev.AddField("name", "HTTP")
-		ev.AddField("http.request.missing", "no request on this event")
+		span.SetAttributes(
+			attribute.String("name", "HTTP"),
+			attribute.String("http.request.missing", "no request on this event"),
+		)
 	}
 
 	// response attributes
 	if event.Response != nil {
 		bodySizeString := event.Response.Header.Get("Content-Length")
 		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
-
-		ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
-		ev.AddField("http.response.body.size", bodySize)
+		span.SetAttributes(
+			semconv.HTTPStatusCode(event.Response.StatusCode),
+			attribute.Int64("http.response.body.size", bodySize),
+		)
 
 	} else {
-		ev.AddField("http.response.missing", "no response on this event")
+		span.SetAttributes(
+			attribute.String("http.response.missing", "no response on this event"),
+		)
 	}
 
-	k8sEventAttrs := utils.GetK8sEventAttrs(k8sClient, event.SrcIp, event.DstIp)
-	ev.Add(k8sEventAttrs)
+	// TODO: mayne move k8s attrs here?
+	utils.AddK8sAttrsToSpan(span, k8sClient, event.SrcIp, event.DstIp)
 
 	log.Debug().
 		Str("request_id", event.RequestId).
-		Time("event.timestamp", ev.Timestamp).
+		Time("event.timestamp", event.Start).
 		Str("http.url", requestURI).
 		Msg("Event sent")
-	err := ev.Send()
-	if err != nil {
-		log.Debug().
-			Err(err).
-			Msg("error sending event")
-	}
+
+	// end span and set end time -- also marks span ready for dispatch
+	span.End(trace.WithTimestamp(event.End))
 }
 
 func getEnvOrDefault(key string, defaultValue string) string {

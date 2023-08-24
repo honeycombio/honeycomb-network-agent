@@ -4,46 +4,47 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
-func GetK8sEventAttrs(client *CachedK8sClient, srcIp string, dstIp string) map[string]any {
-	log.Debug().
-		Str("src_ip", srcIp).
-		Str("dst_ip", dstIp).
-		Msg("Getting k8s event attrs")
-
-	k8sEventAttrs := map[string]any{}
-
+func AddK8sAttrsToSpan(span trace.Span, client *CachedK8sClient, srcIp string, dstIp string) {
 	if srcPod := client.GetPodByIPAddr(srcIp); srcPod != nil {
-		k8sEventAttrs[string(semconv.K8SPodNameKey)] = srcPod.Name
-		k8sEventAttrs[string(semconv.K8SPodUIDKey)] = srcPod.UID
-		k8sEventAttrs[string(semconv.K8SNamespaceNameKey)] = srcPod.Namespace
+		span.SetAttributes(
+			semconv.K8SPodName(srcPod.Name),
+			semconv.K8SPodUID(fmt.Sprint(srcPod.UID)),
+			semconv.K8SNamespaceName(srcPod.Namespace),
+		)
 
 		if len(srcPod.Spec.Containers) > 0 {
 			var containerNames []string
 			for _, container := range srcPod.Spec.Containers {
 				containerNames = append(containerNames, container.Name)
 			}
-			k8sEventAttrs[string(semconv.K8SContainerNameKey)] = strings.Join(containerNames, ",")
+			span.SetAttributes(
+				semconv.K8SContainerName(strings.Join(containerNames, ",")),
+			)
 		}
 
 		if srcNode := client.GetNodeByPod(srcPod); srcNode != nil {
-			k8sEventAttrs[string(semconv.K8SNodeNameKey)] = srcNode.Name
-			k8sEventAttrs[string(semconv.K8SNodeUIDKey)] = srcNode.UID
+			span.SetAttributes(
+				semconv.K8SNodeName(srcNode.Name),
+				semconv.K8SNodeUID(fmt.Sprint(srcNode.UID)),
+			)
 		}
 
 		if service := client.GetServiceForPod(srcPod); service != nil {
-			// no semconv for service yet
-			k8sEventAttrs["k8s.service.name"] = service.Name
+			span.SetAttributes(
+				attribute.String("k8s.service.name", service.Name),
+			)
 		}
 	}
 
 	if dstPod := client.GetPodByIPAddr(dstIp); dstPod != nil {
-		k8sEventAttrs[fmt.Sprintf("destination.%s", semconv.K8SPodNameKey)] = dstPod.Name
-		k8sEventAttrs[fmt.Sprintf("destination.%s", semconv.K8SPodUIDKey)] = dstPod.UID
+		span.SetAttributes(
+			attribute.String(fmt.Sprintf("destination.%s", semconv.K8SPodNameKey), dstPod.Name),
+			attribute.String(fmt.Sprintf("destination.%s", semconv.K8SPodUIDKey), fmt.Sprint(dstPod.UID)),
+		)
 	}
-
-	return k8sEventAttrs
 }
