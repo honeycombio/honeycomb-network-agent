@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -10,17 +11,17 @@ import (
 	"time"
 
 	"github.com/honeycombio/ebpf-agent/assemblers"
-	"github.com/honeycombio/ebpf-agent/bpf/probes"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-const Version string = "0.0.3-alpha"
+const Version string = "0.0.6-alpha"
 const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
@@ -30,6 +31,8 @@ func main() {
 	if os.Getenv("DEBUG") == "true" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
+	// TODO: add a flag to enable human readable logs
+	// log.Logger = log.Output(zerolog.NewConsoleWriter())
 
 	log.Info().Str("agent_version", Version).Msg("Starting Honeycomb eBPF agent")
 
@@ -80,22 +83,22 @@ func main() {
 
 	// creates the clientset
 	k8sClient, err := kubernetes.NewForConfig(k8sConfig)
-
 	if err != nil {
 		panic(err.Error())
 	}
 
-	// setup probes
-	p := probes.New(k8sClient)
-	go p.Start()
-	defer p.Stop()
+	// create k8s monitor that caches k8s objects
+	ctx, done := context.WithCancel(context.Background())
+	defer done()
+	cachedK8sClient := utils.NewCachedK8sClient(k8sClient)
+	cachedK8sClient.Start(ctx)
 
 	agentConfig := assemblers.NewConfig()
 
 	// setup TCP stream reader
 	httpEvents := make(chan assemblers.HttpEvent, 10000)
 	assember := assemblers.NewTcpAssembler(*agentConfig, httpEvents)
-	go handleHttpEvents(httpEvents, k8sClient)
+	go handleHttpEvents(httpEvents, cachedK8sClient)
 	go assember.Start()
 	defer assember.Stop()
 
@@ -108,7 +111,7 @@ func main() {
 	log.Info().Msg("Shutting down...")
 }
 
-func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clientset) {
+func handleHttpEvents(events chan assemblers.HttpEvent, client *utils.CachedK8sClient) {
 	ticker := time.NewTicker(time.Second * 10)
 	for {
 		select {
@@ -123,28 +126,30 @@ func handleHttpEvents(events chan assemblers.HttpEvent, client *kubernetes.Clien
 	}
 }
 
-func sendHttpEventToHoneycomb(event assemblers.HttpEvent, client *kubernetes.Clientset) {
+func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.CachedK8sClient) {
 	// create libhoney event
 	ev := libhoney.NewEvent()
 
 	// common attributes
 	ev.Timestamp = event.Timestamp
 	ev.AddField("httpEvent_handled_at", time.Now())
-	ev.AddField("httpEvent_handled_latency", time.Now().Sub(event.Timestamp))
+	ev.AddField("httpEvent_handled_latency_ms", time.Now().Sub(event.Timestamp).Milliseconds())
 	ev.AddField("goroutine_count", runtime.NumGoroutine())
-	ev.AddField("duration_ms", event.Duration.Microseconds())
+	ev.AddField("duration_ms", event.Duration.Milliseconds())
 	ev.AddField(string(semconv.NetSockHostAddrKey), event.SrcIp)
 	ev.AddField("destination.address", event.DstIp)
 
+	var requestURI string
+
 	// request attributes
 	if event.Request != nil {
+		requestURI = event.Request.RequestURI
+
 		bodySizeString := event.Request.Header.Get("Content-Length")
 		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
 		ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
 		ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
-		ev.AddField(string(semconv.HTTPURLKey), event.Request.RequestURI)
-		ev.AddField("http.request.body", fmt.Sprintf("%v", event.Request.Body))
-		ev.AddField("http.request.headers", fmt.Sprintf("%v", event.Request.Header))
+		ev.AddField(string(semconv.HTTPURLKey), requestURI)
 		ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
 		ev.AddField("http.request.body.size", bodySize)
 	} else {
@@ -158,23 +163,19 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, client *kubernetes.Cli
 		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
 
 		ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
-		ev.AddField("http.response.body", event.Response.Body)
-		ev.AddField("http.response.headers", event.Response.Header)
 		ev.AddField("http.response.body.size", bodySize)
 
 	} else {
 		ev.AddField("http.response.missing", "no response on this event")
 	}
 
-	// k8s attributes
-	// TODO: make this faster; the call to the k8s API takes a bit of time and
-	//       slows the processing of the event queue
-	// k8sEventAttrs := utils.GetK8sEventAttrs(client, event.SrcIp, event.DstIp)
-	// ev.Add(k8sEventAttrs)
+	k8sEventAttrs := utils.GetK8sEventAttrs(k8sClient, event.SrcIp, event.DstIp)
+	ev.Add(k8sEventAttrs)
 
-	log.Info().
+	log.Debug().
+		Str("request_id", event.RequestId).
 		Time("event.timestamp", ev.Timestamp).
-		Str("http.url", event.Request.RequestURI).
+		Str("http.url", requestURI).
 		Msg("Event sent")
 	err := ev.Send()
 	if err != nil {

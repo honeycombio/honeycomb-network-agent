@@ -13,7 +13,6 @@ import (
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
-	"k8s.io/client-go/kubernetes"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target amd64,arm64 -cc clang -cflags $CFLAGS bpf source/tcp_probe.c
@@ -22,10 +21,10 @@ type manager struct {
 	bpfObjects bpfObjects
 	probes     []link.Link
 	reader     *perf.Reader
-	client     *kubernetes.Clientset
+	client     *utils.CachedK8sClient
 }
 
-func New(client *kubernetes.Clientset) manager {
+func New(client *utils.CachedK8sClient) manager {
 	// Load pre-compiled programs and maps into the kernel.
 	objs := bpfObjects{}
 	if err := loadBpfObjects(&objs, nil); err != nil {
@@ -95,7 +94,7 @@ func (m *manager) Stop() {
 }
 
 // Send event to Honeycomb
-func sendEvent(event bpfTcpEvent, client *kubernetes.Clientset) {
+func sendEvent(event bpfTcpEvent, client *utils.CachedK8sClient) {
 
 	sourceIpAddr := intToIP(event.Saddr).String()
 	destIpAddr := intToIP(event.Daddr).String()

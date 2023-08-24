@@ -8,8 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const closeTimeout time.Duration = time.Hour * 24
-const timeout time.Duration = time.Minute * 5
+const timeout time.Duration = time.Second * 30
 
 var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
 var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
@@ -29,6 +28,8 @@ var fname = flag.String("r", "", "Filename to read from, overrides -i")
 var snaplen = flag.Int("s", 65536, "Snap length (number of bytes max to read per packet")
 var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
 var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
+var packetSource = flag.String("source", "pcap", "Packet source (defaults to pcap)")
+var bpfFilter = flag.String("filter", "tcp", "BPF filter")
 
 type config struct {
 	Maxcount         int
@@ -49,6 +50,8 @@ type config struct {
 	Promiscuous      bool
 	CloseTimeout     time.Duration
 	Timeout          time.Duration
+	packetSource     string
+	bpfFilter        string
 }
 
 func NewConfig() *config {
@@ -69,8 +72,9 @@ func NewConfig() *config {
 		Snaplen:          *snaplen,
 		TsType:           *tstype,
 		Promiscuous:      *promisc,
-		CloseTimeout:     closeTimeout,
 		Timeout:          timeout,
+		packetSource:     *packetSource,
+		bpfFilter:        *bpfFilter,
 	}
 
 	if c.Debug {

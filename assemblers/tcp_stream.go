@@ -18,8 +18,9 @@ type tcpStream struct {
 	net, transport gopacket.Flow
 	client         httpReader
 	server         httpReader
-	urls           []string
+	counter        requestCounter
 	ident          string
+	closed         bool
 	sync.Mutex
 	matcher httpMatcher
 	events  chan HttpEvent
@@ -127,15 +128,19 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 		// Missing bytes in stream: do not even try to parse it
 		return
 	}
-	data := sg.Fetch(length)
 
 	if length > 0 {
+		data := sg.Fetch(length)
 		if dir == reassembly.TCPDirClientToServer {
-			t.client.timestamp = ac.GetCaptureInfo().Timestamp
-			t.client.bytes <- data
+			t.client.messages <- message{
+				data:      data,
+				timestamp: ac.GetCaptureInfo().Timestamp,
+			}
 		} else {
-			t.server.timestamp = ac.GetCaptureInfo().Timestamp
-			t.server.bytes <- data
+			t.server.messages <- message{
+				data:      data,
+				timestamp: ac.GetCaptureInfo().Timestamp,
+			}
 		}
 	}
 }
@@ -144,8 +149,20 @@ func (t *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
 	log.Debug().
 		Str("tcp_stream_ident", t.ident).
 		Msg("Connection closed")
-	close(t.client.bytes)
-	close(t.server.bytes)
+	t.close()
 	// do not remove the connection to allow last ACK
 	return false
+}
+
+func (t *tcpStream) close() {
+	t.Lock()
+	defer t.Unlock()
+
+	if !t.closed {
+		t.closed = true
+		close(t.client.messages)
+		close(t.client.bytes)
+		close(t.server.messages)
+		close(t.server.bytes)
+	}
 }

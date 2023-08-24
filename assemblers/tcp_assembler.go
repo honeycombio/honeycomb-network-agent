@@ -1,8 +1,6 @@
 package assemblers
 
 import (
-	"flag"
-	"strings"
 	"time"
 
 	"github.com/google/gopacket"
@@ -42,7 +40,6 @@ func (c *Context) GetCaptureInfo() gopacket.CaptureInfo {
 
 type tcpAssembler struct {
 	config        *config
-	handle        *pcap.Handle
 	packetSource  *gopacket.PacketSource
 	streamFactory *tcpStreamFactory
 	streamPool    *reassembly.StreamPool
@@ -51,43 +48,22 @@ type tcpAssembler struct {
 }
 
 func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
-	var handle *pcap.Handle
+	var packetSource *gopacket.PacketSource
 	var err error
 
-	// Set up pcap packet capture
-	if *fname != "" {
-		log.Info().
-			Str("filename", *fname).
-			Msg("Reading from pcap dump")
-		handle, err = pcap.OpenOffline(*fname)
-	} else {
-		log.Info().
-			Str("interface", *iface).
-			Msg("Starting capture")
-		handle, err = pcap.OpenLive(*iface, int32(*snaplen), true, pcap.BlockForever)
-	}
-	if err != nil {
-		log.Fatal().
-			Err(err).
-			Msg("Failed to open a pcap handle")
-	}
-	if len(flag.Args()) > 0 {
-		bpffilter := strings.Join(flag.Args(), " ")
-		log.Info().
-			Str("bpf_filter", bpffilter).
-			Msg("Using BPF filter")
-		if err = handle.SetBPFFilter(bpffilter); err != nil {
-			log.Fatal().
-				Err(err).
-				Str("bpf_filter", bpffilter).
-				Msg("BPF filter error")
+	switch config.packetSource {
+	case "pcap":
+		packetSource, err = newPcapPacketSource(config)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to setup pcap handle")
 		}
+	// TODO: other data sources (eg afpacket, pfring, etc)
+	default:
+		log.Fatal().Str("packet_source", config.packetSource).Msg("Unknown packet source")
 	}
 
-	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	packetSource.Lazy = *lazy
+	packetSource.Lazy = config.Lazy
 	packetSource.NoCopy = true
-	log.Info().Msg("Starting to read packets")
 
 	streamFactory := NewTcpStreamFactory(httpEvents)
 	streamPool := reassembly.NewStreamPool(&streamFactory)
@@ -95,7 +71,6 @@ func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
 
 	return tcpAssembler{
 		config:        &config,
-		handle:        handle,
 		packetSource:  packetSource,
 		streamFactory: &streamFactory,
 		streamPool:    streamPool,
@@ -105,88 +80,81 @@ func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
 }
 
 func (h *tcpAssembler) Start() {
-
-	// start up http event handler
-
+	log.Info().Msg("Starting TCP assembler")
+	flushTicker := time.NewTicker(time.Second * 5)
 	count := 0
 	bytes := int64(0)
 	start := time.Now()
 	defragger := ip4defrag.NewIPv4Defragmenter()
-	for packet := range h.packetSource.Packets() {
-		count++
-		data := packet.Data()
-		bytes += int64(len(data))
-		// defrag the IPv4 packet if required
-		if !h.config.Nodefrag {
-			ip4Layer := packet.Layer(layers.LayerTypeIPv4)
-			if ip4Layer == nil {
-				continue
-			}
-			ip4 := ip4Layer.(*layers.IPv4)
-			l := ip4.Length
-			newip4, err := defragger.DefragIPv4(ip4)
-			if err != nil {
-				log.Fatal().Err(err).Msg("Error while de-fragmenting")
-			} else if newip4 == nil {
-				log.Debug().Msg("Fragment...\n")
-				continue // packet fragment, we don't have whole packet yet.
-			}
-			if newip4.Length != l {
-				stats.ipdefrag++
-				log.Debug().
-					Str("network_layer_type", newip4.NextLayerType().String()).
-					Msg("Decoding re-assembled packet")
-				pb, ok := packet.(gopacket.PacketBuilder)
-				if !ok {
-					panic("Not a PacketBuilder")
-				}
-				nextDecoder := newip4.NextLayerType()
-				nextDecoder.Decode(newip4.Payload, pb)
-			}
-		}
 
-		tcp := packet.Layer(layers.LayerTypeTCP)
-		if tcp != nil {
-			tcp := tcp.(*layers.TCP)
-			if h.config.Checksum {
-				err := tcp.SetNetworkLayerForChecksum(packet.NetworkLayer())
-				if err != nil {
-					log.Fatal().Err(err).Msg("Failed to set network layer for checksum")
-				}
-			}
-			c := Context{
-				CaptureInfo: packet.Metadata().CaptureInfo,
-			}
-			stats.totalsz += len(tcp.Payload)
-			h.assembler.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &c)
-		}
-		if count%h.config.Statsevery == 0 {
-			ref := packet.Metadata().CaptureInfo.Timestamp
-			flushed, closed := h.assembler.FlushWithOptions(reassembly.FlushOptions{T: ref.Add(-h.config.Timeout), TC: ref.Add(-h.config.CloseTimeout)})
+	for {
+		select {
+		case <-flushTicker.C:
+			flushed, closed := h.assembler.FlushCloseOlderThan(time.Now().Add(-h.config.Timeout))
 			log.Debug().
 				Int("flushed", flushed).
 				Int("closed", closed).
-				Time("packet_timestamp", ref).
-				Msg("Forced flush")
-		}
+				Msg("Flushing old streams")
+		case packet := <-h.packetSource.Packets():
+			count++
+			data := packet.Data()
+			bytes += int64(len(data))
+			// defrag the IPv4 packet if required
+			if ipv4Layer := packet.Layer(layers.LayerTypeIPv4); ipv4Layer != nil {
+				ipv4 := ipv4Layer.(*layers.IPv4)
+				newipv4, err := defragger.DefragIPv4(ipv4)
+				if err != nil {
+					log.Debug().Err(err).Msg("Error while de-fragmenting")
+					continue
+				}
+				if newipv4 == nil {
+					log.Debug().Msg("Ingoring packet fragment")
+					continue
+				}
 
-		done := h.config.Maxcount > 0 && count >= h.config.Maxcount
-		if count%h.config.Statsevery == 0 || done {
-			log.Debug().
-				Int("processed_count_since_start", count).
-				Int64("milliseconds_since_start", time.Since(start).Milliseconds()).
-				Int64("bytes", bytes).
-				Msg("Processed Packets")
+				// decode the packet if required
+				if newipv4.Length != ipv4.Length {
+					stats.ipdefrag++
+					builder, ok := packet.(gopacket.PacketBuilder)
+					if !ok {
+						log.Debug().Msg("Unable to decode packet - does not contain PacketBuilder")
+					}
+					nextDecoder := newipv4.NextLayerType()
+					nextDecoder.Decode(newipv4.Payload, builder)
+				}
+			}
+
+			// process TCP packet
+			if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
+				tcp := tcpLayer.(*layers.TCP)
+				if h.config.Checksum {
+					err := tcp.SetNetworkLayerForChecksum(packet.NetworkLayer())
+					if err != nil {
+						log.Debug().Err(err).Msg("Failed to set network layer for checksum")
+						continue
+					}
+				}
+				context := Context{
+					CaptureInfo: packet.Metadata().CaptureInfo,
+				}
+				stats.totalsz += len(tcp.Payload)
+				h.assembler.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &context)
+			}
+
+			done := h.config.Maxcount > 0 && count >= h.config.Maxcount
+			if count%h.config.Statsevery == 0 || done {
+				log.Debug().
+					Int("processed_count_since_start", count).
+					Int64("milliseconds_since_start", time.Since(start).Milliseconds()).
+					Int64("bytes", bytes).
+					Msg("Processed Packets")
+			}
 		}
 	}
 }
 
 func (h *tcpAssembler) Stop() {
 	closed := h.assembler.FlushAll()
-	// Debug("Final flush: %d closed", closed)
-	log.Debug().
-		Int("closed", closed).
-		Msg("Final flush")
 	if zerolog.GlobalLevel() >= zerolog.DebugLevel {
 		// this uses stdlib's log, but oh well
 		h.streamPool.Dump()
@@ -194,6 +162,7 @@ func (h *tcpAssembler) Stop() {
 
 	h.streamFactory.WaitGoRoutines()
 	log.Debug().
+		Int("closed", closed).
 		Str("assember_page_usage", h.assembler.Dump()).
 		Int("IPdefrag", stats.ipdefrag).
 		Int("missed_bytes", stats.missedBytes).
@@ -210,5 +179,34 @@ func (h *tcpAssembler) Stop() {
 		Int("biggest_chunk_bytes", stats.biggestChunkBytes).
 		Int("overlap_packets", stats.overlapPackets).
 		Int("overlap_bytes", stats.overlapBytes).
-		Msg("Stop")
+		Msg("Stopping TCP assembler")
+}
+
+func newPcapPacketSource(config config) (*gopacket.PacketSource, error) {
+	log.Info().
+		Str("interface", config.Interface).
+		Int("snaplen", config.Snaplen).
+		Bool("promiscuous", config.Promiscuous).
+		Str("bpf_filter", config.bpfFilter).
+		Msg("Configuring pcap packet source")
+	handle, err := pcap.OpenLive(config.Interface, int32(config.Snaplen), config.Promiscuous, time.Second)
+	if err != nil {
+		log.Fatal().
+			Err(err).
+			Msg("Failed to open a pcap handle")
+		return nil, err
+	}
+	if config.bpfFilter != "" {
+		if err = handle.SetBPFFilter(config.bpfFilter); err != nil {
+			log.Fatal().
+				Err(err).
+				Msg("Error setting BPF filter")
+			return nil, err
+		}
+	}
+
+	return gopacket.NewPacketSource(
+		handle,
+		handle.LinkType(),
+	), nil
 }
