@@ -3,8 +3,8 @@ package assemblers
 import "sync"
 
 type requestCounter struct {
-	requests uint64
-	respones uint64
+	requests  uint64
+	responses uint64
 	sync.Mutex
 }
 
@@ -20,6 +20,6 @@ func (c *requestCounter) incrementResponse() uint64 {
 	c.Lock()
 	defer c.Unlock()
 
-	c.respones++
-	return c.respones
+	c.responses++
+	return c.responses
 }
