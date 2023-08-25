@@ -70,10 +70,12 @@ These environment variables get passed in the make command.
 ```sh
 $ make apply-ebpf-agent
 namespace/honeycomb created
-secret/honeycomb-secrets created
+secret/honeycomb created
 secret/ghcr created
 daemonset.apps/hny-ebpf-agent created
 ```
+
+If you're on a Mac, try `brew install gettext` if `envsubst` isn't available.
 
 Confirm that the pods are up by using `k9s` or with `kubectl`:
 
@@ -85,7 +87,7 @@ hny-ebpf-agent-bqcvl   1/1     Running   0          94s
 
 To remove the agent:
 
-`make unapply-ebpf-agent` or `kubectl delete -f deployment.yaml`
+`make unapply-ebpf-agent` or `kubectl delete -f smoke-tests/deployment.yaml`
 
 ## Optionally install the "greetings" example app
 

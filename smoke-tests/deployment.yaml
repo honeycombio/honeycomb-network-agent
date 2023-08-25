@@ -8,7 +8,7 @@ status: {}
 apiVersion: v1
 kind: Secret
 metadata:
-  name: honeycomb-secrets
+  name: honeycomb
   namespace: honeycomb
 type: Opaque
 stringData:
@@ -77,16 +77,18 @@ spec:
       hostNetwork: true
       containers:
         - name: hny-ebpf-agent
+          # use locally built image from make docker-build
           image: hny/ebpf-agent:local
+          # image: ghcr.io/honeycombio/ebpf-agent:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: HONEYCOMB_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: honeycomb-secrets
+                  name: honeycomb
                   key: api-key
             - name: HONEYCOMB_DATASET
-              value: ebpf-agent-go
+              value: hny-ebpf-agent
             ## uncomment this to enable debug logs
             # - name: DEBUG
             #   value: "true"
