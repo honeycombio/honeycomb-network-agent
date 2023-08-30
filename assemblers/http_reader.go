@@ -91,14 +91,24 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 }
 
 func (h *httpReader) processEvent(ident string, entry *entry) {
+	eventDuration := entry.responseTimestamp.Sub(entry.requestTimestamp)
+	if eventDuration < 0 { // the response came in before the request? wat?
+		// logging the weirdness for now so we can debug in environments with production loads
+		log.Debug().
+			Str("ident", ident).
+			Int64("duration_ns", int64(eventDuration)).
+			Int64("duration_ms", eventDuration.Milliseconds()).
+			Msg("Time has gotten weird for this event.")
+	}
+
 	h.parent.events <- HttpEvent{
-		RequestId:         ident,
-		Request:           entry.request,
-		Response:          entry.response,
+		RequestId: ident,
+		Request:   entry.request,
+		Response:  entry.response,
 		RequestTimestamp:  entry.requestTimestamp,
 		ResponseTimeStamp: entry.responseTimestamp,
-		Duration:          entry.responseTimestamp.Sub(entry.requestTimestamp),
-		SrcIp:             h.srcIp,
-		DstIp:             h.dstIp,
+		Duration:  eventDuration,
+		SrcIp:     h.srcIp,
+		DstIp:     h.dstIp,
 	}
 }
