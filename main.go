@@ -133,7 +133,8 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	// common attributes
 	ev.Timestamp = event.RequestTimestamp
 	ev.AddField("httpEvent_handled_at", time.Now())
-	ev.AddField("httpEvent_handled_latency_ms", time.Now().Sub(event.RequestTimestamp).Milliseconds())
+	ev.AddField("meta.httpEvent_request_handled_latency_ms", time.Now().Sub(event.RequestTimestamp).Milliseconds())
+	ev.AddField("meta.httpEvent_response_handled_latency_ms", time.Now().Sub(event.ResponseTimestamp).Milliseconds())
 	ev.AddField("goroutine_count", runtime.NumGoroutine())
 	ev.AddField("duration_ms", event.Duration.Milliseconds())
 	ev.AddField("http.request.timestamp", event.RequestTimestamp)
