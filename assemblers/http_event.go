@@ -6,11 +6,12 @@ import (
 )
 
 type HttpEvent struct {
-	RequestId string
-	Request   *http.Request
-	Response  *http.Response
-	Timestamp time.Time
-	Duration  time.Duration
-	SrcIp     string
-	DstIp     string
+	RequestId         string
+	Request           *http.Request
+	Response          *http.Response
+	RequestTimestamp  time.Time
+	ResponseTimeStamp time.Time
+	Duration          time.Duration
+	SrcIp             string
+	DstIp             string
 }

@@ -92,12 +92,13 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 
 func (h *httpReader) processEvent(ident string, entry *entry) {
 	h.parent.events <- HttpEvent{
-		RequestId: ident,
-		Request:   entry.request,
-		Response:  entry.response,
-		Timestamp: entry.requestTimestamp,
-		Duration:  entry.responseTimestamp.Sub(entry.requestTimestamp),
-		SrcIp:     h.srcIp,
-		DstIp:     h.dstIp,
+		RequestId:         ident,
+		Request:           entry.request,
+		Response:          entry.response,
+		RequestTimestamp:  entry.requestTimestamp,
+		ResponseTimeStamp: entry.responseTimestamp,
+		Duration:          entry.responseTimestamp.Sub(entry.requestTimestamp),
+		SrcIp:             h.srcIp,
+		DstIp:             h.dstIp,
 	}
 }
