@@ -1,5 +1,13 @@
 # Honeycomb eBPF Agent changelog
 
+## [0.0.7-alpha] - 2023-08-30
+
+### Maintenance
+
+- maint: add debug telemetry (#136) | @pkanal
+- chore: log when we've got an event where time's gone wobbly (#137) | @robbkidd
+- docs: add Quickstart docs and example (#89) | @JamieDanielson
+
 ## [0.0.6-alpha] - 2023-08-24
 
 ### Enhancements
