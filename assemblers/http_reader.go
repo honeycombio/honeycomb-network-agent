@@ -102,12 +102,13 @@ func (h *httpReader) processEvent(ident string, entry *entry) {
 	}
 
 	h.parent.events <- HttpEvent{
-		RequestId: ident,
-		Request:   entry.request,
-		Response:  entry.response,
-		Timestamp: entry.requestTimestamp,
-		Duration:  eventDuration,
-		SrcIp:     h.srcIp,
-		DstIp:     h.dstIp,
+		RequestId:         ident,
+		Request:           entry.request,
+		Response:          entry.response,
+		RequestTimestamp:  entry.requestTimestamp,
+		ResponseTimestamp: entry.responseTimestamp,
+		Duration:          eventDuration,
+		SrcIp:             h.srcIp,
+		DstIp:             h.dstIp,
 	}
 }
