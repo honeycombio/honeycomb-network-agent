@@ -101,12 +101,15 @@ func (h *httpReader) processEvent(ident string, entry *entry) {
 			Msg("Time has gotten weird for this event.")
 	}
 
+	body, _ := io.ReadAll(entry.response.Body)
+
 	h.parent.events <- HttpEvent{
 		RequestId:         ident,
 		Request:           entry.request,
 		Response:          entry.response,
 		RequestTimestamp:  entry.requestTimestamp,
 		ResponseTimestamp: entry.responseTimestamp,
+		ResponseBody:      string(body),
 		Duration:          eventDuration,
 		SrcIp:             h.srcIp,
 		DstIp:             h.dstIp,
