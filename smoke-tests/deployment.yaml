@@ -102,5 +102,10 @@ spec:
                 - NET_RAW
             # for local debugging
             # privileged: true
+          resources:
+            limits:
+              cpu: "100m"
+            requests:
+              cpu: "10m"
       imagePullSecrets:
         - name: ghcr
