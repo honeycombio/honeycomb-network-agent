@@ -83,10 +83,14 @@ func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
 func (h *tcpAssembler) Start() {
 	log.Info().Msg("Starting TCP assembler")
 	flushTicker := time.NewTicker(time.Second * 5)
+	statsTicker := time.NewTicker(time.Second * 10)
 	count := 0
 	bytes := int64(0)
 	start := time.Now()
 	defragger := ip4defrag.NewIPv4Defragmenter()
+
+	// start new libhoney event to be reused in the loop
+	ev := libhoney.NewEvent()
 
 	for {
 		select {
@@ -96,6 +100,22 @@ func (h *tcpAssembler) Start() {
 				Int("flushed", flushed).
 				Int("closed", closed).
 				Msg("Flushing old streams")
+		case <-statsTicker.C:
+			// intentionally reusing the same event
+			ev = libhoney.NewEvent()
+			ev.Dataset = "hny-ebpf-agent-stats"
+			ev.Add(map[string]interface{}{
+				"name":                     "tcp_assembler_processed",
+				"packet_count_since_start": count,
+				"uptime_ms":                time.Since(start).Milliseconds(),
+				"bytes":                    bytes,
+			})
+			ev.Send()
+			log.Debug().
+				Int("processed_count_since_start", count).
+				Int64("uptime_ms", time.Since(start).Milliseconds()).
+				Int64("bytes", bytes).
+				Msg("Processed Packets")
 		case packet := <-h.packetSource.Packets():
 			count++
 			data := packet.Data()
