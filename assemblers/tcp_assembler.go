@@ -129,7 +129,7 @@ func (h *tcpAssembler) Start() {
 					continue
 				}
 				if newipv4 == nil {
-					log.Debug().Msg("Ingoring packet fragment")
+					log.Debug().Msg("Ignoring packet fragment")
 					continue
 				}
 
