@@ -205,8 +205,26 @@ func newPcapPacketSource(config config) (*gopacket.PacketSource, error) {
 		}
 	}
 
+	go logPcapHandleStats(handle)
 	return gopacket.NewPacketSource(
 		handle,
 		handle.LinkType(),
 	), nil
+}
+
+func logPcapHandleStats(handle *pcap.Handle) {
+	ticker := time.NewTicker(time.Second * 10)
+	for {
+		<-ticker.C
+		stats, err := handle.Stats()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get pcap handle stats")
+			continue
+		}
+		log.Info().
+			Int("packets_received", stats.PacketsReceived).
+			Int("packets_dropped", stats.PacketsDropped).
+			Int("packets_if_dropped", stats.PacketsIfDropped).
+			Msg("Pcap handle stats")
+	}
 }
