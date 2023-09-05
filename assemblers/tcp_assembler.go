@@ -8,6 +8,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/reassembly"
+	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -213,6 +214,7 @@ func newPcapPacketSource(config config) (*gopacket.PacketSource, error) {
 }
 
 func logPcapHandleStats(handle *pcap.Handle) {
+	// TODO make ticker configurable
 	ticker := time.NewTicker(time.Second * 10)
 	for {
 		<-ticker.C
@@ -221,10 +223,19 @@ func logPcapHandleStats(handle *pcap.Handle) {
 			log.Error().Err(err).Msg("Failed to get pcap handle stats")
 			continue
 		}
+		// TODO use config for different dataset for stats telemetry
+		// create libhoney event
+		ev := libhoney.NewEvent()
+		ev.Dataset = "hny-ebpf-agent-stats"
+		ev.AddField("name", "tcp_assembler_pcap")
+		ev.AddField("pcap.packets_received", stats.PacketsReceived)
+		ev.AddField("pcap.packets_dropped", stats.PacketsDropped)
+		ev.AddField("pcap.packets_if_dropped", stats.PacketsIfDropped)
 		log.Info().
-			Int("packets_received", stats.PacketsReceived).
-			Int("packets_dropped", stats.PacketsDropped).
-			Int("packets_if_dropped", stats.PacketsIfDropped).
+			Int("pcap.packets_received", stats.PacketsReceived).
+			Int("pcap.packets_dropped", stats.PacketsDropped).
+			Int("pcap.packets_if_dropped", stats.PacketsIfDropped).
 			Msg("Pcap handle stats")
+		ev.Send()
 	}
 }
