@@ -8,18 +8,21 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/reassembly"
+	"github.com/honeycombio/ebpf-agent/config"
 	"github.com/rs/zerolog/log"
 )
 
 var streamId uint64 = 0
 
 type tcpStreamFactory struct {
+	config     config.Config
 	wg         sync.WaitGroup
 	httpEvents chan HttpEvent
 }
 
-func NewTcpStreamFactory(httpEvents chan HttpEvent) tcpStreamFactory {
+func NewTcpStreamFactory(config config.Config, httpEvents chan HttpEvent) tcpStreamFactory {
 	return tcpStreamFactory{
+		config:     config,
 		httpEvents: httpEvents,
 	}
 }
