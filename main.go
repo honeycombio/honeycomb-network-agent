@@ -21,7 +21,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-const Version string = "0.0.6-alpha"
+const Version string = "0.0.7-alpha"
 const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
@@ -131,11 +131,16 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	ev := libhoney.NewEvent()
 
 	// common attributes
-	ev.Timestamp = event.Timestamp
+	ev.Timestamp = event.RequestTimestamp
 	ev.AddField("httpEvent_handled_at", time.Now())
-	ev.AddField("httpEvent_handled_latency_ms", time.Now().Sub(event.Timestamp).Milliseconds())
+	ev.AddField("meta.httpEvent_request_handled_latency_ms", time.Now().Sub(event.RequestTimestamp).Milliseconds())
+	ev.AddField("meta.httpEvent_response_handled_latency_ms", time.Now().Sub(event.ResponseTimestamp).Milliseconds())
 	ev.AddField("goroutine_count", runtime.NumGoroutine())
 	ev.AddField("duration_ms", event.Duration.Milliseconds())
+	ev.AddField("http.request.timestamp", event.RequestTimestamp)
+	ev.AddField("http.response.timestamp", event.ResponseTimestamp)
+	ev.AddField("http.request.id", event.RequestId)
+
 	ev.AddField(string(semconv.NetSockHostAddrKey), event.SrcIp)
 	ev.AddField("destination.address", event.DstIp)
 
