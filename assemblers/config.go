@@ -3,6 +3,7 @@ package assemblers
 import (
 	"encoding/json"
 	"flag"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -79,6 +80,24 @@ func NewConfig() *config {
 		bpfFilter:         *bpfFilter,
 		ChannelBufferSize: *channelBufferSize,
 	}
+
+	// Add filters to only capture common HTTP methods
+	// TODO "not host me", // how do we get our current IP?
+	// reference links:
+	// https://www.middlewareinventory.com/blog/tcpdump-capture-http-get-post-requests-apache-weblogic-websphere/
+	// https://www.middlewareinventory.com/ascii-table/
+	filters := []string{
+		// tcp[((tcp[12:1] & 0xf0) >> 2):<num> means skip the ip & tcp headers, then get the next <num> bytes and match hex
+		// bpf insists that we must use 1, 2, or 4 bytes
+		// HTTP Methods are request start strings
+		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x47455420", // 'GET '
+		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x504F5354", // 'POST'
+		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x50555420", // 'PUT '
+		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x44454C45", // 'DELE'TE
+		// HTTP 1.1 is the response start string
+		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x48545450", // 'HTTP' 1.1
+	}
+	c.bpfFilter = strings.Join(filters, " or ")
 
 	if c.Debug {
 		b, err := json.MarshalIndent(c, "", "  ")
