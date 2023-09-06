@@ -12,6 +12,7 @@ Recommended:
 - [K9s](https://k9scli.io/) - A Terminal UI for Kubernetes
 - [remake](https://remake.readthedocs.io/) - A better make
   - View them with `remake --tasks`
+- [locust](https://docs.locust.io/en/stable/what-is-locust.html) - A performance testing tool, required for load testing
 
 ## Local Development
 
@@ -113,6 +114,20 @@ Hit the endpoint:
 ## Remove the "greetings" example app
 
 `make unapply-greetings` or `kubectl delete -f smoke-tests/greetings.yaml`
+
+## Load Testing
+
+After a locally built image and an API key is set:
+
+`make loadtest`
+
+This will apply the agent, apply the echoserver, and start locust.
+
+Navigate to `http://0.0.0.0:8089/` in your browser and set users and spawn rate, e.g. 5000 and 100, and hit Start swarming.
+
+To tear down the load test, `ctrl+c` in the terminal running and `make unload`.
+
+See more details in [`smoke-tests/loadtest.md`](./smoke-tests/loadtest.md)
 
 ## Debugging
 
