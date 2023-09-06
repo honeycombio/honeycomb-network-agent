@@ -89,8 +89,9 @@ func (h *tcpAssembler) Start() {
 	start := time.Now()
 	defragger := ip4defrag.NewIPv4Defragmenter()
 
-	// start new libhoney event to be reused in the loop
-	ev := libhoney.NewEvent()
+	// statsEvent is for sending packet processing stats to Honeycomb and
+	// is declared outside the loop for memory re-use.
+	var statsEvent *libhoney.Event
 
 	for {
 		select {
@@ -101,16 +102,16 @@ func (h *tcpAssembler) Start() {
 				Int("closed", closed).
 				Msg("Flushing old streams")
 		case <-statsTicker.C:
-			// intentionally reusing the same event
-			ev = libhoney.NewEvent()
-			ev.Dataset = "hny-ebpf-agent-stats"
-			ev.Add(map[string]interface{}{
+			// intentionally reusing the variable above
+			statsEvent = libhoney.NewEvent()
+			statsEvent.Dataset = "hny-ebpf-agent-stats"
+			statsEvent.Add(map[string]interface{}{
 				"name":                     "tcp_assembler_processed",
 				"packet_count_since_start": count,
 				"uptime_ms":                time.Since(start).Milliseconds(),
 				"bytes":                    bytes,
 			})
-			ev.Send()
+			statsEvent.Send()
 			log.Debug().
 				Int("processed_count_since_start", count).
 				Int64("uptime_ms", time.Since(start).Milliseconds()).
