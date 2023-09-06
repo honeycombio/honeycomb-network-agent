@@ -28,8 +28,8 @@ var fname = flag.String("r", "", "Filename to read from, overrides -i")
 var snaplen = flag.Int("s", 65536, "Snap length (number of bytes max to read per packet")
 var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
 var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
-var packetSource = flag.String("source", "pcap", "Packet source (defaults to pcap)")
-var bpfFilter = flag.String("filter", "tcp", "BPF filter")
+var packetSource = flag.String("source", "pfring", "Packet source (defaults to pcap)")
+var bpfFilter = flag.String("filter", "tcp not port 443", "BPF filter")
 var messageQueueSize = flag.Int("message_queue_size", 1000, "Size of message queue per stream")
 
 type config struct {

@@ -7,6 +7,7 @@ import (
 	"github.com/google/gopacket/ip4defrag"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"github.com/google/gopacket/pfring"
 	"github.com/google/gopacket/reassembly"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -56,6 +57,11 @@ func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
 		packetSource, err = newPcapPacketSource(config)
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to setup pcap handle")
+		}
+	case "pfring":
+		packetSource, err = newPfringPacketSource(config)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to setup pfring handle")
 		}
 	// TODO: other data sources (eg afpacket, pfring, etc)
 	default:
@@ -226,5 +232,54 @@ func logPcapHandleStats(handle *pcap.Handle) {
 			Int("packets_dropped", stats.PacketsDropped).
 			Int("packets_if_dropped", stats.PacketsIfDropped).
 			Msg("Pcap handle stats")
+	}
+}
+
+func newPfringPacketSource(config config) (*gopacket.PacketSource, error) {
+	log.Info().
+		Str("interface", config.Interface).
+		Int("snaplen", config.Snaplen).
+		Str("bpf_filter", config.bpfFilter).
+		Msg("Configuring pfring packet source")
+
+	ring, err := pfring.NewRing(config.Interface, uint32(config.Snaplen), pfring.FlagPromisc)
+	if err != nil {
+		log.Fatal().
+			Err(err).
+			Msg("Failed to open a pfring handle")
+		return nil, err
+	}
+	if config.bpfFilter != "" {
+		if err = ring.SetBPFFilter(config.bpfFilter); err != nil {
+			log.Fatal().
+				Err(err).
+				Msg("Error setting BPF filter")
+			return nil, err
+		}
+	}
+
+	ring.SetSocketMode(pfring.ReadOnly)
+	ring.Enable()
+
+	go logPfringStats(ring)
+	return gopacket.NewPacketSource(
+		ring,
+		layers.LinkTypeEthernet,
+	), nil
+}
+
+func logPfringStats(handle *pfring.Ring) {
+	ticker := time.NewTicker(time.Second * 10)
+	for {
+		<-ticker.C
+		stats, err := handle.Stats()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get pfring handle stats")
+			continue
+		}
+		log.Info().
+			Int("received", int(stats.Received)).
+			Int("dropped", int(stats.Dropped)).
+			Msg("Pfring handle stats")
 	}
 }
