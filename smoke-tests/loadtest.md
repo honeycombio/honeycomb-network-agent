@@ -26,5 +26,5 @@
 6. Tear down echo server
 
     ```shell
-    k delete ns echoserver
+    k delete -f echoserver.yaml
     ```
