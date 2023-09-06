@@ -84,10 +84,12 @@ func NewConfig() *config {
 	// https://www.middlewareinventory.com/blog/tcpdump-capture-http-get-post-requests-apache-weblogic-websphere/
 	// https://www.middlewareinventory.com/ascii-table/
 	filters := []string{}
+	// GET, PUT, POST, DELETE are request start strings
+	// HTTP 1.1 is the response start string
 	for _, method := range []string{"GET", "PUT", "POST", "DELETE", "HTTP 1.1"} {
 		bytes := []byte(method)
-		bs := hex.EncodeToString(bytes)
-		filters = append(filters, fmt.Sprintf("tcp[((tcp[12:1] & 0xf0) >> 2):%d] = 0x%s", len(method), string(bs)))
+		encodedStr := hex.EncodeToString(bytes)
+		filters = append(filters, fmt.Sprintf("tcp[((tcp[12:1] & 0xf0) >> 2):%d] = 0x%s", len(method), string(encodedStr)))
 	}
 	c.bpfFilter = strings.Join(filters, " or ")
 
