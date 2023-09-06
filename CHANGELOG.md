@@ -1,6 +1,6 @@
 # Honeycomb eBPF Agent changelog
 
-## [0.0.8-alpha] - 2023-08-30
+## [0.0.8-alpha] - 2023-09-07
 
 ### Enhancements
 
