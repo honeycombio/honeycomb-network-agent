@@ -80,6 +80,9 @@ func NewConfig() *config {
 		bpfFilter:        *bpfFilter,
 	}
 
+	// reference links:
+	// https://www.middlewareinventory.com/blog/tcpdump-capture-http-get-post-requests-apache-weblogic-websphere/
+	// https://www.middlewareinventory.com/ascii-table/
 	filters := []string{}
 	for _, method := range []string{"GET", "PUT", "POST", "DELETE", "HTTP 1.1"} {
 		bytes := []byte(method)
