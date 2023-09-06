@@ -97,10 +97,10 @@ func main() {
 
 	// setup TCP stream reader
 	httpEvents := make(chan assemblers.HttpEvent, 10000)
-	assember := assemblers.NewTcpAssembler(*agentConfig, httpEvents)
+	assembler := assemblers.NewTcpAssembler(*agentConfig, httpEvents)
 	go handleHttpEvents(httpEvents, cachedK8sClient)
-	go assember.Start()
-	defer assember.Stop()
+	go assembler.Start()
+	defer assembler.Stop()
 
 	log.Info().Msg("Agent is ready!")
 
