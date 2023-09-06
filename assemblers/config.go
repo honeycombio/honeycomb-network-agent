@@ -1,8 +1,11 @@
 package assemblers
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"flag"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -76,6 +79,14 @@ func NewConfig() *config {
 		packetSource:     *packetSource,
 		bpfFilter:        *bpfFilter,
 	}
+
+	filters := []string{}
+	for _, method := range []string{"GET", "PUT", "POST", "DELETE", "HTTP 1.1"} {
+		bytes := []byte(method)
+		bs := hex.EncodeToString(bytes)
+		filters = append(filters, fmt.Sprintf("tcp[((tcp[12:1] & 0xf0) >> 2):%d] = 0x%s", len(method), string(bs)))
+	}
+	c.bpfFilter = strings.Join(filters, " or ")
 
 	if c.Debug {
 		b, err := json.MarshalIndent(c, "", "  ")
