@@ -13,6 +13,63 @@ import (
 	"golang.org/x/net/bpf"
 )
 
+func newAfpacketSource(config config) (*gopacket.PacketSource, error) {
+	// subtract 1 from snaplen to account for the VLAN frame header
+	snaplen := config.Snaplen - 1
+	if snaplen < 0 {
+		snaplen = 0
+	}
+
+	frameSize, blockSize, numBlocks, err := afpacketComputeSize(config.TargetSizeMB, snaplen, os.Getpagesize())
+	if err != nil {
+		return nil, err
+	}
+
+	log.Info().
+		Str("interface", config.Interface).
+		Int("snaplen", snaplen).
+		Str("bpf_filter", config.bpfFilter).
+		Int("frame_size", frameSize).
+		Int("block_size", blockSize).
+		Int("num_blocks", numBlocks).
+		Int("target_size_mb", targetSizeMB).
+		Int("page_size", os.Getpagesize()).
+		Msg("Configuring afpacket packet source")
+
+	opts := []interface{}{
+		afpacket.OptFrameSize(frameSize),
+		afpacket.OptBlockSize(blockSize),
+		afpacket.OptNumBlocks(numBlocks),
+		afpacket.OptAddVLANHeader(false),
+		afpacket.OptPollTimeout(pcap.BlockForever),
+		afpacket.SocketRaw,
+		afpacket.TPacketVersion3,
+	}
+	if config.Interface != "any" {
+		opts = append(opts, afpacket.OptInterface(config.Interface))
+	}
+
+	handle := &afpacketHandle{}
+	handle.TPacket, err = afpacket.NewTPacket(
+		opts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if config.bpfFilter != "" {
+		handle.SetBPFFilter(config.bpfFilter, snaplen)
+	}
+
+	go logAfpacketHandleStats(handle)
+	return gopacket.NewPacketSource(
+		handle.TPacket,
+		handle.LinkType(),
+	), nil
+}
+
+// The afpacket handle used to read packets.
+// Copied from https://github.com/google/gopacket/blob/master/examples/afpacket/afpacket.go#L39
 type afpacketHandle struct {
 	TPacket *afpacket.TPacket
 }
@@ -59,83 +116,11 @@ func (h *afpacketHandle) SocketStats() (afpacket.SocketStats, afpacket.SocketSta
 	return h.TPacket.SocketStats()
 }
 
-func newAfpacketSource(config config) (*gopacket.PacketSource, error) {
-	// subtract 1 from snaplen to account for the VLAN frame header
-	snaplen := config.Snaplen - 1
-	if snaplen < 0 {
-		snaplen = 0
-	}
-
-	frameSize, blockSize, numBlocks, err := afpacketComputeSize(config.TargetSizeMB, snaplen, os.Getpagesize())
-	if err != nil {
-		return nil, err
-	}
-
-	log.Info().
-		Str("interface", config.Interface).
-		Int("snaplen", snaplen).
-		Str("bpf_filter", config.bpfFilter).
-		Int("frame_size", frameSize).
-		Int("block_size", blockSize).
-		Int("num_blocks", numBlocks).
-		Int("target_size_mb", targetSizeMB).
-		Int("page_size", os.Getpagesize()).
-		Msg("Configuring afpacket packet source")
-
-	opts := []interface{}{
-		afpacket.OptFrameSize(frameSize),
-		afpacket.OptBlockSize(blockSize),
-		afpacket.OptNumBlocks(numBlocks),
-		afpacket.OptAddVLANHeader(false),
-		afpacket.OptPollTimeout(pcap.BlockForever),
-		afpacket.SocketRaw,
-		afpacket.TPacketVersion3,
-	}
-	if config.Interface != "any" {
-		opts = append(opts, afpacket.OptInterface(config.Interface))
-	}
-
-	handle := &afpacketHandle{}
-	handle.TPacket, err = afpacket.NewTPacket(
-		opts...,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if config.bpfFilter != "" {
-		handle.SetBPFFilter(config.bpfFilter, config.Snaplen)
-	}
-
-	go logAfpacketHandleStats(handle)
-	return gopacket.NewPacketSource(
-		handle.TPacket,
-		handle.LinkType(),
-	), nil
-}
-
-func logAfpacketHandleStats(handle *afpacketHandle) {
-	ticker := time.NewTicker(time.Second * 10)
-	for {
-		<-ticker.C
-		_, socketStatsV3, err := handle.SocketStats()
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get afpacket socket stats")
-			continue
-		}
-		log.Info().
-			Uint("packets", socketStatsV3.Packets()).
-			Uint("drops", socketStatsV3.Drops()).
-			Msg("Afpacket handle stats")
-
-		// TODO: set stats in assembler once #153 has merged
-	}
-}
-
 // afpacketComputeSize computes the block_size and the num_blocks in such a way that the
 // allocated mmap buffer is close to but smaller than target_size_mb.
 // The restriction is that the block_size must be divisible by both the
 // frame size and page size.
+// Copied from https://github.com/google/gopacket/blob/master/examples/afpacket/afpacket.go#L118
 func afpacketComputeSize(targetSizeMb int, snaplen int, pageSize int) (
 	frameSize int, blockSize int, numBlocks int, err error) {
 
@@ -154,4 +139,22 @@ func afpacketComputeSize(targetSizeMb int, snaplen int, pageSize int) (
 	}
 
 	return frameSize, blockSize, numBlocks, nil
+}
+
+func logAfpacketHandleStats(handle *afpacketHandle) {
+	ticker := time.NewTicker(time.Second * 10)
+	for {
+		<-ticker.C
+		_, socketStatsV3, err := handle.SocketStats()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get afpacket socket stats")
+			continue
+		}
+		log.Info().
+			Uint("packets", socketStatsV3.Packets()).
+			Uint("drops", socketStatsV3.Drops()).
+			Msg("Afpacket handle stats")
+
+		// TODO: set stats in assembler once #153 has merged
+	}
 }
