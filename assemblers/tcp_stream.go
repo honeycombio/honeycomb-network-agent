@@ -7,6 +7,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/reassembly"
+	"github.com/honeycombio/ebpf-agent/config"
 	"github.com/rs/zerolog/log"
 )
 
@@ -21,6 +22,7 @@ type tcpStream struct {
 	counter        requestCounter
 	ident          string
 	closed         bool
+	config         config.Config
 	sync.Mutex
 	matcher httpMatcher
 	events  chan HttpEvent
@@ -35,7 +37,7 @@ func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassem
 			t.fsmerr = true
 			stats.rejectConnFsm++
 		}
-		if !*ignorefsmerr {
+		if !t.config.Ignorefsmerr {
 			return false
 		}
 	}
@@ -44,13 +46,13 @@ func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassem
 	if err != nil {
 		// Error("OptionChecker", "%s: Packet rejected by OptionChecker: %s\n", t.ident, err)
 		stats.rejectOpt++
-		if !*nooptcheck {
+		if !t.config.Nooptcheck {
 			return false
 		}
 	}
 	// Checksum
 	accept := true
-	if *checksum {
+	if t.config.Checksum {
 		c, err := tcp.ComputeChecksum()
 		if err != nil {
 			log.Error().
@@ -122,7 +124,7 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 		Int("overlap_byte_count", sgStats.OverlapBytes).
 		Int("overlap_packet_count", sgStats.OverlapPackets).
 		Msg("SG reassembled packet")
-	if skip == -1 && *allowmissinginit {
+	if skip == -1 && t.config.Allowmissinginit {
 		// this is allowed
 	} else if skip != 0 {
 		// Missing bytes in stream: do not even try to parse it

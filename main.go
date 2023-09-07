@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/honeycombio/ebpf-agent/assemblers"
+	"github.com/honeycombio/ebpf-agent/config"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
@@ -93,11 +94,11 @@ func main() {
 	cachedK8sClient := utils.NewCachedK8sClient(k8sClient)
 	cachedK8sClient.Start(ctx)
 
-	agentConfig := assemblers.NewConfig()
+	agentConfig := config.NewConfig()
 
 	// setup TCP stream reader
 	httpEvents := make(chan assemblers.HttpEvent, 10000)
-	assembler := assemblers.NewTcpAssembler(*agentConfig, httpEvents)
+	assembler := assemblers.NewTcpAssembler(agentConfig, httpEvents)
 	go handleHttpEvents(httpEvents, cachedK8sClient)
 	go assembler.Start()
 	defer assembler.Stop()

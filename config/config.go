@@ -1,4 +1,4 @@
-package assemblers
+package config
 
 import (
 	"encoding/json"
@@ -32,7 +32,7 @@ var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 var packetSource = flag.String("source", "pcap", "Packet source (defaults to pcap)")
 var bpfFilter = flag.String("filter", "tcp", "BPF filter")
 
-type config struct {
+type Config struct {
 	Maxcount         int
 	Statsevery       int
 	Lazy             bool
@@ -51,12 +51,12 @@ type config struct {
 	Promiscuous      bool
 	CloseTimeout     time.Duration
 	Timeout          time.Duration
-	packetSource     string
-	bpfFilter        string
+	PacketSource     string
+	BpfFilter        string
 }
 
-func NewConfig() *config {
-	c := &config{
+func NewConfig() Config {
+	c := Config{
 		Maxcount:         *maxcount,
 		Statsevery:       *statsevery,
 		Lazy:             *lazy,
@@ -74,8 +74,8 @@ func NewConfig() *config {
 		TsType:           *tstype,
 		Promiscuous:      *promisc,
 		Timeout:          timeout,
-		packetSource:     *packetSource,
-		bpfFilter:        *bpfFilter,
+		PacketSource:     *packetSource,
+		BpfFilter:        *bpfFilter,
 	}
 
 	// Add filters to only capture common HTTP methods
@@ -94,7 +94,7 @@ func NewConfig() *config {
 		// HTTP 1.1 is the response start string
 		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x48545450", // 'HTTP' 1.1
 	}
-	c.bpfFilter = strings.Join(filters, " or ")
+	c.BpfFilter = strings.Join(filters, " or ")
 
 	if c.Debug {
 		b, err := json.MarshalIndent(c, "", "  ")
