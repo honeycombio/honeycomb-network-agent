@@ -31,51 +31,54 @@ var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
 var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 var packetSource = flag.String("source", "pcap", "Packet source (defaults to pcap)")
 var bpfFilter = flag.String("filter", "tcp", "BPF filter")
+var channelBufferSize = flag.Int("channel_buffer_size", 1000, "Channel buffer size (defaults to 1000)")
 
 type Config struct {
-	Maxcount         int
-	Statsevery       int
-	Lazy             bool
-	Nodefrag         bool
-	Checksum         bool
-	Nooptcheck       bool
-	Ignorefsmerr     bool
-	Allowmissinginit bool
-	Verbose          bool
-	Debug            bool
-	Quiet            bool
-	Interface        string
-	FileName         string
-	Snaplen          int
-	TsType           string
-	Promiscuous      bool
-	CloseTimeout     time.Duration
-	Timeout          time.Duration
-	PacketSource     string
-	BpfFilter        string
+	Maxcount          int
+	Statsevery        int
+	Lazy              bool
+	Nodefrag          bool
+	Checksum          bool
+	Nooptcheck        bool
+	Ignorefsmerr      bool
+	Allowmissinginit  bool
+	Verbose           bool
+	Debug             bool
+	Quiet             bool
+	Interface         string
+	FileName          string
+	Snaplen           int
+	TsType            string
+	Promiscuous       bool
+	CloseTimeout      time.Duration
+	Timeout           time.Duration
+	PacketSource      string
+	BpfFilter         string
+	ChannelBufferSize int
 }
 
 func NewConfig() Config {
 	c := Config{
-		Maxcount:         *maxcount,
-		Statsevery:       *statsevery,
-		Lazy:             *lazy,
-		Nodefrag:         *nodefrag,
-		Checksum:         *checksum,
-		Nooptcheck:       *nooptcheck,
-		Ignorefsmerr:     *ignorefsmerr,
-		Allowmissinginit: *allowmissinginit,
-		Verbose:          *verbose,
-		Debug:            *debug,
-		Quiet:            *quiet,
-		Interface:        *iface,
-		FileName:         *fname,
-		Snaplen:          *snaplen,
-		TsType:           *tstype,
-		Promiscuous:      *promisc,
-		Timeout:          timeout,
-		PacketSource:     *packetSource,
-		BpfFilter:        *bpfFilter,
+		Maxcount:          *maxcount,
+		Statsevery:        *statsevery,
+		Lazy:              *lazy,
+		Nodefrag:          *nodefrag,
+		Checksum:          *checksum,
+		Nooptcheck:        *nooptcheck,
+		Ignorefsmerr:      *ignorefsmerr,
+		Allowmissinginit:  *allowmissinginit,
+		Verbose:           *verbose,
+		Debug:             *debug,
+		Quiet:             *quiet,
+		Interface:         *iface,
+		FileName:          *fname,
+		Snaplen:           *snaplen,
+		TsType:            *tstype,
+		Promiscuous:       *promisc,
+		Timeout:           timeout,
+		PacketSource:      *packetSource,
+		BpfFilter:         *bpfFilter,
+		ChannelBufferSize: *channelBufferSize,
 	}
 
 	// Add filters to only capture common HTTP methods
