@@ -22,7 +22,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-const Version string = "0.0.7-alpha"
+const Version string = "0.0.8-alpha"
 const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
@@ -98,10 +98,10 @@ func main() {
 
 	// setup TCP stream reader
 	httpEvents := make(chan assemblers.HttpEvent, 10000)
-	assember := assemblers.NewTcpAssembler(*agentConfig, httpEvents)
+	assembler := assemblers.NewTcpAssembler(*agentConfig, httpEvents)
 	go handleHttpEvents(httpEvents, cachedK8sClient)
-	go assember.Start()
-	defer assember.Stop()
+	go assembler.Start()
+	defer assembler.Stop()
 
 	log.Info().Msg("Agent is ready!")
 

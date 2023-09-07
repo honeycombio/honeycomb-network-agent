@@ -11,3 +11,7 @@ updates:
     commit-message:
       prefix: "maint"
       include: "scope"
+    groups:
+      k8s-dependencies:
+        patterns:
+          - "k8s.io/*"
