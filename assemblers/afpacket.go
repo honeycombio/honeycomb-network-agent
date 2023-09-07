@@ -68,9 +68,6 @@ func newAfpacketSource(config config) (*gopacket.PacketSource, error) {
 
 	frameSize, blockSize, numBlocks, err := afpacketComputeSize(config.TargetSizeMB, snaplen, os.Getpagesize())
 	if err != nil {
-		log.Fatal().
-			Err(err).
-			Msg("Failed to compute afpacket buffer size")
 		return nil, err
 	}
 
@@ -103,9 +100,6 @@ func newAfpacketSource(config config) (*gopacket.PacketSource, error) {
 		opts...,
 	)
 	if err != nil {
-		log.Fatal().
-			Err(err).
-			Msg("Failed to open a afpacket handle")
 		return nil, err
 	}
 
