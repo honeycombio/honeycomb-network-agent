@@ -145,15 +145,6 @@ func (h *tcpAssembler) Start() {
 				stats.totalsz += len(tcp.Payload)
 				h.assembler.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &context)
 			}
-
-			done := h.config.Maxcount > 0 && count >= h.config.Maxcount
-			if count%h.config.Statsevery == 0 || done {
-				log.Debug().
-					Int("processed_count_since_start", count).
-					Int64("milliseconds_since_start", time.Since(h.startedAt).Milliseconds()).
-					Int64("bytes", bytes).
-					Msg("Processed Packets")
-			}
 		}
 	}
 }
