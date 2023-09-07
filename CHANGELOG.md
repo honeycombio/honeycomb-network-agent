@@ -1,5 +1,27 @@
 # Honeycomb eBPF Agent changelog
 
+## [0.0.8-alpha] - 2023-09-07
+
+### Enhancements
+
+- feat: Add filters to only capture HTTP methods (#149) | @JamieDanielson
+- feat: Emit events for packet stats to send to Honeycomb (#142) | @JamieDanielson
+
+### Maintenance
+
+- maint(deps): bump the k8s-dependencies group with 3 updates (#147) | @dependabot
+- maint: have dependabot group k8s dependency updates into one PR (#146) | @robbkidd
+- maint: add setup for load testing (#143) | @JamieDanielson
+- maint(deps): bump go.opentelemetry.io/otel from 1.16.0 to 1.17.0 (#129) | @dependabot
+
+## [0.0.7-alpha] - 2023-08-30
+
+### Maintenance
+
+- maint: add debug telemetry (#136) | @pkanal
+- chore: log when we've got an event where time's gone wobbly (#137) | @robbkidd
+- docs: add Quickstart docs and example (#89) | @JamieDanielson
+
 ## [0.0.6-alpha] - 2023-08-24
 
 ### Enhancements

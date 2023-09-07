@@ -8,6 +8,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/reassembly"
+	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -87,10 +88,15 @@ func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
 func (h *tcpAssembler) Start() {
 	log.Info().Msg("Starting TCP assembler")
 	flushTicker := time.NewTicker(time.Second * 5)
+	statsTicker := time.NewTicker(time.Second * 10)
 	count := 0
 	bytes := int64(0)
 	start := time.Now()
 	defragger := ip4defrag.NewIPv4Defragmenter()
+
+	// statsEvent is for sending packet processing stats to Honeycomb and
+	// is declared outside the loop for memory re-use.
+	var statsEvent *libhoney.Event
 
 	for {
 		select {
@@ -100,6 +106,22 @@ func (h *tcpAssembler) Start() {
 				Int("flushed", flushed).
 				Int("closed", closed).
 				Msg("Flushing old streams")
+		case <-statsTicker.C:
+			// intentionally reusing the variable above
+			statsEvent = libhoney.NewEvent()
+			statsEvent.Dataset = "hny-ebpf-agent-stats"
+			statsEvent.Add(map[string]interface{}{
+				"name":                     "tcp_assembler_processed",
+				"packet_count_since_start": count,
+				"uptime_ms":                time.Since(start).Milliseconds(),
+				"bytes":                    bytes,
+			})
+			statsEvent.Send()
+			log.Debug().
+				Int("processed_count_since_start", count).
+				Int64("uptime_ms", time.Since(start).Milliseconds()).
+				Int64("bytes", bytes).
+				Msg("Processed Packets")
 		case packet := <-h.packetSource.Packets():
 			count++
 			data := packet.Data()
@@ -113,7 +135,7 @@ func (h *tcpAssembler) Start() {
 					continue
 				}
 				if newipv4 == nil {
-					log.Debug().Msg("Ingoring packet fragment")
+					log.Debug().Msg("Ignoring packet fragment")
 					continue
 				}
 
@@ -218,6 +240,7 @@ func newPcapPacketSource(config config) (*gopacket.PacketSource, error) {
 }
 
 func logPcapHandleStats(handle *pcap.Handle) {
+	// TODO make ticker configurable
 	ticker := time.NewTicker(time.Second * 10)
 	for {
 		<-ticker.C
@@ -231,5 +254,20 @@ func logPcapHandleStats(handle *pcap.Handle) {
 			Int("packets_dropped", stats.PacketsDropped).
 			Int("packets_if_dropped", stats.PacketsIfDropped).
 			Msg("Pcap handle stats")
+
+		// TODO use config for different dataset for stats telemetry
+		// create libhoney event
+		ev := libhoney.NewEvent()
+		ev.Dataset = "hny-ebpf-agent-stats"
+		ev.AddField("name", "tcp_assembler_pcap")
+		ev.AddField("pcap.packets_received", stats.PacketsReceived)
+		ev.AddField("pcap.packets_dropped", stats.PacketsDropped)
+		ev.AddField("pcap.packets_if_dropped", stats.PacketsIfDropped)
+		log.Info().
+			Int("pcap.packets_received", stats.PacketsReceived).
+			Int("pcap.packets_dropped", stats.PacketsDropped).
+			Int("pcap.packets_if_dropped", stats.PacketsIfDropped).
+			Msg("Pcap handle stats")
+		ev.Send()
 	}
 }
