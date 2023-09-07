@@ -127,6 +127,8 @@ func logAfpacketHandleStats(handle *afpacketHandle) {
 			Uint("packets", socketStatsV3.Packets()).
 			Uint("drops", socketStatsV3.Drops()).
 			Msg("Afpacket handle stats")
+
+		// TODO: set stats in assembler once #153 has merged
 	}
 }
 
