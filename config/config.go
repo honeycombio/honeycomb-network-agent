@@ -94,7 +94,7 @@ func NewConfig() *Config {
 		// HTTP 1.1 is the response start string
 		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x48545450", // 'HTTP' 1.1
 	}
-	c.bpfFilter = strings.Join(filters, " or ")
+	c.BpfFilter = strings.Join(filters, " or ")
 
 	if c.Debug {
 		b, err := json.MarshalIndent(c, "", "  ")
