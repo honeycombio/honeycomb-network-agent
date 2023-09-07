@@ -9,6 +9,7 @@ import (
 )
 
 const timeout time.Duration = time.Second * 30
+const targetSizeMB int = 8
 
 var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
 var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
@@ -54,6 +55,7 @@ type config struct {
 	packetSource     string
 	bpfFilter        string
 	messageQueueSize int
+	TargetSizeMB     int
 }
 
 func NewConfig() *config {
@@ -78,6 +80,7 @@ func NewConfig() *config {
 		packetSource:     *packetSource,
 		bpfFilter:        *bpfFilter,
 		messageQueueSize: *messageQueueSize,
+		TargetSizeMB:     targetSizeMB,
 	}
 
 	if c.Debug {

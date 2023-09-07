@@ -1,12 +1,9 @@
 package assemblers
 
 import (
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/google/gopacket"
-	"github.com/google/gopacket/afpacket"
 	"github.com/google/gopacket/ip4defrag"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
@@ -235,113 +232,4 @@ func logPcapHandleStats(handle *pcap.Handle) {
 			Int("packets_if_dropped", stats.PacketsIfDropped).
 			Msg("Pcap handle stats")
 	}
-}
-
-type afpacketHandle struct {
-	TPacket *afpacket.TPacket
-}
-
-func (h afpacketHandle) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
-	data, ci, err := h.TPacket.ZeroCopyReadPacketData()
-	if err != nil {
-		return nil, gopacket.CaptureInfo{}, err
-	}
-	return data, gopacket.CaptureInfo{
-		Timestamp:     ci.Timestamp,
-		CaptureLength: ci.CaptureLength,
-		Length:        ci.Length,
-	}, nil
-}
-
-func newAfpacketSource(config config) (*gopacket.PacketSource, error) {
-	log.Info().
-		Str("interface", config.Interface).
-		Int("snaplen", config.Snaplen).
-		Bool("promiscuous", config.Promiscuous).
-		Str("bpf_filter", config.bpfFilter).
-		Msg("Configuring afpacket packet source")
-
-	// handle, err := afpacket.NewTPacket()
-	// handle, err := afpacket.NewTPacket(
-	// 	afpacket.OptInterface(config.Interface),
-	// 	afpacket.OptFrameSize(config.Snaplen),
-	// 	afpacket.OptBlockSize(config.Snaplen*1024),
-	// 	afpacket.OptNumBlocks(1),
-	// 	afpacket.OptPollTimeout(time.Millisecond*100),
-	// 	// afpacket.OptPollBlockSize(config.Snaplen*1024),
-	// 	afpacket.OptPollNumBlocks(1),
-	// 	afpacket.OptFanout(afpacket.FanoutHashWithDefrag),
-	// )
-	szFrame, szBlock, numBlocks, err := afpacketComputeSize(8, 65535, os.Getpagesize())
-	if err != nil {
-		log.Fatal().
-			Err(err).
-			Msg("Failed to compute afpacket buffer size")
-		return nil, err
-	}
-	log.Info().
-		Int("frame_size", szFrame).
-		Int("block_size", szBlock).
-		Int("num_blocks", numBlocks).
-		Int("target_size_mb", 8).
-		Int("snaplen", config.Snaplen).
-		Int("page_size", os.Getpagesize()).
-		Msg("afpacket buffer size")
-	afpacketHandle, err := afpacket.NewTPacket(
-		afpacket.OptFrameSize(szFrame),
-		afpacket.OptBlockSize(szBlock),
-		afpacket.OptNumBlocks(numBlocks),
-		afpacket.OptAddVLANHeader(false),
-		afpacket.OptPollTimeout(timeout),
-		afpacket.SocketRaw,
-		afpacket.TPacketVersion3)
-
-	if err != nil {
-		log.Fatal().
-			Err(err).
-			Msg("Failed to open a afpacket handle")
-		return nil, err
-	}
-
-	go logAfpacketHandleStats(afpacketHandle)
-	return gopacket.NewPacketSource(
-		afpacketHandle,
-		layers.LayerTypeEthernet,
-	), nil
-}
-
-func logAfpacketHandleStats(handle *afpacket.TPacket) {
-	ticker := time.NewTicker(time.Second * 10)
-	for {
-		<-ticker.C
-		stats, err := handle.Stats()
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get afpacket handle stats")
-			continue
-		}
-		log.Info().
-			Int64("pools", stats.Polls).
-			Int64("packets", stats.Packets).
-			Msg("Afpacket handle stats")
-	}
-}
-
-func afpacketComputeSize(targetSizeMb int, snaplen int, pageSize int) (
-	frameSize int, blockSize int, numBlocks int, err error) {
-
-	if snaplen < pageSize {
-		frameSize = pageSize / (pageSize / snaplen)
-	} else {
-		frameSize = (snaplen/pageSize + 1) * pageSize
-	}
-
-	// 128 is the default from the gopacket library so just use that
-	blockSize = frameSize * 128
-	numBlocks = (targetSizeMb * 1024 * 1024) / blockSize
-
-	if numBlocks == 0 {
-		return 0, 0, 0, fmt.Errorf("Interface buffersize is too small")
-	}
-
-	return frameSize, blockSize, numBlocks, nil
 }
