@@ -218,10 +218,16 @@ func newPcapPacketSource(config config) (*gopacket.PacketSource, error) {
 		Msg("Configuring pcap packet source")
 	handle, err := pcap.OpenLive(config.Interface, int32(config.Snaplen), config.Promiscuous, time.Second)
 	if err != nil {
+		log.Fatal().
+			Err(err).
+			Msg("Failed to open a pcap handle")
 		return nil, err
 	}
 	if config.bpfFilter != "" {
 		if err = handle.SetBPFFilter(config.bpfFilter); err != nil {
+			log.Fatal().
+				Err(err).
+				Msg("Error setting BPF filter")
 			return nil, err
 		}
 	}

@@ -31,7 +31,7 @@ var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
 var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 var packetSource = flag.String("source", "pcap", "Packet source (defaults to pcap)")
 var bpfFilter = flag.String("filter", "tcp", "BPF filter")
-var bufferSizeMB = flag.Int("buffer_size_mb", 8, "Target size of the buffer in MB")
+var bufferSizeMB = flag.Int("buffer_size_mb", 8, "Target size of the buffer in MB (default 8MB)")
 
 type config struct {
 	Maxcount         int
