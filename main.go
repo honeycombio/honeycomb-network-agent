@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -150,10 +149,6 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	// request attributes
 	if event.Request != nil {
 		requestURI = event.Request.RequestURI
-		parts := strings.Split(requestURI, "=")
-		if len(parts) > 1 {
-			ev.AddField("http.request.echo.body", parts[1])
-		}
 
 		bodySizeString := event.Request.Header.Get("Content-Length")
 		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
@@ -169,7 +164,6 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 
 	// response attributes
 	if event.Response != nil {
-		ev.AddField("http.response.body", event.ResponseBody)
 		bodySizeString := event.Response.Header.Get("Content-Length")
 		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
 

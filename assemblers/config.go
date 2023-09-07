@@ -32,7 +32,6 @@ var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
 var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 var packetSource = flag.String("source", "afpacket", "Packet source (defaults to pcap)")
 var bpfFilter = flag.String("filter", "tcp", "BPF filter")
-var messageQueueSize = flag.Int("message_queue_size", 1000, "Size of message queue per stream")
 
 type config struct {
 	Maxcount         int
@@ -55,7 +54,6 @@ type config struct {
 	Timeout          time.Duration
 	packetSource     string
 	bpfFilter        string
-	messageQueueSize int
 	TargetSizeMB     int
 }
 
@@ -80,7 +78,6 @@ func NewConfig() *config {
 		Timeout:          timeout,
 		packetSource:     *packetSource,
 		bpfFilter:        *bpfFilter,
-		messageQueueSize: *messageQueueSize,
 		TargetSizeMB:     targetSizeMB,
 	}
 

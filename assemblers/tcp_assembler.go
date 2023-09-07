@@ -71,7 +71,7 @@ func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
 	packetSource.Lazy = config.Lazy
 	packetSource.NoCopy = true
 
-	streamFactory := NewTcpStreamFactory(config, httpEvents)
+	streamFactory := NewTcpStreamFactory(httpEvents)
 	streamPool := reassembly.NewStreamPool(&streamFactory)
 	assembler := reassembly.NewAssembler(streamPool)
 
