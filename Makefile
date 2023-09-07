@@ -61,13 +61,13 @@ unapply-greetings:
 	kubectl delete -f smoke-tests/greetings.yaml
 
 # deploy echoserver in already-running cluster and start locust
-.PHONY: loadtest
-loadtest: apply-ebpf-agent
+.PHONY: swarm
+swarm: apply-ebpf-agent
 	kubectl apply -f smoke-tests/echoserver.yaml
 	cd smoke-tests && locust
 
 # teardown load test setup
-.PHONY: unload
-unload:
+.PHONY: unswarm
+unswarm:
 	kubectl delete -f smoke-tests/echoserver.yaml
 	make unapply-ebpf-agent

@@ -119,13 +119,13 @@ Hit the endpoint:
 
 After a locally built image and an API key is set:
 
-`make loadtest`
+`make swarm`
 
 This will apply the agent, apply the echoserver, and start locust.
 
 Navigate to `http://0.0.0.0:8089/` in your browser and set users and spawn rate, e.g. 5000 and 100, and hit Start swarming.
 
-To tear down the load test, `ctrl+c` in the terminal running and `make unload`.
+To tear down the load test, `ctrl+c` in the terminal running and `make unswarm`.
 
 See more details in [`smoke-tests/loadtest.md`](./smoke-tests/loadtest.md)
 
