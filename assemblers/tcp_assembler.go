@@ -88,8 +88,6 @@ func (h *tcpAssembler) Start() {
 	log.Info().Msg("Starting TCP assembler")
 	flushTicker := time.NewTicker(time.Second * 5)
 	statsTicker := time.NewTicker(time.Second * 10)
-	count := 0
-	bytes := int64(0)
 	h.startedAt = time.Now()
 	defragger := ip4defrag.NewIPv4Defragmenter()
 
