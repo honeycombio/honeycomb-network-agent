@@ -249,12 +249,6 @@ func logPcapHandleStats(handle *pcap.Handle) {
 			log.Error().Err(err).Msg("Failed to get pcap handle stats")
 			continue
 		}
-		log.Info().
-			Int("packets_received", stats.PacketsReceived).
-			Int("packets_dropped", stats.PacketsDropped).
-			Int("packets_if_dropped", stats.PacketsIfDropped).
-			Msg("Pcap handle stats")
-
 		// TODO use config for different dataset for stats telemetry
 		// create libhoney event
 		ev := libhoney.NewEvent()
