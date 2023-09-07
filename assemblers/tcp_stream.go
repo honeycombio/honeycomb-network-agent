@@ -22,7 +22,7 @@ type tcpStream struct {
 	counter        requestCounter
 	ident          string
 	closed         bool
-	config         *config.Config
+	config         config.Config
 	sync.Mutex
 	matcher httpMatcher
 	events  chan HttpEvent

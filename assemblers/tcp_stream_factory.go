@@ -37,6 +37,7 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	}
 	streamId := atomic.AddUint64(&streamId, 1)
 	stream := &tcpStream{
+		config:     factory.config,
 		id:         streamId,
 		net:        net,
 		transport:  transport,

@@ -55,8 +55,8 @@ type Config struct {
 	BpfFilter        string
 }
 
-func NewConfig() *Config {
-	c := &Config{
+func NewConfig() Config {
+	c := Config{
 		Maxcount:         *maxcount,
 		Statsevery:       *statsevery,
 		Lazy:             *lazy,
