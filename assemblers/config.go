@@ -10,7 +10,6 @@ import (
 )
 
 const timeout time.Duration = time.Second * 30
-const targetSizeMB int = 8
 
 var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
 var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
@@ -32,6 +31,7 @@ var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
 var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 var packetSource = flag.String("source", "pcap", "Packet source (defaults to pcap)")
 var bpfFilter = flag.String("filter", "tcp", "BPF filter")
+var bufferSizeMB = flag.Int("buffer_size_mb", 8, "Target size of the buffer in MB")
 
 type config struct {
 	Maxcount         int
@@ -54,7 +54,7 @@ type config struct {
 	Timeout          time.Duration
 	packetSource     string
 	bpfFilter        string
-	TargetSizeMB     int
+	BufferSizeMB     int
 }
 
 func NewConfig() *config {
@@ -78,7 +78,7 @@ func NewConfig() *config {
 		Timeout:          timeout,
 		packetSource:     *packetSource,
 		bpfFilter:        *bpfFilter,
-		TargetSizeMB:     targetSizeMB,
+		BufferSizeMB:     *bufferSizeMB,
 	}
 
 	// Add filters to only capture common HTTP methods

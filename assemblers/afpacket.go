@@ -20,7 +20,7 @@ func newAfpacketSource(config config) (*gopacket.PacketSource, error) {
 		snaplen = 0
 	}
 
-	frameSize, blockSize, numBlocks, err := afpacketComputeSize(config.TargetSizeMB, snaplen, os.Getpagesize())
+	frameSize, blockSize, numBlocks, err := afpacketComputeSize(config.BufferSizeMB, snaplen, os.Getpagesize())
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func newAfpacketSource(config config) (*gopacket.PacketSource, error) {
 		Int("frame_size", frameSize).
 		Int("block_size", blockSize).
 		Int("num_blocks", numBlocks).
-		Int("target_size_mb", targetSizeMB).
+		Int("target_size_mb", config.BufferSizeMB).
 		Int("page_size", os.Getpagesize()).
 		Msg("Configuring afpacket packet source")
 
