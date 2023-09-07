@@ -112,17 +112,9 @@ func main() {
 }
 
 func handleHttpEvents(events chan assemblers.HttpEvent, client *utils.CachedK8sClient) {
-	ticker := time.NewTicker(time.Second * 10)
 	for {
-		select {
-		case event := <-events:
-			sendHttpEventToHoneycomb(event, client)
-		case <-ticker.C:
-			log.Info().
-				Int("event queue length", len(events)).
-				Int("goroutines", runtime.NumGoroutine()).
-				Msg("Queue length ticker")
-		}
+		event := <-events
+		sendHttpEventToHoneycomb(event, client)
 	}
 }
 

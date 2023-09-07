@@ -1,6 +1,7 @@
 package assemblers
 
 import (
+	"runtime"
 	"time"
 
 	"github.com/google/gopacket"
@@ -100,7 +101,7 @@ func (h *tcpAssembler) Start() {
 				Int("closed", closed).
 				Msg("Flushing old streams")
 		case <-statsTicker.C:
-			h.logAssmeblerStats()
+			h.logAssemblerStats()
 		case packet := <-h.packetSource.Packets():
 			// defrag the IPv4 packet if required
 			if ipv4Layer := packet.Layer(layers.LayerTypeIPv4); ipv4Layer != nil {
@@ -155,14 +156,14 @@ func (h *tcpAssembler) Stop() {
 	}
 
 	h.streamFactory.WaitGoRoutines()
-	h.logAssmeblerStats()
+	h.logAssemblerStats()
 	log.Debug().
 		Int("closed", closed).
-		Str("assember_page_usage", h.assembler.Dump()).
+		Str("assembler_page_usage", h.assembler.Dump()).
 		Msg("Stopping TCP assembler")
 }
 
-func (a *tcpAssembler) logAssmeblerStats() {
+func (a *tcpAssembler) logAssemblerStats() {
 	statsFields := map[string]interface{}{
 		"uptime_ms":             time.Since(a.startedAt).Milliseconds(),
 		"IPdefrag":              stats.ipdefrag,
@@ -183,6 +184,8 @@ func (a *tcpAssembler) logAssmeblerStats() {
 		"source_received":       stats.source_received,
 		"source_dropped":        stats.source_dropped,
 		"source_if_dropped":     stats.source_if_dropped,
+		"event_queue_length":    len(a.httpEvents),
+		"goroutines":            runtime.NumGoroutine(),
 	}
 	statsEvent := libhoney.NewEvent()
 	statsEvent.Dataset = "hny-ebpf-agent-stats"
