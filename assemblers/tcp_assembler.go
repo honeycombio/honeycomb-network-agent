@@ -8,6 +8,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/reassembly"
+	"github.com/honeycombio/ebpf-agent/config"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -40,7 +41,7 @@ func (c *Context) GetCaptureInfo() gopacket.CaptureInfo {
 }
 
 type tcpAssembler struct {
-	config        *config
+	config        config.Config
 	packetSource  *gopacket.PacketSource
 	streamFactory *tcpStreamFactory
 	streamPool    *reassembly.StreamPool
@@ -48,11 +49,11 @@ type tcpAssembler struct {
 	httpEvents    chan HttpEvent
 }
 
-func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
+func NewTcpAssembler(config config.Config, httpEvents chan HttpEvent) tcpAssembler {
 	var packetSource *gopacket.PacketSource
 	var err error
 
-	switch config.packetSource {
+	switch config.PacketSource {
 	case "pcap":
 		packetSource, err = newPcapPacketSource(config)
 		if err != nil {
@@ -60,7 +61,7 @@ func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
 		}
 	// TODO: other data sources (eg afpacket, pfring, etc)
 	default:
-		log.Fatal().Str("packet_source", config.packetSource).Msg("Unknown packet source")
+		log.Fatal().Str("packet_source", config.PacketSource).Msg("Unknown packet source")
 	}
 
 	packetSource.Lazy = config.Lazy
@@ -71,7 +72,7 @@ func NewTcpAssembler(config config, httpEvents chan HttpEvent) tcpAssembler {
 	assembler := reassembly.NewAssembler(streamPool)
 
 	return tcpAssembler{
-		config:        &config,
+		config:        config,
 		packetSource:  packetSource,
 		streamFactory: &streamFactory,
 		streamPool:    streamPool,
@@ -204,12 +205,12 @@ func (h *tcpAssembler) Stop() {
 		Msg("Stopping TCP assembler")
 }
 
-func newPcapPacketSource(config config) (*gopacket.PacketSource, error) {
+func newPcapPacketSource(config config.Config) (*gopacket.PacketSource, error) {
 	log.Info().
 		Str("interface", config.Interface).
 		Int("snaplen", config.Snaplen).
 		Bool("promiscuous", config.Promiscuous).
-		Str("bpf_filter", config.bpfFilter).
+		Str("bpf_filter", config.BpfFilter).
 		Msg("Configuring pcap packet source")
 	handle, err := pcap.OpenLive(config.Interface, int32(config.Snaplen), config.Promiscuous, time.Second)
 	if err != nil {
@@ -218,8 +219,8 @@ func newPcapPacketSource(config config) (*gopacket.PacketSource, error) {
 			Msg("Failed to open a pcap handle")
 		return nil, err
 	}
-	if config.bpfFilter != "" {
-		if err = handle.SetBPFFilter(config.bpfFilter); err != nil {
+	if config.BpfFilter != "" {
+		if err = handle.SetBPFFilter(config.BpfFilter); err != nil {
 			log.Fatal().
 				Err(err).
 				Msg("Error setting BPF filter")
