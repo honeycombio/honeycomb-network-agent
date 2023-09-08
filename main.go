@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/honeycombio/ebpf-agent/assemblers"
+	"github.com/honeycombio/ebpf-agent/config"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
@@ -21,7 +22,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-const Version string = "0.0.8-alpha"
+const Version string = "0.0.9-alpha"
 const defaultDataset = "hny-ebpf-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
@@ -93,11 +94,11 @@ func main() {
 	cachedK8sClient := utils.NewCachedK8sClient(k8sClient)
 	cachedK8sClient.Start(ctx)
 
-	agentConfig := assemblers.NewConfig()
+	agentConfig := config.NewConfig()
 
 	// setup TCP stream reader
-	httpEvents := make(chan assemblers.HttpEvent, 10000)
-	assembler := assemblers.NewTcpAssembler(*agentConfig, httpEvents)
+	httpEvents := make(chan assemblers.HttpEvent, agentConfig.ChannelBufferSize)
+	assembler := assemblers.NewTcpAssembler(agentConfig, httpEvents)
 	go handleHttpEvents(httpEvents, cachedK8sClient)
 	go assembler.Start()
 	defer assembler.Stop()
@@ -112,17 +113,9 @@ func main() {
 }
 
 func handleHttpEvents(events chan assemblers.HttpEvent, client *utils.CachedK8sClient) {
-	ticker := time.NewTicker(time.Second * 10)
 	for {
-		select {
-		case event := <-events:
-			sendHttpEventToHoneycomb(event, client)
-		case <-ticker.C:
-			log.Info().
-				Int("event queue length", len(events)).
-				Int("goroutines", runtime.NumGoroutine()).
-				Msg("Queue length ticker")
-		}
+		event := <-events
+		sendHttpEventToHoneycomb(event, client)
 	}
 }
 

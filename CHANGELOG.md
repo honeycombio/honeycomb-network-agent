@@ -1,6 +1,18 @@
 # Honeycomb eBPF Agent changelog
 
-## [0.0.8-alpha] - 2023-09-07
+## [0.0.9-alpha] - 2023-09-07
+
+### Enhancements
+
+- feat: Add configurable channel size buffer config option (#145) | @MikeGoldsmith
+
+### Maintenance
+
+- maint: fix load test  (#148) | @JamieDanielson
+- maint: Refactor stats collection & include pcap stats (#153) | @MikeGoldsmith
+- maint: Move config to it's own package (#139) | @MikeGoldsmith
+
+## [0.0.8-alpha] - 2023-09-06
 
 ### Enhancements
 
