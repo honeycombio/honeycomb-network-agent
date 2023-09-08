@@ -7,8 +7,7 @@ import (
 )
 
 type httpMatcher struct {
-	messages map[string]entry
-	sync.Mutex
+	messages *sync.Map
 }
 
 type entry struct {
@@ -20,48 +19,36 @@ type entry struct {
 
 func newRequestResponseMatcher() httpMatcher {
 	return httpMatcher{
-		messages: make(map[string]entry),
+		messages: &sync.Map{},
 	}
 }
 
 func (m *httpMatcher) GetOrStoreRequest(ident string, timestamp time.Time, request *http.Request) (*entry, bool) {
-	m.Lock()
-	defer m.Unlock()
-
-	// check if we already have a response for this request, if yes, return it
-	if e, ok := m.messages[ident]; ok {
-		e.request = request
-		e.requestTimestamp = timestamp
-		delete(m.messages, ident)
-		return &e, true
-	}
-
-	// we don't have a response for this request yet, so store it for later
-	entry := entry{
+	e := &entry{
 		request:          request,
 		requestTimestamp: timestamp,
 	}
-	m.messages[ident] = entry
+	if v, ok := m.messages.LoadOrStore(ident, e); ok {
+		m.messages.Delete(ident)
+		e = v.(*entry)
+		e.request = request
+		e.requestTimestamp = timestamp
+		return e, true
+	}
 	return nil, false
 }
 
 func (m *httpMatcher) GetOrStoreResponse(ident string, timestamp time.Time, response *http.Response) (*entry, bool) {
-	m.Lock()
-	defer m.Unlock()
-
-	// check if we already have a request for this response, if yes, return it
-	if e, ok := m.messages[ident]; ok {
-		e.response = response
-		e.responseTimestamp = timestamp
-		delete(m.messages, ident)
-		return &e, true
-	}
-
-	// we don't have a request for this response yet, so store it for later
-	entry := entry{
+	e := &entry{
 		response:          response,
 		responseTimestamp: timestamp,
 	}
-	m.messages[ident] = entry
+	if v, ok := m.messages.LoadOrStore(ident, e); ok {
+		m.messages.Delete(ident)
+		e = v.(*entry)
+		e.response = response
+		e.responseTimestamp = timestamp
+		return e, true
+	}
 	return nil, false
 }
