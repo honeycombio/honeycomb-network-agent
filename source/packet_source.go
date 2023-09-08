@@ -3,9 +3,9 @@ package source
 import (
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/pcap"
 	"github.com/honeycombio/ebpf-agent/config"
+	"github.com/honeycombio/gopacket"
+	"github.com/honeycombio/gopacket/pcap"
 	"github.com/rs/zerolog/log"
 )
 

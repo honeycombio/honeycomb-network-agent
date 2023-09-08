@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/reassembly"
 	"github.com/honeycombio/ebpf-agent/config"
+	"github.com/honeycombio/gopacket"
+	"github.com/honeycombio/gopacket/layers"
+	"github.com/honeycombio/gopacket/reassembly"
 	"github.com/rs/zerolog/log"
 )
 
