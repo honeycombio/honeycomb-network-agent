@@ -9,8 +9,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const timeout time.Duration = time.Second * 30
-
 var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
 var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
 var lazy = flag.Bool("lazy", false, "If true, do lazy decoding")
@@ -32,6 +30,8 @@ var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 var packetSource = flag.String("source", "pcap", "Packet source (defaults to pcap)")
 var bpfFilter = flag.String("filter", "tcp", "BPF filter")
 var channelBufferSize = flag.Int("channel_buffer_size", 1000, "Channel buffer size (defaults to 1000)")
+var streamFlushTimeout = flag.Int("stream_flush_timeout", 10, "Stream flush timeout in seconds (defaults to 10)")
+var streamCloseTimeout = flag.Int("stream_close_timeout", 90, "Stream close timeout in seconds (defaults to 90)")
 var maxBufferedPagesTotal = flag.Int("gopacket_pages", 150_000, "Maximum number of TCP reassembly pages to allocate per interface")
 var maxBufferedPagesPerConnection = flag.Int("gopacket_per_conn", 4000, "Maximum number of TCP reassembly pages per connection")
 
@@ -52,8 +52,8 @@ type Config struct {
 	Snaplen                       int
 	TsType                        string
 	Promiscuous                   bool
-	CloseTimeout                  time.Duration
-	Timeout                       time.Duration
+	StreamFlushTimeout            time.Duration
+	StreamCloseTimeout            time.Duration
 	PacketSource                  string
 	BpfFilter                     string
 	ChannelBufferSize             int
@@ -79,7 +79,8 @@ func NewConfig() Config {
 		Snaplen:                       *snaplen,
 		TsType:                        *tstype,
 		Promiscuous:                   *promisc,
-		Timeout:                       timeout,
+		StreamFlushTimeout:            time.Duration(*streamFlushTimeout) * time.Second,
+		StreamCloseTimeout:            time.Duration(*streamCloseTimeout) * time.Second,
 		PacketSource:                  *packetSource,
 		BpfFilter:                     *bpfFilter,
 		ChannelBufferSize:             *channelBufferSize,
