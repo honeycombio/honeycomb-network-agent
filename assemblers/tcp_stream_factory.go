@@ -52,20 +52,20 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 		bytes:    make(chan []byte),
 		parent:   stream,
 		isClient: true,
-		srcIp:    fmt.Sprintf("%s", net.Src()),
-		dstIp:    fmt.Sprintf("%s", net.Dst()),
-		srcPort:  fmt.Sprintf("%s", transport.Src()),
-		dstPort:  fmt.Sprintf("%s", transport.Dst()),
+		srcIp:    net.Src().String(),
+		dstIp:    net.Dst().String(),
+		srcPort:  transport.Src().String(),
+		dstPort:  transport.Dst().String(),
 		messages: make(chan message, factory.config.ChannelBufferSize),
 	}
 	stream.server = httpReader{
 		bytes:    make(chan []byte),
 		parent:   stream,
 		isClient: false,
-		srcIp:    fmt.Sprintf("%s", net.Reverse().Src()),
-		dstIp:    fmt.Sprintf("%s", net.Reverse().Dst()),
-		srcPort:  fmt.Sprintf("%s", transport.Reverse().Src()),
-		dstPort:  fmt.Sprintf("%s", transport.Reverse().Dst()),
+		srcIp:    net.Reverse().Src().String(),
+		dstIp:    net.Reverse().Dst().String(),
+		srcPort:  transport.Reverse().Src().String(),
+		dstPort:  transport.Reverse().Dst().String(),
 		messages: make(chan message, factory.config.ChannelBufferSize),
 	}
 	factory.wg.Add(2)
