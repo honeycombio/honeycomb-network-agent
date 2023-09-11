@@ -1,5 +1,17 @@
 # Honeycomb eBPF Agent changelog
 
+## [0.0.11-alpha] - 2023-09-11
+
+### Enhancements
+
+- feat: Separate stream flush and close timeouts (#162) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- feat: Add config options for gopacket max pages and per-conn pages (#160) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+
+### Maintenance
+
+- maint: Replace custom request/response counter with TCP seq & ack counters (#163) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint: Remove unnecessary fmt.Sprintf usage (#161) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+
 ## [0.0.10-alpha] - 2023-09-08
 
 ### Maintenance
