@@ -133,7 +133,7 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 
 	ctx, ok := ac.(*Context)
 	if !ok {
-		log.Fatal().
+		log.Warn().
 			Msg("Failed to cast ScatterGather to ContextWithSeq")
 	}
 
