@@ -19,7 +19,6 @@ type tcpStream struct {
 	net, transport gopacket.Flow
 	client         httpReader
 	server         httpReader
-	counter        requestCounter
 	ident          string
 	closed         bool
 	config         config.Config
@@ -131,17 +130,25 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 		return
 	}
 
+	ctx, ok := ac.(*Context)
+	if !ok {
+		log.Fatal().
+			Msg("Failed to cast ScatterGather to ContextWithSeq")
+	}
+
 	if length > 0 {
 		data := sg.Fetch(length)
 		if dir == reassembly.TCPDirClientToServer {
 			t.client.messages <- message{
 				data:      data,
-				timestamp: ac.GetCaptureInfo().Timestamp,
+				timestamp: ctx.CaptureInfo.Timestamp,
+				Seq:       int(ctx.seq),
 			}
 		} else {
 			t.server.messages <- message{
 				data:      data,
-				timestamp: ac.GetCaptureInfo().Timestamp,
+				timestamp: ctx.CaptureInfo.Timestamp,
+				Seq:       int(ctx.ack),
 			}
 		}
 	}

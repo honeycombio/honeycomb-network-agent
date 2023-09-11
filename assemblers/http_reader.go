@@ -14,6 +14,7 @@ import (
 type message struct {
 	data      []byte
 	timestamp time.Time
+	Seq       int
 }
 
 type httpReader struct {
@@ -27,6 +28,7 @@ type httpReader struct {
 	parent    *tcpStream
 	messages  chan message
 	timestamp time.Time
+	seq       int
 }
 
 func (h *httpReader) Read(p []byte) (int, error) {
@@ -36,6 +38,7 @@ func (h *httpReader) Read(p []byte) (int, error) {
 		msg, ok = <-h.messages
 		h.data = msg.data
 		h.timestamp = msg.timestamp
+		h.seq = msg.Seq
 	}
 	if !ok || len(h.data) == 0 {
 		return 0, io.EOF
@@ -62,8 +65,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 				continue
 			}
 
-			requestCount := h.parent.counter.incrementRequest()
-			ident := fmt.Sprintf("%s:%d", h.parent.ident, requestCount)
+			ident := fmt.Sprintf("%s:%d", h.parent.ident, h.seq)
 			if entry, ok := h.parent.matcher.GetOrStoreRequest(ident, h.timestamp, req); ok {
 				// we have a match, process complete request/response pair
 				h.processEvent(ident, entry)
@@ -80,8 +82,7 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 				continue
 			}
 
-			responseCount := h.parent.counter.incrementResponse()
-			ident := fmt.Sprintf("%s:%d", h.parent.ident, responseCount)
+			ident := fmt.Sprintf("%s:%d", h.parent.ident, h.seq)
 			if entry, ok := h.parent.matcher.GetOrStoreResponse(ident, h.timestamp, res); ok {
 				// we have a match, process complete request/response pair
 				h.processEvent(ident, entry)

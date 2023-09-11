@@ -38,6 +38,7 @@ var stats struct {
 
 type Context struct {
 	CaptureInfo gopacket.CaptureInfo
+	seq, ack    reassembly.Sequence
 }
 
 func (c *Context) GetCaptureInfo() gopacket.CaptureInfo {
@@ -104,6 +105,11 @@ func (h *tcpAssembler) Start() {
 		case <-statsTicker.C:
 			h.logAssemblerStats()
 		case packet := <-h.packetSource.Packets():
+			if packet.NetworkLayer() == nil {
+				// can't use this packet
+				continue
+			}
+
 			// defrag the IPv4 packet if required
 			if ipv4Layer := packet.Layer(layers.LayerTypeIPv4); ipv4Layer != nil {
 				ipv4 := ipv4Layer.(*layers.IPv4)
@@ -141,6 +147,8 @@ func (h *tcpAssembler) Start() {
 				}
 				context := Context{
 					CaptureInfo: packet.Metadata().CaptureInfo,
+					seq:         reassembly.Sequence(tcp.Seq),
+					ack:         reassembly.Sequence(tcp.Ack),
 				}
 				stats.totalsz += len(tcp.Payload)
 				h.assembler.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &context)
