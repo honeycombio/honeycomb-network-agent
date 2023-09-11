@@ -32,54 +32,60 @@ var bpfFilter = flag.String("filter", "tcp", "BPF filter")
 var channelBufferSize = flag.Int("channel_buffer_size", 1000, "Channel buffer size (defaults to 1000)")
 var streamFlushTimeout = flag.Int("stream_flush_timeout", 10, "Stream flush timeout in seconds (defaults to 10)")
 var streamCloseTimeout = flag.Int("stream_close_timeout", 90, "Stream close timeout in seconds (defaults to 90)")
+var maxBufferedPagesTotal = flag.Int("gopacket_pages", 150_000, "Maximum number of TCP reassembly pages to allocate per interface")
+var maxBufferedPagesPerConnection = flag.Int("gopacket_per_conn", 4000, "Maximum number of TCP reassembly pages per connection")
 
 type Config struct {
-	Maxcount           int
-	Statsevery         int
-	Lazy               bool
-	Nodefrag           bool
-	Checksum           bool
-	Nooptcheck         bool
-	Ignorefsmerr       bool
-	Allowmissinginit   bool
-	Verbose            bool
-	Debug              bool
-	Quiet              bool
-	Interface          string
-	FileName           string
-	Snaplen            int
-	TsType             string
-	Promiscuous        bool
-	StreamFlushTimeout time.Duration
-	StreamCloseTimeout time.Duration
-	PacketSource       string
-	BpfFilter          string
-	ChannelBufferSize  int
+	Maxcount                      int
+	Statsevery                    int
+	Lazy                          bool
+	Nodefrag                      bool
+	Checksum                      bool
+	Nooptcheck                    bool
+	Ignorefsmerr                  bool
+	Allowmissinginit              bool
+	Verbose                       bool
+	Debug                         bool
+	Quiet                         bool
+	Interface                     string
+	FileName                      string
+	Snaplen                       int
+	TsType                        string
+	Promiscuous                   bool
+	StreamFlushTimeout            time.Duration
+	StreamCloseTimeout            time.Duration
+	PacketSource                  string
+	BpfFilter                     string
+	ChannelBufferSize             int
+	MaxBufferedPagesTotal         int
+	MaxBufferedPagesPerConnection int
 }
 
 func NewConfig() Config {
 	c := Config{
-		Maxcount:           *maxcount,
-		Statsevery:         *statsevery,
-		Lazy:               *lazy,
-		Nodefrag:           *nodefrag,
-		Checksum:           *checksum,
-		Nooptcheck:         *nooptcheck,
-		Ignorefsmerr:       *ignorefsmerr,
-		Allowmissinginit:   *allowmissinginit,
-		Verbose:            *verbose,
-		Debug:              *debug,
-		Quiet:              *quiet,
-		Interface:          *iface,
-		FileName:           *fname,
-		Snaplen:            *snaplen,
-		TsType:             *tstype,
-		Promiscuous:        *promisc,
-		StreamFlushTimeout: time.Duration(*streamFlushTimeout) * time.Second,
-		StreamCloseTimeout: time.Duration(*streamCloseTimeout) * time.Second,
-		PacketSource:       *packetSource,
-		BpfFilter:          *bpfFilter,
-		ChannelBufferSize:  *channelBufferSize,
+		Maxcount:                      *maxcount,
+		Statsevery:                    *statsevery,
+		Lazy:                          *lazy,
+		Nodefrag:                      *nodefrag,
+		Checksum:                      *checksum,
+		Nooptcheck:                    *nooptcheck,
+		Ignorefsmerr:                  *ignorefsmerr,
+		Allowmissinginit:              *allowmissinginit,
+		Verbose:                       *verbose,
+		Debug:                         *debug,
+		Quiet:                         *quiet,
+		Interface:                     *iface,
+		FileName:                      *fname,
+		Snaplen:                       *snaplen,
+		TsType:                        *tstype,
+		Promiscuous:                   *promisc,
+		StreamFlushTimeout:            time.Duration(*streamFlushTimeout) * time.Second,
+		StreamCloseTimeout:            time.Duration(*streamCloseTimeout) * time.Second,
+		PacketSource:                  *packetSource,
+		BpfFilter:                     *bpfFilter,
+		ChannelBufferSize:             *channelBufferSize,
+		MaxBufferedPagesTotal:         *maxBufferedPagesTotal,
+		MaxBufferedPagesPerConnection: *maxBufferedPagesPerConnection,
 	}
 
 	// Add filters to only capture common HTTP methods
