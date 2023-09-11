@@ -88,15 +88,20 @@ func NewTcpAssembler(config config.Config, httpEvents chan HttpEvent) tcpAssembl
 
 func (h *tcpAssembler) Start() {
 	log.Info().Msg("Starting TCP assembler")
-	flushTicker := time.NewTicker(time.Second * 5)
+	flushCloseTicker := time.NewTicker(h.config.StreamFlushTimeout / 4)
 	statsTicker := time.NewTicker(time.Second * 10)
 	h.startedAt = time.Now()
 	defragger := ip4defrag.NewIPv4Defragmenter()
 
 	for {
 		select {
-		case <-flushTicker.C:
-			flushed, closed := h.assembler.FlushCloseOlderThan(time.Now().Add(-h.config.Timeout))
+		case <-flushCloseTicker.C:
+			flushed, closed := h.assembler.FlushWithOptions(
+				reassembly.FlushOptions{
+					T:  time.Now().Add(-h.config.StreamFlushTimeout),
+					TC: time.Now().Add(-h.config.StreamCloseTimeout),
+				},
+			)
 			log.Debug().
 				Int("flushed", flushed).
 				Int("closed", closed).

@@ -9,8 +9,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const timeout time.Duration = time.Second * 30
-
 var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
 var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
 var lazy = flag.Bool("lazy", false, "If true, do lazy decoding")
@@ -32,53 +30,56 @@ var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 var packetSource = flag.String("source", "pcap", "Packet source (defaults to pcap)")
 var bpfFilter = flag.String("filter", "tcp", "BPF filter")
 var channelBufferSize = flag.Int("channel_buffer_size", 1000, "Channel buffer size (defaults to 1000)")
+var streamFlushTimeout = flag.Int("stream_flush_timeout", 10, "Stream flush timeout in seconds (defaults to 10)")
+var streamCloseTimeout = flag.Int("stream_close_timeout", 90, "Stream close timeout in seconds (defaults to 90)")
 
 type Config struct {
-	Maxcount          int
-	Statsevery        int
-	Lazy              bool
-	Nodefrag          bool
-	Checksum          bool
-	Nooptcheck        bool
-	Ignorefsmerr      bool
-	Allowmissinginit  bool
-	Verbose           bool
-	Debug             bool
-	Quiet             bool
-	Interface         string
-	FileName          string
-	Snaplen           int
-	TsType            string
-	Promiscuous       bool
-	CloseTimeout      time.Duration
-	Timeout           time.Duration
-	PacketSource      string
-	BpfFilter         string
-	ChannelBufferSize int
+	Maxcount           int
+	Statsevery         int
+	Lazy               bool
+	Nodefrag           bool
+	Checksum           bool
+	Nooptcheck         bool
+	Ignorefsmerr       bool
+	Allowmissinginit   bool
+	Verbose            bool
+	Debug              bool
+	Quiet              bool
+	Interface          string
+	FileName           string
+	Snaplen            int
+	TsType             string
+	Promiscuous        bool
+	StreamFlushTimeout time.Duration
+	StreamCloseTimeout time.Duration
+	PacketSource       string
+	BpfFilter          string
+	ChannelBufferSize  int
 }
 
 func NewConfig() Config {
 	c := Config{
-		Maxcount:          *maxcount,
-		Statsevery:        *statsevery,
-		Lazy:              *lazy,
-		Nodefrag:          *nodefrag,
-		Checksum:          *checksum,
-		Nooptcheck:        *nooptcheck,
-		Ignorefsmerr:      *ignorefsmerr,
-		Allowmissinginit:  *allowmissinginit,
-		Verbose:           *verbose,
-		Debug:             *debug,
-		Quiet:             *quiet,
-		Interface:         *iface,
-		FileName:          *fname,
-		Snaplen:           *snaplen,
-		TsType:            *tstype,
-		Promiscuous:       *promisc,
-		Timeout:           timeout,
-		PacketSource:      *packetSource,
-		BpfFilter:         *bpfFilter,
-		ChannelBufferSize: *channelBufferSize,
+		Maxcount:           *maxcount,
+		Statsevery:         *statsevery,
+		Lazy:               *lazy,
+		Nodefrag:           *nodefrag,
+		Checksum:           *checksum,
+		Nooptcheck:         *nooptcheck,
+		Ignorefsmerr:       *ignorefsmerr,
+		Allowmissinginit:   *allowmissinginit,
+		Verbose:            *verbose,
+		Debug:              *debug,
+		Quiet:              *quiet,
+		Interface:          *iface,
+		FileName:           *fname,
+		Snaplen:            *snaplen,
+		TsType:             *tstype,
+		Promiscuous:        *promisc,
+		StreamFlushTimeout: time.Duration(*streamFlushTimeout) * time.Second,
+		StreamCloseTimeout: time.Duration(*streamCloseTimeout) * time.Second,
+		PacketSource:       *packetSource,
+		BpfFilter:          *bpfFilter,
+		ChannelBufferSize:  *channelBufferSize,
 	}
 
 	// Add filters to only capture common HTTP methods
