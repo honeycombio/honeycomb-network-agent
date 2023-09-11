@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// tcpStream has two unidirectional httpReaders, one for client and one for server
 type tcpStream struct {
 	id             uint64
 	tcpstate       *reassembly.TCPSimpleFSM
@@ -142,13 +143,13 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 			t.client.messages <- message{
 				data:      data,
 				timestamp: ctx.CaptureInfo.Timestamp,
-				Seq:       int(ctx.seq),
+				Seq:       int(ctx.ack), // client ACK matches server SEQ
 			}
 		} else {
 			t.server.messages <- message{
 				data:      data,
 				timestamp: ctx.CaptureInfo.Timestamp,
-				Seq:       int(ctx.ack),
+				Seq:       int(ctx.seq), // server SEQ matches client ACK
 			}
 		}
 	}
