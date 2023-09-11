@@ -5,15 +5,16 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/afpacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
+	"github.com/honeycombio/ebpf-agent/config"
+	"github.com/honeycombio/gopacket"
+	"github.com/honeycombio/gopacket/afpacket"
+	"github.com/honeycombio/gopacket/layers"
+	"github.com/honeycombio/gopacket/pcap"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/net/bpf"
 )
 
-func newAfpacketSource(config config) (*gopacket.PacketSource, error) {
+func newAfpacketSource(config config.Config) (*gopacket.PacketSource, error) {
 	// subtract 1 from snaplen to account for the VLAN frame header
 	snaplen := config.Snaplen - 1
 	if snaplen < 0 {
@@ -28,7 +29,7 @@ func newAfpacketSource(config config) (*gopacket.PacketSource, error) {
 	log.Info().
 		Str("interface", config.Interface).
 		Int("snaplen", snaplen).
-		Str("bpf_filter", config.bpfFilter).
+		Str("bpf_filter", config.BpfFilter).
 		Int("frame_size", frameSize).
 		Int("block_size", blockSize).
 		Int("num_blocks", numBlocks).
@@ -57,8 +58,8 @@ func newAfpacketSource(config config) (*gopacket.PacketSource, error) {
 		return nil, err
 	}
 
-	if config.bpfFilter != "" {
-		handle.SetBPFFilter(config.bpfFilter, snaplen)
+	if config.BpfFilter != "" {
+		handle.SetBPFFilter(config.BpfFilter, snaplen)
 	}
 
 	go logAfpacketHandleStats(handle)
