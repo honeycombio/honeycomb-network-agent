@@ -32,53 +32,59 @@ var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 var packetSource = flag.String("source", "pcap", "Packet source (defaults to pcap)")
 var bpfFilter = flag.String("filter", "tcp", "BPF filter")
 var channelBufferSize = flag.Int("channel_buffer_size", 1000, "Channel buffer size (defaults to 1000)")
+var maxBufferedPagesTotal = flag.Int("gopacket_pages", 150_000, "Maximum number of TCP reassembly pages to allocate per interface")
+var maxBufferedPagesPerConnection = flag.Int("gopacket_per_conn", 4000, "Maximum number of TCP reassembly pages per connection")
 
 type Config struct {
-	Maxcount          int
-	Statsevery        int
-	Lazy              bool
-	Nodefrag          bool
-	Checksum          bool
-	Nooptcheck        bool
-	Ignorefsmerr      bool
-	Allowmissinginit  bool
-	Verbose           bool
-	Debug             bool
-	Quiet             bool
-	Interface         string
-	FileName          string
-	Snaplen           int
-	TsType            string
-	Promiscuous       bool
-	CloseTimeout      time.Duration
-	Timeout           time.Duration
-	PacketSource      string
-	BpfFilter         string
-	ChannelBufferSize int
+	Maxcount                      int
+	Statsevery                    int
+	Lazy                          bool
+	Nodefrag                      bool
+	Checksum                      bool
+	Nooptcheck                    bool
+	Ignorefsmerr                  bool
+	Allowmissinginit              bool
+	Verbose                       bool
+	Debug                         bool
+	Quiet                         bool
+	Interface                     string
+	FileName                      string
+	Snaplen                       int
+	TsType                        string
+	Promiscuous                   bool
+	CloseTimeout                  time.Duration
+	Timeout                       time.Duration
+	PacketSource                  string
+	BpfFilter                     string
+	ChannelBufferSize             int
+	MaxBufferedPagesTotal         int
+	MaxBufferedPagesPerConnection int
 }
 
 func NewConfig() Config {
 	c := Config{
-		Maxcount:          *maxcount,
-		Statsevery:        *statsevery,
-		Lazy:              *lazy,
-		Nodefrag:          *nodefrag,
-		Checksum:          *checksum,
-		Nooptcheck:        *nooptcheck,
-		Ignorefsmerr:      *ignorefsmerr,
-		Allowmissinginit:  *allowmissinginit,
-		Verbose:           *verbose,
-		Debug:             *debug,
-		Quiet:             *quiet,
-		Interface:         *iface,
-		FileName:          *fname,
-		Snaplen:           *snaplen,
-		TsType:            *tstype,
-		Promiscuous:       *promisc,
-		Timeout:           timeout,
-		PacketSource:      *packetSource,
-		BpfFilter:         *bpfFilter,
-		ChannelBufferSize: *channelBufferSize,
+		Maxcount:                      *maxcount,
+		Statsevery:                    *statsevery,
+		Lazy:                          *lazy,
+		Nodefrag:                      *nodefrag,
+		Checksum:                      *checksum,
+		Nooptcheck:                    *nooptcheck,
+		Ignorefsmerr:                  *ignorefsmerr,
+		Allowmissinginit:              *allowmissinginit,
+		Verbose:                       *verbose,
+		Debug:                         *debug,
+		Quiet:                         *quiet,
+		Interface:                     *iface,
+		FileName:                      *fname,
+		Snaplen:                       *snaplen,
+		TsType:                        *tstype,
+		Promiscuous:                   *promisc,
+		Timeout:                       timeout,
+		PacketSource:                  *packetSource,
+		BpfFilter:                     *bpfFilter,
+		ChannelBufferSize:             *channelBufferSize,
+		MaxBufferedPagesTotal:         *maxBufferedPagesTotal,
+		MaxBufferedPagesPerConnection: *maxBufferedPagesPerConnection,
 	}
 
 	// Add filters to only capture common HTTP methods
