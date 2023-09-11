@@ -1,5 +1,11 @@
 # Honeycomb eBPF Agent changelog
 
+## [0.0.10-alpha] - 2023-09-08
+
+### Maintenance
+
+maint: replace gopacket with honey gopacket (#158) | @JamieDanielson
+
 ## [0.0.9-alpha] - 2023-09-07
 
 ### Enhancements
