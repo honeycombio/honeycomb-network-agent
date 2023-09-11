@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/cilium/ebpf v0.11.0
-	github.com/google/gopacket v1.1.19
+	github.com/honeycombio/gopacket v1.1.21
 	github.com/honeycombio/libhoney-go v1.20.0
 	github.com/rs/zerolog v1.30.0
 	go.opentelemetry.io/otel v1.17.0
