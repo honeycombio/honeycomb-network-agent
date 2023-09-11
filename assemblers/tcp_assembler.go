@@ -77,6 +77,10 @@ func NewTcpAssembler(config config.Config, httpEvents chan HttpEvent) tcpAssembl
 	streamPool := reassembly.NewStreamPool(&streamFactory)
 	assembler := reassembly.NewAssembler(streamPool)
 
+	// Set total max pages and per-connection max pages -- this is very important to limit memory usage
+	assembler.AssemblerOptions.MaxBufferedPagesTotal = config.MaxBufferedPagesTotal
+	assembler.AssemblerOptions.MaxBufferedPagesPerConnection = config.MaxBufferedPagesPerConnection
+
 	return tcpAssembler{
 		config:        config,
 		packetSource:  packetSource,
