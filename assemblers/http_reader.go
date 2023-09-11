@@ -14,7 +14,9 @@ import (
 type message struct {
 	data      []byte
 	timestamp time.Time
-	Seq       int
+	// Seq will hold SEQ or ACK number for incoming or outgoing HTTP TCP segments
+	// https://madpackets.com/2018/04/25/tcp-sequence-and-acknowledgement-numbers-explained/
+	Seq int
 }
 
 type httpReader struct {
