@@ -69,6 +69,7 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 		messages: make(chan message, factory.config.ChannelBufferSize),
 	}
 	factory.wg.Add(2)
+	go stream.logStreamStats()
 	go stream.client.run(&factory.wg)
 	go stream.server.run(&factory.wg)
 	return stream

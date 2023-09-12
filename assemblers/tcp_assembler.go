@@ -208,7 +208,7 @@ func (a *tcpAssembler) logAssemblerStats() {
 		"goroutines":            runtime.NumGoroutine(),
 	}
 	statsEvent := libhoney.NewEvent()
-	statsEvent.Dataset = "hny-ebpf-agent-stats"
+	statsEvent.Dataset = config.StatsDataset
 	statsEvent.AddField("name", "tcp_assembler_stats")
 	statsEvent.Add(statsFields)
 	statsEvent.Send()

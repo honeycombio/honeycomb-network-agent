@@ -9,6 +9,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const StatsDataset = "hny-ebpf-agent-stats"
+
 var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
 var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
 var lazy = flag.Bool("lazy", false, "If true, do lazy decoding")

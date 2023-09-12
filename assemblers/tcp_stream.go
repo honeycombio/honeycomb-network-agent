@@ -3,11 +3,13 @@ package assemblers
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/honeycombio/ebpf-agent/config"
 	"github.com/honeycombio/gopacket"
 	"github.com/honeycombio/gopacket/layers"
 	"github.com/honeycombio/gopacket/reassembly"
+	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog/log"
 )
 
@@ -162,6 +164,22 @@ func (stream *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool
 	stream.close()
 	// do not remove the connection to allow last ACK
 	return false
+}
+
+func (stream *tcpStream) logStreamStats() {
+	ticker := time.NewTicker(5 * time.Second)
+	for {
+		<-ticker.C
+		statsEvent := libhoney.NewEvent()
+		statsEvent.Dataset = config.StatsDataset
+		statsEvent.Add(map[string]interface{}{
+			"name":                "tcp_stream_stats",
+			"ident":               stream.ident,
+			"client_queue_length": len(stream.client.messages),
+			"server_queue_length": len(stream.server.messages),
+		})
+		statsEvent.Send()
+	}
 }
 
 func (stream *tcpStream) close() {
