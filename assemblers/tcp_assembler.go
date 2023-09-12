@@ -38,6 +38,7 @@ var stats struct {
 
 type Context struct {
 	CaptureInfo gopacket.CaptureInfo
+	seq, ack    reassembly.Sequence
 }
 
 func (c *Context) GetCaptureInfo() gopacket.CaptureInfo {
@@ -81,6 +82,10 @@ func NewTcpAssembler(config config.Config, httpEvents chan HttpEvent) tcpAssembl
 	streamPool := reassembly.NewStreamPool(&streamFactory)
 	assembler := reassembly.NewAssembler(streamPool)
 
+	// Set total max pages and per-connection max pages -- this is very important to limit memory usage
+	assembler.AssemblerOptions.MaxBufferedPagesTotal = config.MaxBufferedPagesTotal
+	assembler.AssemblerOptions.MaxBufferedPagesPerConnection = config.MaxBufferedPagesPerConnection
+
 	return tcpAssembler{
 		config:        config,
 		packetSource:  packetSource,
@@ -93,15 +98,22 @@ func NewTcpAssembler(config config.Config, httpEvents chan HttpEvent) tcpAssembl
 
 func (h *tcpAssembler) Start() {
 	log.Info().Msg("Starting TCP assembler")
-	flushTicker := time.NewTicker(time.Second * 5)
+	// Tick on the tightest loop. The flush timeout is the shorter of the two timeouts using this ticker.
+	// Tick even more frequently than the flush interval (4 is somewhat arbitrary)
+	flushCloseTicker := time.NewTicker(h.config.StreamFlushTimeout / 4)
 	statsTicker := time.NewTicker(time.Second * 10)
 	h.startedAt = time.Now()
 	defragger := ip4defrag.NewIPv4Defragmenter()
 
 	for {
 		select {
-		case <-flushTicker.C:
-			flushed, closed := h.assembler.FlushCloseOlderThan(time.Now().Add(-h.config.Timeout))
+		case <-flushCloseTicker.C:
+			flushed, closed := h.assembler.FlushWithOptions(
+				reassembly.FlushOptions{
+					T:  time.Now().Add(-h.config.StreamFlushTimeout),
+					TC: time.Now().Add(-h.config.StreamCloseTimeout),
+				},
+			)
 			log.Debug().
 				Int("flushed", flushed).
 				Int("closed", closed).
@@ -109,6 +121,11 @@ func (h *tcpAssembler) Start() {
 		case <-statsTicker.C:
 			h.logAssemblerStats()
 		case packet := <-h.packetSource.Packets():
+			if packet.NetworkLayer() == nil {
+				// can't use this packet
+				continue
+			}
+
 			// defrag the IPv4 packet if required
 			if ipv4Layer := packet.Layer(layers.LayerTypeIPv4); ipv4Layer != nil {
 				ipv4 := ipv4Layer.(*layers.IPv4)
@@ -146,6 +163,8 @@ func (h *tcpAssembler) Start() {
 				}
 				context := Context{
 					CaptureInfo: packet.Metadata().CaptureInfo,
+					seq:         reassembly.Sequence(tcp.Seq),
+					ack:         reassembly.Sequence(tcp.Ack),
 				}
 				stats.totalsz += len(tcp.Payload)
 				h.assembler.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &context)

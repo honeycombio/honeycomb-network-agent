@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// tcpStream has two unidirectional httpReaders, one for client and one for server
 type tcpStream struct {
 	id             uint64
 	tcpstate       *reassembly.TCPSimpleFSM
@@ -19,7 +20,6 @@ type tcpStream struct {
 	net, transport gopacket.Flow
 	client         httpReader
 	server         httpReader
-	counter        requestCounter
 	ident          string
 	closed         bool
 	config         config.Config
@@ -131,17 +131,25 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 		return
 	}
 
+	ctx, ok := ac.(*Context)
+	if !ok {
+		log.Warn().
+			Msg("Failed to cast ScatterGather to ContextWithSeq")
+	}
+
 	if length > 0 {
 		data := sg.Fetch(length)
 		if dir == reassembly.TCPDirClientToServer {
 			t.client.messages <- message{
 				data:      data,
-				timestamp: ac.GetCaptureInfo().Timestamp,
+				timestamp: ctx.CaptureInfo.Timestamp,
+				Seq:       int(ctx.ack), // client ACK matches server SEQ
 			}
 		} else {
 			t.server.messages <- message{
 				data:      data,
-				timestamp: ac.GetCaptureInfo().Timestamp,
+				timestamp: ctx.CaptureInfo.Timestamp,
+				Seq:       int(ctx.seq), // server SEQ matches client ACK
 			}
 		}
 	}
