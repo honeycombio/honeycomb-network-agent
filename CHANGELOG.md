@@ -1,5 +1,11 @@
 # Honeycomb eBPF Agent changelog
 
+## [0.0.12-alpha] - 2023-09-12
+
+### Maintenance
+
+- maint: Try to use less memory (#170) | @robbkidd 
+
 ## [0.0.11-alpha] - 2023-09-11
 
 ### Enhancements
