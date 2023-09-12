@@ -225,7 +225,7 @@ func newPcapPacketSource(config config.Config) (*gopacket.PacketSource, error) {
 		Bool("promiscuous", config.Promiscuous).
 		Str("bpf_filter", config.BpfFilter).
 		Msg("Configuring pcap packet source")
-	handle, err := pcap.OpenLive(config.Interface, int32(config.Snaplen), config.Promiscuous, time.Second)
+	handle, err := pcap.OpenLive(config.Interface, int32(config.Snaplen), config.Promiscuous, pcap.BlockForever)
 	if err != nil {
 		log.Fatal().
 			Err(err).
