@@ -160,8 +160,7 @@ func (t *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
 		Str("tcp_stream_ident", t.ident).
 		Msg("Connection closed")
 	t.close()
-	// do not remove the connection to allow last ACK
-	return false
+	return true // remove the connection, heck with the last ACK
 }
 
 func (t *tcpStream) close() {
