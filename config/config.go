@@ -24,7 +24,7 @@ var quiet = flag.Bool("quiet", false, "Be quiet regarding errors")
 // capture
 var iface = flag.String("i", "any", "Interface to read packets from")
 var fname = flag.String("r", "", "Filename to read from, overrides -i")
-var snaplen = flag.Int("s", 65536, "Snap length (number of bytes max to read per packet")
+var snaplen = flag.Int("s", 262144, "Snap length (number of bytes max to read per packet") // 262144 is the default snaplen for tcpdump
 var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
 var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 var packetSource = flag.String("source", "pcap", "Packet source (defaults to pcap)")

@@ -49,7 +49,6 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	}
 
 	stream.client = httpReader{
-		bytes:    make(chan []byte),
 		parent:   stream,
 		isClient: true,
 		srcIp:    net.Src().String(),
@@ -59,7 +58,6 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 		messages: make(chan message, factory.config.ChannelBufferSize),
 	}
 	stream.server = httpReader{
-		bytes:    make(chan []byte),
 		parent:   stream,
 		isClient: false,
 		srcIp:    net.Reverse().Src().String(),

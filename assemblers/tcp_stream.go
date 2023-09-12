@@ -155,24 +155,23 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 	}
 }
 
+// ReassemblyComplete is called when the TCP assembler believes a stream has completed.
 func (t *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
 	log.Debug().
 		Str("tcp_stream_ident", t.ident).
 		Msg("Connection closed")
 	t.close()
-	// do not remove the connection to allow last ACK
-	return false
+	return true // remove the connection, heck with the last ACK
 }
 
+// close closes the tcpStream and its httpReaders.
 func (t *tcpStream) close() {
 	t.Lock()
 	defer t.Unlock()
 
 	if !t.closed {
 		t.closed = true
-		close(t.client.messages)
-		close(t.client.bytes)
-		close(t.server.messages)
-		close(t.server.bytes)
+		t.client.close()
+		t.server.close()
 	}
 }
