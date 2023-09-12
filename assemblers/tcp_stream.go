@@ -170,9 +170,7 @@ func (t *tcpStream) close() {
 
 	if !t.closed {
 		t.closed = true
-		close(t.client.messages)
-		close(t.client.bytes)
-		close(t.server.messages)
-		close(t.server.bytes)
+		t.client.close()
+		t.server.close()
 	}
 }

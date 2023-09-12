@@ -115,3 +115,10 @@ func (h *httpReader) processEvent(ident string, entry *entry) {
 		DstIp:             h.dstIp,
 	}
 }
+
+func (h *httpReader) close() error {
+	close(h.messages)
+	close(h.bytes)
+	h.data = nil
+	return nil
+}
