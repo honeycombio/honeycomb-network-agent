@@ -12,6 +12,7 @@ import (
 
 	"github.com/honeycombio/ebpf-agent/assemblers"
 	"github.com/honeycombio/ebpf-agent/config"
+	"github.com/honeycombio/ebpf-agent/debug"
 	"github.com/honeycombio/ebpf-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
@@ -31,6 +32,10 @@ func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	if os.Getenv("LOG_LEVEL") == "DEBUG" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+	if os.Getenv("DEBUG") == "true" {
+		debug := &debug.DebugService{}
+		debug.Start()
 	}
 	// TODO: add a flag to enable human readable logs
 	// log.Logger = log.Output(zerolog.NewConsoleWriter())
