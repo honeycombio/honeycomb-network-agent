@@ -81,6 +81,9 @@ spec:
           image: hny/ebpf-agent:local
           # image: ghcr.io/honeycombio/ebpf-agent:latest
           imagePullPolicy: IfNotPresent
+          # uncomment this to enable profiling listener on port 6060
+          # ports:
+          #   - containerPort: 6060
           env:
             - name: HONEYCOMB_API_KEY
               valueFrom:
@@ -89,7 +92,10 @@ spec:
                   key: api-key
             - name: HONEYCOMB_DATASET
               value: hny-ebpf-agent
-            ## uncomment this to enable debug logs
+            ## uncomment this to enable debug log level
+            # - name: LOG_LEVEL
+              # value: "DEBUG"
+            ## uncomment this to enable profiling
             # - name: DEBUG
             #   value: "true"
           args:
