@@ -29,7 +29,7 @@ const defaultEndpoint = "https://api.honeycomb.io"
 func main() {
 	// Set logging level
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if os.Getenv("DEBUG") == "true" {
+	if os.Getenv("LOG_LEVEL") == "DEBUG" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 	// TODO: add a flag to enable human readable logs
