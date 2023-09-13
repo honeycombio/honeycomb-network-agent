@@ -18,8 +18,8 @@ type tcpStream struct {
 	fsmerr         bool
 	optchecker     reassembly.TCPOptionCheck
 	net, transport gopacket.Flow
-	client         httpReader
-	server         httpReader
+	client         tcpReader
+	server         tcpReader
 	ident          string
 	closed         bool
 	config         config.Config

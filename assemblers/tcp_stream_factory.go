@@ -48,7 +48,7 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 		events:     factory.httpEvents,
 	}
 
-	stream.client = httpReader{
+	stream.client = tcpReader{
 		parent:   stream,
 		isClient: true,
 		srcIp:    net.Src().String(),
@@ -57,7 +57,7 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 		dstPort:  transport.Dst().String(),
 		messages: make(chan message, factory.config.ChannelBufferSize),
 	}
-	stream.server = httpReader{
+	stream.server = tcpReader{
 		parent:   stream,
 		isClient: false,
 		srcIp:    net.Reverse().Src().String(),
