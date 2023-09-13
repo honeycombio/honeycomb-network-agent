@@ -12,7 +12,7 @@ ifeq (,$(wildcard /sys/kernel/btf/vmlinux))
 	BPF_HEADERS += -DBPF_NO_PRESERVE_ACCESS_INDEX
 endif
 
-IMG_NAME ?= hny/ebpf-agent
+IMG_NAME ?= hny/network-agent
 IMG_TAG ?= local
 
 .PHONY: generate
@@ -22,12 +22,12 @@ generate:
 
 .PHONY: docker-generate
 docker-generate:
-	docker build --tag hny/ebpf-agent-builder . -f bpf/Dockerfile
-	docker run --rm -v $(shell pwd):/src hny/ebpf-agent-builder
+	docker build --tag hny/network-agent-builder . -f bpf/Dockerfile
+	docker run --rm -v $(shell pwd):/src hny/network-agent-builder
 
 .PHONY: build
 build:
-	CGO_ENABLED=1 GOOS=linux go build -o hny-ebpf-agent main.go
+	CGO_ENABLED=1 GOOS=linux go build -o hny-network-agent main.go
 
 .PHONY: docker-build
 docker-build:
@@ -40,14 +40,14 @@ update-headers:
 
 ### Testing targets
 
-# deploy ebpf agent daemonset to already-running cluster with env vars from .env file
-.PHONY: apply-ebpf-agent
-apply-ebpf-agent:
+# deploy network agent daemonset to already-running cluster with env vars from .env file
+.PHONY: apply-network-agent
+apply-network-agent:
 	envsubst < smoke-tests/deployment.yaml | kubectl apply -f -
 
-# remove ebpf agent daemonset
-.PHONY: unapply-ebpf-agent
-unapply-ebpf-agent:
+# remove network agent daemonset
+.PHONY: unapply-network-agent
+unapply-network-agent:
 	kubectl delete -f smoke-tests/deployment.yaml
 
 # apply new greetings deployment in already-running cluster
@@ -62,7 +62,7 @@ unapply-greetings:
 
 # deploy echoserver in already-running cluster and start locust
 .PHONY: swarm
-swarm: apply-ebpf-agent
+swarm: apply-network-agent
 	kubectl apply -f smoke-tests/echoserver.yaml
 	cd smoke-tests && locust
 
@@ -70,4 +70,4 @@ swarm: apply-ebpf-agent
 .PHONY: unswarm
 unswarm:
 	kubectl delete -f smoke-tests/echoserver.yaml
-	make unapply-ebpf-agent
+	make unapply-network-agent

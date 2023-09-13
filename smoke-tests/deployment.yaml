@@ -60,26 +60,26 @@ subjects:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: hny-ebpf-agent
+  name: hny-network-agent
   namespace: honeycomb
   labels:
-    app: hny-ebpf-agent
+    app: hny-network-agent
 spec:
   selector:
     matchLabels:
-      name: hny-ebpf-agent
+      name: hny-network-agent
   template:
     metadata:
       labels:
-        name: hny-ebpf-agent
+        name: hny-network-agent
     spec:
       serviceAccountName: honeycomb-sa
       hostNetwork: true
       containers:
-        - name: hny-ebpf-agent
+        - name: hny-network-agent
           # use locally built image from make docker-build
-          image: hny/ebpf-agent:local
-          # image: ghcr.io/honeycombio/ebpf-agent:latest
+          image: hny/network-agent:local
+          # image: ghcr.io/honeycombio/network-agent:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: HONEYCOMB_API_KEY
@@ -88,7 +88,7 @@ spec:
                   name: honeycomb
                   key: api-key
             - name: HONEYCOMB_DATASET
-              value: hny-ebpf-agent
+              value: hny-network-agent
             ## uncomment this to enable debug logs
             # - name: DEBUG
             #   value: "true"

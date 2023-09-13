@@ -23,7 +23,7 @@ When building with `make docker-build`, the generated files are included in the 
 
 ## To pull a published image from ghcr
 
-Docker images are found in [`ghcr.io/honeycombio/ebpf-agent:latest`](https://github.com/honeycombio/honeycomb-ebpf-agent/pkgs/container/ebpf-agent).
+Docker images are found in [`ghcr.io/honeycombio/network-agent:latest`](https://github.com/honeycombio/honeycomb-network-agent/pkgs/container/network-agent).
 
 Because this is a private registry, you must have a Github [personal access token](https://github.com/settings/tokens) (classic) with `read:packages` permission.
 
@@ -46,34 +46,34 @@ kubectl create secret docker-registry ghcr-secret \
 
 ## To create a local docker image
 
-`make docker-build` will create a local docker image called `hny/ebpf-agent:local`.
+`make docker-build` will create a local docker image called `hny/network-agent:local`.
 
 Verify that it published to your local docker images:
 
 ```sh
-$ docker images | grep ebpf-agent
-REPOSITORY        TAG       IMAGE ID        CREATED          SIZE
-hny/ebpf-agent    local     326362e52d9c    5 minutes ago    120MB
+$ docker images | grep network-agent
+REPOSITORY           TAG       IMAGE ID        CREATED          SIZE
+hny/network-agent    local     326362e52d9c    5 minutes ago    120MB
 ```
 
 For a custom name and/or tag, pass `IMG_NAME` and/or `IMG_TAG` in the make command.
-For example, to get a local docker image called `hny/ebpf-agent-go:custom`:
+For example, to get a local docker image called `hny/network-agent-go:custom`:
 
-`IMG_NAME=hny/ebpf-agent-go IMG_TAG=custom make docker-build`
+`IMG_NAME=hny/network-agent-go IMG_TAG=custom make docker-build`
 
 ## Deploying the agent to a Kubernetes cluster
 
 Set environment variables like `HONEYCOMB_API_KEY` and the previously noted `GITHUB_TOKEN` and `BASE64_TOKEN` in a file called `.env`.
 These environment variables get passed in the make command.
 
-`make apply-ebpf-agent`
+`make apply-network-agent`
 
 ```sh
-$ make apply-ebpf-agent
+$ make apply-network-agent
 namespace/honeycomb created
 secret/honeycomb created
 secret/ghcr created
-daemonset.apps/hny-ebpf-agent created
+daemonset.apps/hny-network-agent created
 ```
 
 If you're on a Mac, try `brew install gettext` if `envsubst` isn't available.
@@ -82,13 +82,13 @@ Confirm that the pods are up by using `k9s` or with `kubectl`:
 
 ```sh
 $ kubectl get pods --namespace=honeycomb
-NAME                   READY   STATUS    RESTARTS   AGE
-hny-ebpf-agent-bqcvl   1/1     Running   0          94s
+NAME                      READY   STATUS    RESTARTS   AGE
+hny-network-agent-bqcvl   1/1     Running   0          94s
 ```
 
 To remove the agent:
 
-`make unapply-ebpf-agent` or `kubectl delete -f smoke-tests/deployment.yaml`
+`make unapply-network-agent` or `kubectl delete -f smoke-tests/deployment.yaml`
 
 ## Optionally install the "greetings" example app
 

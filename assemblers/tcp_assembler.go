@@ -4,12 +4,12 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/honeycombio/ebpf-agent/config"
 	"github.com/honeycombio/gopacket"
 	"github.com/honeycombio/gopacket/ip4defrag"
 	"github.com/honeycombio/gopacket/layers"
 	"github.com/honeycombio/gopacket/pcap"
 	"github.com/honeycombio/gopacket/reassembly"
+	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -208,7 +208,7 @@ func (a *tcpAssembler) logAssemblerStats() {
 		"goroutines":            runtime.NumGoroutine(),
 	}
 	statsEvent := libhoney.NewEvent()
-	statsEvent.Dataset = "hny-ebpf-agent-stats"
+	statsEvent.Dataset = "hny-network-agent-stats"
 	statsEvent.AddField("name", "tcp_assembler_stats")
 	statsEvent.Add(statsFields)
 	statsEvent.Send()
