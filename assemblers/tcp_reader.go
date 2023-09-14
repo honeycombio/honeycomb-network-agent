@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/honeycombio/gopacket"
+	"github.com/gopacket/gopacket"
 	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/rs/zerolog/log"
 )

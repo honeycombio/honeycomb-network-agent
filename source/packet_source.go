@@ -3,8 +3,8 @@ package source
 import (
 	"time"
 
-	"github.com/honeycombio/gopacket"
-	"github.com/honeycombio/gopacket/pcap"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/pcap"
 	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/rs/zerolog/log"
 )
