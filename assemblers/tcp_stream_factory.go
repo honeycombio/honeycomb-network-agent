@@ -3,7 +3,6 @@ package assemblers
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
 
 	"github.com/honeycombio/ebpf-agent/config"
 	"github.com/honeycombio/gopacket"
@@ -35,7 +34,7 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	}
 
 	// increment total stream count and use as stream id
-	streamId := atomic.AddUint64(&stats.total_streams, 1)
+	streamId := IncrementStreamCount()
 	stream := &tcpStream{
 		config:     factory.config,
 		id:         streamId,
@@ -71,7 +70,7 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	go stream.server.run(&factory.wg)
 
 	// increment the number of active streams
-	atomic.AddInt64(&stats.active_streams, 1)
+	IncrementActiveStreamCount()
 	return stream
 }
 

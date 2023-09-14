@@ -3,7 +3,6 @@ package assemblers
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
 
 	"github.com/honeycombio/ebpf-agent/config"
 	"github.com/honeycombio/gopacket"
@@ -164,7 +163,7 @@ func (t *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
 	t.close()
 
 	// decrement the number of active streams
-	atomic.AddInt64(&stats.active_streams, -1)
+	DecrementActiveStreamCount()
 	return true // remove the connection, heck with the last ACK
 }
 
