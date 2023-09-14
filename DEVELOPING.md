@@ -176,7 +176,7 @@ This allows the fork to remain cleaner, easier to manage and makes it easier to 
 ### Updating gopacket
 
 1. Run `go get github.com/honeycombio/gopacket@<commit-sha>`
-2. The above command will fail because of a module name mismatch, but does print the full psuedo commit SHA Go uses.
+2. The above command will fail because of a module name mismatch, but does print the full psuedo commit SHA Go uses
 For example:
 ```shell
 $ go get github.com/honeycombio/gopacket@82dde036188549768ff5b13414ff8a7441b9a17f
@@ -188,3 +188,4 @@ go: github.com/honeycombio/gopacket@v1.1.2-0.20230914230614-82dde0361885: parsin
 ```golang
 replace github.com/gopacket/gopacket => github.com/honeycombio/gopacket v1.1.2-0.20230914230614-82dde0361885
 ```
+4. Finally, run `go mod tidy`
