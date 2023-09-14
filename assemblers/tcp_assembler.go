@@ -34,6 +34,8 @@ var stats struct {
 	source_received     int
 	source_dropped      int
 	source_if_dropped   int
+	total_streams       uint64
+	active_streams      int64
 }
 
 type Context struct {
@@ -206,6 +208,8 @@ func (a *tcpAssembler) logAssemblerStats() {
 		"source_if_dropped":     stats.source_if_dropped,
 		"event_queue_length":    len(a.httpEvents),
 		"goroutines":            runtime.NumGoroutine(),
+		"total_streams":         stats.total_streams,
+		"active_streams":        stats.active_streams,
 	}
 	statsEvent := libhoney.NewEvent()
 	statsEvent.Dataset = "hny-ebpf-agent-stats"

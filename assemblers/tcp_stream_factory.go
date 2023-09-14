@@ -12,8 +12,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var streamId uint64 = 0
-
 type tcpStreamFactory struct {
 	config     config.Config
 	wg         sync.WaitGroup
@@ -35,7 +33,9 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	fsmOptions := reassembly.TCPSimpleFSMOptions{
 		SupportMissingEstablishment: true,
 	}
-	streamId := atomic.AddUint64(&streamId, 1)
+
+	// increment total stream count and use as stream id
+	streamId := atomic.AddUint64(&stats.total_streams, 1)
 	stream := &tcpStream{
 		config:     factory.config,
 		id:         streamId,
@@ -69,6 +69,9 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	factory.wg.Add(2)
 	go stream.client.run(&factory.wg)
 	go stream.server.run(&factory.wg)
+
+	// increment the number of active streams
+	atomic.AddInt64(&stats.active_streams, 1)
 	return stream
 }
 
