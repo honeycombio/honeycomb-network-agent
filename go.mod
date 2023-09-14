@@ -1,4 +1,4 @@
-module github.com/honeycombio/ebpf-agent
+module github.com/honeycombio/honeycomb-network-agent
 
 go 1.20
 

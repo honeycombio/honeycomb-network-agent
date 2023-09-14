@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/honeycombio/ebpf-agent/assemblers"
-	"github.com/honeycombio/ebpf-agent/config"
-	"github.com/honeycombio/ebpf-agent/debug"
-	"github.com/honeycombio/ebpf-agent/utils"
+	"github.com/honeycombio/honeycomb-network-agent/assemblers"
+	"github.com/honeycombio/honeycomb-network-agent/config"
+	"github.com/honeycombio/honeycomb-network-agent/debug"
+	"github.com/honeycombio/honeycomb-network-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -24,7 +24,7 @@ import (
 )
 
 const Version string = "0.0.13-alpha"
-const defaultDataset = "hny-ebpf-agent"
+const defaultDataset = "hny-network-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
 func main() {
@@ -40,7 +40,7 @@ func main() {
 	// TODO: add a flag to enable human readable logs
 	// log.Logger = log.Output(zerolog.NewConsoleWriter())
 
-	log.Info().Str("agent_version", Version).Msg("Starting Honeycomb eBPF agent")
+	log.Info().Str("agent_version", Version).Msg("Starting Honeycomb Network agent")
 
 	kernelVersion, err := utils.HostKernelVersion()
 	if err != nil {
@@ -72,7 +72,7 @@ func main() {
 	})
 
 	// appends libhoney's user-agent (TODO: doesn't work, no useragent right now)
-	libhoney.UserAgentAddition = fmt.Sprintf("hny/ebpf-agent/%s", Version)
+	libhoney.UserAgentAddition = fmt.Sprintf("hny/network-agent/%s", Version)
 
 	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", Version)

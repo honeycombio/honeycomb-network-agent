@@ -1,4 +1,4 @@
-# Honeycomb eBPF Agent changelog
+# Honeycomb Network Agent changelog
 
 ## [0.0.13-alpha] - 2023-09-14
 
