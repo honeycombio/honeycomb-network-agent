@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/honeycombio/ebpf-agent/config"
+	"github.com/honeycombio/gopacket"
 	"github.com/rs/zerolog/log"
 )
 
@@ -30,6 +32,18 @@ type tcpReader struct {
 	messages  chan message
 	timestamp time.Time
 	seq       int
+}
+
+func NewTcpReader(isClient bool, stream *tcpStream, net gopacket.Flow, transport gopacket.Flow, config config.Config) *tcpReader {
+	return &tcpReader{
+		parent:   stream,
+		isClient: isClient,
+		srcIp:    net.Src().String(),
+		dstIp:    net.Dst().String(),
+		srcPort:  transport.Src().String(),
+		dstPort:  transport.Dst().String(),
+		messages: make(chan message, config.ChannelBufferSize),
+	}
 }
 
 func (reader *tcpReader) Read(p []byte) (int, error) {

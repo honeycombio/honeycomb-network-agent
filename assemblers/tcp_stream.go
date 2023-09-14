@@ -18,14 +18,33 @@ type tcpStream struct {
 	fsmerr         bool
 	optchecker     reassembly.TCPOptionCheck
 	net, transport gopacket.Flow
-	client         tcpReader
-	server         tcpReader
+	client         *tcpReader
+	server         *tcpReader
 	ident          string
 	closed         bool
 	config         config.Config
 	sync.Mutex
 	matcher httpMatcher
 	events  chan HttpEvent
+}
+
+func NewTcpStream(streamId uint64, net gopacket.Flow, transport gopacket.Flow, config config.Config, httpEvents chan HttpEvent) *tcpStream {
+	stream := &tcpStream{
+		config:    config,
+		id:        streamId,
+		net:       net,
+		transport: transport,
+		tcpstate: reassembly.NewTCPSimpleFSM(reassembly.TCPSimpleFSMOptions{
+			SupportMissingEstablishment: true,
+		}),
+		ident:      fmt.Sprintf("%s:%s:%d", net, transport, streamId),
+		optchecker: reassembly.NewTCPOptionCheck(),
+		matcher:    newRequestResponseMatcher(),
+		events:     httpEvents,
+	}
+	stream.client = NewTcpReader(true, stream, net, transport, config)
+	stream.server = NewTcpReader(false, stream, net.Reverse(), transport.Reverse(), config)
+	return stream
 }
 
 func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassembly.TCPFlowDirection, nextSeq reassembly.Sequence, start *bool, ac reassembly.AssemblerContext) bool {
