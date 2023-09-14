@@ -18,8 +18,8 @@ type tcpStream struct {
 	fsmerr         bool
 	optchecker     reassembly.TCPOptionCheck
 	net, transport gopacket.Flow
-	client         httpReader
-	server         httpReader
+	client         *tcpReader
+	server         *tcpReader
 	ident          string
 	closed         bool
 	config         config.Config
@@ -28,41 +28,60 @@ type tcpStream struct {
 	events  chan HttpEvent
 }
 
-func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassembly.TCPFlowDirection, nextSeq reassembly.Sequence, start *bool, ac reassembly.AssemblerContext) bool {
+func NewTcpStream(streamId uint64, net gopacket.Flow, transport gopacket.Flow, config config.Config, httpEvents chan HttpEvent) *tcpStream {
+	stream := &tcpStream{
+		config:    config,
+		id:        streamId,
+		net:       net,
+		transport: transport,
+		tcpstate: reassembly.NewTCPSimpleFSM(reassembly.TCPSimpleFSMOptions{
+			SupportMissingEstablishment: true,
+		}),
+		ident:      fmt.Sprintf("%s:%s:%d", net, transport, streamId),
+		optchecker: reassembly.NewTCPOptionCheck(),
+		matcher:    newRequestResponseMatcher(),
+		events:     httpEvents,
+	}
+	stream.client = NewTcpReader(true, stream, net, transport, config)
+	stream.server = NewTcpReader(false, stream, net.Reverse(), transport.Reverse(), config)
+	return stream
+}
+
+func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassembly.TCPFlowDirection, nextSeq reassembly.Sequence, start *bool, ac reassembly.AssemblerContext) bool {
 	// FSM
-	if !t.tcpstate.CheckState(tcp, dir) {
+	if !stream.tcpstate.CheckState(tcp, dir) {
 		// Error("FSM", "%s: Packet rejected by FSM (state:%s)\n", t.ident, t.tcpstate.String())
 		stats.rejectFsm++
-		if !t.fsmerr {
-			t.fsmerr = true
+		if !stream.fsmerr {
+			stream.fsmerr = true
 			stats.rejectConnFsm++
 		}
-		if !t.config.Ignorefsmerr {
+		if !stream.config.Ignorefsmerr {
 			return false
 		}
 	}
 	// Options
-	err := t.optchecker.Accept(tcp, ci, dir, nextSeq, start)
+	err := stream.optchecker.Accept(tcp, ci, dir, nextSeq, start)
 	if err != nil {
 		// Error("OptionChecker", "%s: Packet rejected by OptionChecker: %s\n", t.ident, err)
 		stats.rejectOpt++
-		if !t.config.Nooptcheck {
+		if !stream.config.Nooptcheck {
 			return false
 		}
 	}
 	// Checksum
 	accept := true
-	if t.config.Checksum {
+	if stream.config.Checksum {
 		c, err := tcp.ComputeChecksum()
 		if err != nil {
 			log.Error().
 				Err(err).
-				Str("tcp_stream_ident", t.ident).
+				Str("tcp_stream_ident", stream.ident).
 				Msg("ChecksumCompute")
 			accept = false
 		} else if c != 0x0 {
 			log.Error().
-				Str("tcp_stream_ident", t.ident).
+				Str("tcp_stream_ident", stream.ident).
 				Uint16("checksum", c).
 				Msg("InvalidChecksum")
 			accept = false
@@ -74,7 +93,7 @@ func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassem
 	return accept
 }
 
-func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.AssemblerContext) {
+func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.AssemblerContext) {
 	dir, start, end, skip := sg.Info()
 	length, saved := sg.Lengths()
 	// update stats
@@ -107,9 +126,9 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 
 	var ident string
 	if dir == reassembly.TCPDirClientToServer {
-		ident = fmt.Sprintf("%v %v", t.net, t.transport)
+		ident = fmt.Sprintf("%v %v", stream.net, stream.transport)
 	} else {
-		ident = fmt.Sprintf("%v %v", t.net.Reverse(), t.transport.Reverse())
+		ident = fmt.Sprintf("%v %v", stream.net.Reverse(), stream.transport.Reverse())
 	}
 	log.Debug().
 		Str("ident", ident).            // ex: "192.168.65.4->192.168.65.4 6443->38304"
@@ -124,7 +143,7 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 		Int("overlap_byte_count", sgStats.OverlapBytes).
 		Int("overlap_packet_count", sgStats.OverlapPackets).
 		Msg("SG reassembled packet")
-	if skip == -1 && t.config.Allowmissinginit {
+	if skip == -1 && stream.config.Allowmissinginit {
 		// this is allowed
 	} else if skip != 0 {
 		// Missing bytes in stream: do not even try to parse it
@@ -140,13 +159,13 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 	if length > 0 {
 		data := sg.Fetch(length)
 		if dir == reassembly.TCPDirClientToServer {
-			t.client.messages <- message{
+			stream.client.messages <- message{
 				data:      data,
 				timestamp: ctx.CaptureInfo.Timestamp,
 				Seq:       int(ctx.ack), // client ACK matches server SEQ
 			}
 		} else {
-			t.server.messages <- message{
+			stream.server.messages <- message{
 				data:      data,
 				timestamp: ctx.CaptureInfo.Timestamp,
 				Seq:       int(ctx.seq), // server SEQ matches client ACK
@@ -156,11 +175,11 @@ func (t *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.Ass
 }
 
 // ReassemblyComplete is called when the TCP assembler believes a stream has completed.
-func (t *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
+func (stream *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
 	log.Debug().
-		Str("tcp_stream_ident", t.ident).
+		Str("tcp_stream_ident", stream.ident).
 		Msg("Connection closed")
-	t.close()
+	stream.close()
 
 	// decrement the number of active streams
 	DecrementActiveStreamCount()
@@ -168,13 +187,13 @@ func (t *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
 }
 
 // close closes the tcpStream and its httpReaders.
-func (t *tcpStream) close() {
-	t.Lock()
-	defer t.Unlock()
+func (stream *tcpStream) close() {
+	stream.Lock()
+	defer stream.Unlock()
 
-	if !t.closed {
-		t.closed = true
-		t.client.close()
-		t.server.close()
+	if !stream.closed {
+		stream.closed = true
+		stream.client.close()
+		stream.server.close()
 	}
 }
