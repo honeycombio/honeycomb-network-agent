@@ -12,6 +12,7 @@ import (
 
 	"github.com/honeycombio/honeycomb-network-agent/assemblers"
 	"github.com/honeycombio/honeycomb-network-agent/config"
+	"github.com/honeycombio/honeycomb-network-agent/debug"
 	"github.com/honeycombio/honeycomb-network-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
@@ -29,8 +30,12 @@ const defaultEndpoint = "https://api.honeycomb.io"
 func main() {
 	// Set logging level
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if os.Getenv("DEBUG") == "true" {
+	if os.Getenv("LOG_LEVEL") == "DEBUG" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+	if os.Getenv("DEBUG") == "true" {
+		debug := &debug.DebugService{}
+		debug.Start()
 	}
 	// TODO: add a flag to enable human readable logs
 	// log.Logger = log.Output(zerolog.NewConsoleWriter())
