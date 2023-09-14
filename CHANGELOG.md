@@ -1,10 +1,22 @@
 # Honeycomb Network Agent changelog
 
+## [0.0.13-alpha] - 2023-09-14
+
+### Enhancements
+
+- feat: Record total and active stream counts (#178) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- feat: add debug service (#177) | [Jamie Danielson](https://github.com/JamieDanielson)
+
+### Maintenance
+
+- maint: Log when request/response timestamp is not set & set to time.Now (#179) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint: improve Makefile targets (#176) | [Robb Kidd](https://github.com/robbkidd)
+
 ## [0.0.12-alpha] - 2023-09-12
 
 ### Maintenance
 
-- maint: Try to use less memory (#170) | @robbkidd 
+- maint: Try to use less memory (#170) | @robbkidd
 
 ## [0.0.11-alpha] - 2023-09-11
 

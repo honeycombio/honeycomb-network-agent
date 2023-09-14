@@ -23,7 +23,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-const Version string = "0.0.12-alpha"
+const Version string = "0.0.13-alpha"
 const defaultDataset = "hny-network-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
@@ -128,13 +128,32 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	// create libhoney event
 	ev := libhoney.NewEvent()
 
+	// calculate event duration
+	// TODO: This is a hack to work around a bug that results in the response timestamp sometimes
+	// being zero which causes the event duration to be negative.
+	if event.RequestTimestamp.IsZero() {
+		log.Debug().
+			Str("request_id", event.RequestId).
+			Msg("Request timestamp is zero")
+		ev.AddField("http.request.timestamp_missing", true)
+		event.RequestTimestamp = time.Now()
+	}
+	if event.ResponseTimestamp.IsZero() {
+		log.Debug().
+			Str("request_id", event.RequestId).
+			Msg("Response timestamp is zero")
+		ev.AddField("http.response.timestamp_missing", true)
+		event.ResponseTimestamp = time.Now()
+	}
+	eventDuration := event.ResponseTimestamp.Sub(event.RequestTimestamp)
+
 	// common attributes
 	ev.Timestamp = event.RequestTimestamp
 	ev.AddField("httpEvent_handled_at", time.Now())
 	ev.AddField("meta.httpEvent_request_handled_latency_ms", time.Now().Sub(event.RequestTimestamp).Milliseconds())
 	ev.AddField("meta.httpEvent_response_handled_latency_ms", time.Now().Sub(event.ResponseTimestamp).Milliseconds())
 	ev.AddField("goroutine_count", runtime.NumGoroutine())
-	ev.AddField("duration_ms", event.Duration.Milliseconds())
+	ev.AddField("duration_ms", eventDuration.Milliseconds())
 	ev.AddField("http.request.timestamp", event.RequestTimestamp)
 	ev.AddField("http.response.timestamp", event.ResponseTimestamp)
 	ev.AddField("http.request.id", event.RequestId)
