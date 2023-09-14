@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/honeycombio/ebpf-agent/config"
 	"github.com/honeycombio/gopacket"
+	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/rs/zerolog/log"
 )
 
