@@ -165,3 +165,25 @@ Steps to generate `vmlinux.h` files:
 - Install additional linux commands so libbpf can work - `apt install linux-tools-$(uname -r)`
 - Use libbpf to generate the vmlinux.h file - `bpftool btf dump file /sys/kernel/btf/vmlinux format c`
 - Check in output vmlinux.h, note which architecture in file format - eg `bpf/headers/vmlinux-arm64.h`
+
+## Updating gopacket
+
+We maintain a fork of [gopacket/gopacket](https://github.com/gopacket/gopacket) as [honeycombio/gopacket](https://github.com/honeycombio/gopacket).
+The agent is configured to use the official gopacket repo as part of it's main dependency chain and import paths.
+The honeycomb fork is swaped in using a replace directive in go.mod.
+This allows the fork to remain cleaner, easier to manage and makes it easier to provide upstream contributions.
+
+### Updating the go.mod's replace commit sha
+
+1. Run `go get github.com/honeycombio/gopacket@<commit-sha>`
+2. The above command will fail because of a module name mismatch, but does print the full psuedo commit Go uses.
+For example:
+```shell
+go: github.com/honeycombio/gopacket@v1.1.2-0.20230914230614-82dde0361885: parsing go.mod:
+	module declares its path as: github.com/gopacket/gopacket
+	        but was required as: github.com/honeycombio/gopacket
+```
+3. Use the psuedo commit sha value after the @ in the go.mod's replace directive. For example
+```golang
+replace github.com/gopacket/gopacket => github.com/honeycombio/gopacket v1.1.2-0.20230914230614-82dde0361885
+```
