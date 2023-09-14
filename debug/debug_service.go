@@ -13,7 +13,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/honeycombio/ebpf-agent/config"
+	"github.com/honeycombio/honeycomb-network-agent/config"
 	deltaprof "github.com/pyroscope-io/godeltaprof/http/pprof"
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
