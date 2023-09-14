@@ -107,26 +107,15 @@ func (reader *tcpReader) run(wg *sync.WaitGroup) {
 	}
 }
 
-func (reader *tcpReader) processEvent(ident string, entry *entry) {
-	eventDuration := entry.responseTimestamp.Sub(entry.requestTimestamp)
-	if eventDuration < 0 { // the response came in before the request? wat?
-		// logging the weirdness for now so we can debug in environments with production loads
-		log.Debug().
-			Str("ident", ident).
-			Int64("duration_ns", int64(eventDuration)).
-			Int64("duration_ms", eventDuration.Milliseconds()).
-			Msg("Time has gotten weird for this event.")
-	}
-
-	reader.parent.events <- HttpEvent{
+func (h *tcpReader) processEvent(ident string, entry *entry) {
+	h.parent.events <- HttpEvent{
 		RequestId:         ident,
 		Request:           entry.request,
 		Response:          entry.response,
 		RequestTimestamp:  entry.requestTimestamp,
 		ResponseTimestamp: entry.responseTimestamp,
-		Duration:          eventDuration,
-		SrcIp:             reader.srcIp,
-		DstIp:             reader.dstIp,
+		SrcIp:             h.srcIp,
+		DstIp:             h.dstIp,
 	}
 }
 
