@@ -107,15 +107,15 @@ func (reader *tcpReader) run(wg *sync.WaitGroup) {
 	}
 }
 
-func (h *tcpReader) processEvent(ident string, entry *entry) {
-	h.parent.events <- HttpEvent{
+func (reader *tcpReader) processEvent(ident string, entry *entry) {
+	reader.parent.events <- HttpEvent{
 		RequestId:         ident,
 		Request:           entry.request,
 		Response:          entry.response,
 		RequestTimestamp:  entry.requestTimestamp,
 		ResponseTimestamp: entry.responseTimestamp,
-		SrcIp:             h.srcIp,
-		DstIp:             h.dstIp,
+		SrcIp:             reader.srcIp,
+		DstIp:             reader.dstIp,
 	}
 }
 
