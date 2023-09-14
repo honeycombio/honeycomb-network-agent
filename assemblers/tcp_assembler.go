@@ -2,6 +2,7 @@ package assemblers
 
 import (
 	"runtime"
+	"sync/atomic"
 	"time"
 
 	"github.com/honeycombio/ebpf-agent/config"
@@ -34,6 +35,20 @@ var stats struct {
 	source_received     int
 	source_dropped      int
 	source_if_dropped   int
+	total_streams       uint64
+	active_streams      int64
+}
+
+func IncrementStreamCount() uint64 {
+	return atomic.AddUint64(&stats.total_streams, 1)
+}
+
+func IncrementActiveStreamCount() {
+	atomic.AddInt64(&stats.active_streams, 1)
+}
+
+func DecrementActiveStreamCount() {
+	atomic.AddInt64(&stats.active_streams, -1)
 }
 
 type Context struct {
@@ -206,6 +221,8 @@ func (a *tcpAssembler) logAssemblerStats() {
 		"source_if_dropped":     stats.source_if_dropped,
 		"event_queue_length":    len(a.httpEvents),
 		"goroutines":            runtime.NumGoroutine(),
+		"total_streams":         stats.total_streams,
+		"active_streams":        stats.active_streams,
 	}
 	statsEvent := libhoney.NewEvent()
 	statsEvent.Dataset = "hny-ebpf-agent-stats"

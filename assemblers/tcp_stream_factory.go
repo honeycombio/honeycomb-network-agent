@@ -2,7 +2,6 @@ package assemblers
 
 import (
 	"sync"
-	"sync/atomic"
 
 	"github.com/honeycombio/ebpf-agent/config"
 	"github.com/honeycombio/gopacket"
@@ -10,8 +9,6 @@ import (
 	"github.com/honeycombio/gopacket/reassembly"
 	"github.com/rs/zerolog/log"
 )
-
-var streamId uint64 = 0
 
 type tcpStreamFactory struct {
 	config     config.Config
@@ -31,12 +28,15 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 		Str("net", net.String()).
 		Str("transport", transport.String()).
 		Msg("NEW tcp stream")
-	streamId := atomic.AddUint64(&streamId, 1)
+	streamId := IncrementStreamCount()
 	stream := NewTcpStream(streamId, net, transport, factory.config, factory.httpEvents)
 
 	factory.wg.Add(2)
 	go stream.client.run(&factory.wg)
 	go stream.server.run(&factory.wg)
+
+	// increment the number of active streams
+	IncrementActiveStreamCount()
 	return stream
 }
 
