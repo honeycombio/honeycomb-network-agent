@@ -25,7 +25,6 @@ type httpReader struct {
 	srcPort   string
 	dstIp     string
 	dstPort   string
-	bytes     chan []byte
 	data      []byte
 	parent    *tcpStream
 	messages  chan message
@@ -38,9 +37,10 @@ func (h *httpReader) Read(p []byte) (int, error) {
 	ok := true
 	for ok && len(h.data) == 0 {
 		msg, ok = <-h.messages
-		h.data = msg.data
 		h.timestamp = msg.timestamp
 		h.seq = msg.Seq
+		h.data = msg.data
+		msg.data = nil // clear the []byte so we can release the memory
 	}
 	if !ok || len(h.data) == 0 {
 		return 0, io.EOF
@@ -94,24 +94,19 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 }
 
 func (h *httpReader) processEvent(ident string, entry *entry) {
-	eventDuration := entry.responseTimestamp.Sub(entry.requestTimestamp)
-	if eventDuration < 0 { // the response came in before the request? wat?
-		// logging the weirdness for now so we can debug in environments with production loads
-		log.Debug().
-			Str("ident", ident).
-			Int64("duration_ns", int64(eventDuration)).
-			Int64("duration_ms", eventDuration.Milliseconds()).
-			Msg("Time has gotten weird for this event.")
-	}
-
 	h.parent.events <- HttpEvent{
 		RequestId:         ident,
 		Request:           entry.request,
 		Response:          entry.response,
 		RequestTimestamp:  entry.requestTimestamp,
 		ResponseTimestamp: entry.responseTimestamp,
-		Duration:          eventDuration,
 		SrcIp:             h.srcIp,
 		DstIp:             h.dstIp,
 	}
+}
+
+func (h *httpReader) close() error {
+	close(h.messages)
+	h.data = nil // release the data, free up that memory! ᕕ( ᐛ )ᕗ
+	return nil
 }

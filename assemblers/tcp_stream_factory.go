@@ -3,16 +3,13 @@ package assemblers
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
 
-	"github.com/honeycombio/ebpf-agent/config"
 	"github.com/honeycombio/gopacket"
 	"github.com/honeycombio/gopacket/layers"
 	"github.com/honeycombio/gopacket/reassembly"
+	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/rs/zerolog/log"
 )
-
-var streamId uint64 = 0
 
 type tcpStreamFactory struct {
 	config     config.Config
@@ -35,7 +32,9 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	fsmOptions := reassembly.TCPSimpleFSMOptions{
 		SupportMissingEstablishment: true,
 	}
-	streamId := atomic.AddUint64(&streamId, 1)
+
+	// increment total stream count and use as stream id
+	streamId := IncrementStreamCount()
 	stream := &tcpStream{
 		config:     factory.config,
 		id:         streamId,
@@ -49,7 +48,6 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	}
 
 	stream.client = httpReader{
-		bytes:    make(chan []byte),
 		parent:   stream,
 		isClient: true,
 		srcIp:    net.Src().String(),
@@ -59,7 +57,6 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 		messages: make(chan message, factory.config.ChannelBufferSize),
 	}
 	stream.server = httpReader{
-		bytes:    make(chan []byte),
 		parent:   stream,
 		isClient: false,
 		srcIp:    net.Reverse().Src().String(),
@@ -71,6 +68,9 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	factory.wg.Add(2)
 	go stream.client.run(&factory.wg)
 	go stream.server.run(&factory.wg)
+
+	// increment the number of active streams
+	IncrementActiveStreamCount()
 	return stream
 }
 

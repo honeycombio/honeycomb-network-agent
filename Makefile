@@ -12,62 +12,74 @@ ifeq (,$(wildcard /sys/kernel/btf/vmlinux))
 	BPF_HEADERS += -DBPF_NO_PRESERVE_ACCESS_INDEX
 endif
 
-IMG_NAME ?= hny/ebpf-agent
+IMG_NAME ?= hny/network-agent
 IMG_TAG ?= local
 
 .PHONY: generate
 generate: export CFLAGS := $(BPF_HEADERS)
+#: generate go/bpf interop code
 generate:
 	go generate ./...
 
 .PHONY: docker-generate
+#: generate go/bpf interop code but in Docker
 docker-generate:
-	docker build --tag hny/ebpf-agent-builder . -f bpf/Dockerfile
-	docker run --rm -v $(shell pwd):/src hny/ebpf-agent-builder
+	docker build --tag hny/network-agent-builder . -f bpf/Dockerfile
+	docker run --rm -v $(shell pwd):/src hny/network-agent-builder
 
 .PHONY: build
+#: compile the agent executable
 build:
-	CGO_ENABLED=1 GOOS=linux go build -o hny-ebpf-agent main.go
+	CGO_ENABLED=1 GOOS=linux go build -o hny-network-agent main.go
 
 .PHONY: docker-build
+#: build the agent image
 docker-build:
 	docker build --tag $(IMG_NAME):$(IMG_TAG) .
 
 .PHONY: update-headers
+#: retrieve libbpf headers
 update-headers:
 	cd bpf/headers && ./update.sh
 	@echo "*** Also update bpf_tracing.h file! ***"
 
 ### Testing targets
 
-# deploy ebpf agent daemonset to already-running cluster with env vars from .env file
-.PHONY: apply-ebpf-agent
-apply-ebpf-agent:
+.PHONY: apply-agent
+#: deploy network agent daemonset to already-running cluster with env vars from .env file
+apply-agent:
 	envsubst < smoke-tests/deployment.yaml | kubectl apply -f -
 
-# remove ebpf agent daemonset
-.PHONY: unapply-ebpf-agent
-unapply-ebpf-agent:
+.PHONY: unapply-agent
+#: remove network agent daemonset
+unapply-agent:
 	kubectl delete -f smoke-tests/deployment.yaml
 
-# apply new greetings deployment in already-running cluster
 .PHONY: apply-greetings
+#: apply new greetings deployment in already-running cluster
 apply-greetings:
 	kubectl apply -f smoke-tests/greetings.yaml
 
-# remove greetings deployment
 .PHONY: unapply-greetings
+#: remove greetings deployment
 unapply-greetings:
 	kubectl delete -f smoke-tests/greetings.yaml
 
-# deploy echoserver in already-running cluster and start locust
-.PHONY: swarm
-swarm: apply-ebpf-agent
+.PHONY: apply-echoserver
+#: deploy echoserver in already-running cluster
+apply-echoserver:
 	kubectl apply -f smoke-tests/echoserver.yaml
+
+.PHONY: unapply-echoserver
+#: remove echoserver
+unapply-echoserver:
+	kubectl delete -f smoke-tests/echoserver.yaml
+
+.PHONY: swarm
+#: run agent and echoserver, then run load test
+swarm: apply-agent apply-echoserver
 	cd smoke-tests && locust
 
-# teardown load test setup
 .PHONY: unswarm
-unswarm:
-	kubectl delete -f smoke-tests/echoserver.yaml
-	make unapply-ebpf-agent
+#: teardown load test agent and echoserver
+unswarm: unapply-echoserver unapply-agent
