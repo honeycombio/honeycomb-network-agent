@@ -9,6 +9,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// TODO hard-coded for now, make configurable
+const DebugAddr = "localhost:6060"
+
 var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
 var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
 var lazy = flag.Bool("lazy", false, "If true, do lazy decoding")
@@ -59,6 +62,7 @@ type Config struct {
 	ChannelBufferSize             int
 	MaxBufferedPagesTotal         int
 	MaxBufferedPagesPerConnection int
+	DebugAddr                     string
 }
 
 func NewConfig() Config {
@@ -86,6 +90,7 @@ func NewConfig() Config {
 		ChannelBufferSize:             *channelBufferSize,
 		MaxBufferedPagesTotal:         *maxBufferedPagesTotal,
 		MaxBufferedPagesPerConnection: *maxBufferedPagesPerConnection,
+		DebugAddr:                     DebugAddr,
 	}
 
 	// Add filters to only capture common HTTP methods
