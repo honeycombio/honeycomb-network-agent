@@ -30,7 +30,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4.6.0
         with:
-          images: ghcr.io/honeycombio/ebpf-agent
+          images: ghcr.io/honeycombio/network-agent
           tags: |
             # use dev tag for main branch builds
             type=raw,value=dev

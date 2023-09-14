@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/honeycombio/ebpf-agent/config"
 	"github.com/honeycombio/gopacket"
 	"github.com/honeycombio/gopacket/layers"
 	"github.com/honeycombio/gopacket/reassembly"
+	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/rs/zerolog/log"
 )
 
@@ -161,6 +161,9 @@ func (t *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
 		Str("tcp_stream_ident", t.ident).
 		Msg("Connection closed")
 	t.close()
+
+	// decrement the number of active streams
+	DecrementActiveStreamCount()
 	return true // remove the connection, heck with the last ACK
 }
 

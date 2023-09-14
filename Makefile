@@ -4,7 +4,7 @@ IMG_TAG ?= local
 .PHONY: build
 #: compile the agent executable
 build:
-	CGO_ENABLED=1 GOOS=linux go build -o hny-ebpf-agent main.go
+	CGO_ENABLED=1 GOOS=linux go build -o hny-network-agent main.go
 
 .PHONY: docker-build
 #: build the agent image
@@ -14,12 +14,12 @@ docker-build:
 ### Testing targets
 
 .PHONY: apply-agent
-#: deploy ebpf agent daemonset to already-running cluster with env vars from .env file
+#: deploy network agent daemonset to already-running cluster with env vars from .env file
 apply-agent:
 	envsubst < smoke-tests/deployment.yaml | kubectl apply -f -
 
 .PHONY: unapply-agent
-#: remove ebpf agent daemonset
+#: remove network agent daemonset
 unapply-agent:
 	kubectl delete -f smoke-tests/deployment.yaml
 

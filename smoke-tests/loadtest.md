@@ -10,7 +10,7 @@
 
     ```shell
     make docker-build
-    HONEYCOMB_API_KEY=abc make apply-ebpf-agent
+    HONEYCOMB_API_KEY=abc make apply-network-agent
     ```
 
 3. Start load test
