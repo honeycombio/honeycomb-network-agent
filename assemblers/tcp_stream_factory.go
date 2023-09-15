@@ -31,10 +31,6 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	streamId := IncrementStreamCount()
 	stream := NewTcpStream(streamId, net, transport, factory.config, factory.httpEvents)
 
-	factory.wg.Add(2)
-	go stream.client.run(&factory.wg)
-	go stream.server.run(&factory.wg)
-
 	// increment the number of active streams
 	IncrementActiveStreamCount()
 	return stream
