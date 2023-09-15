@@ -53,11 +53,6 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 		// https://madpackets.com/2018/04/25/tcp-sequence-and-acknowledgement-numbers-explained/
 		reqIdent := fmt.Sprintf("%s:%d", reader.streamIdent, ctx.ack)
 		req, err := http.ReadRequest(r)
-
-		// read request body to end and close
-		DiscardBytesToEOF(req.Body)
-		req.Body.Close()
-
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return
 		} else if err != nil {
@@ -86,11 +81,6 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 				Msg("Error reading HTTP response")
 			return
 		}
-
-		// read response body to end and close
-		DiscardBytesToEOF(res.Body)
-		res.Body.Close()
-
 		if entry, ok := reader.matcher.GetOrStoreResponse(resIdent, ctx.CaptureInfo.Timestamp, res); ok {
 			// we have a match, process complete request/response pair
 			reader.processEvent(resIdent, entry)
@@ -107,35 +97,5 @@ func (reader *tcpReader) processEvent(ident string, entry *entry) {
 		ResponseTimestamp: entry.responseTimestamp,
 		SrcIp:             reader.srcIp,
 		DstIp:             reader.dstIp,
-	}
-}
-
-var discardBuffer = make([]byte, 4096)
-
-// DiscardBytesToFirstError will read in all bytes up to the first error
-// reported by the given reader, then return the number of bytes discarded
-// and the error encountered.
-func DiscardBytesToFirstError(r io.Reader) (discarded int, err error) {
-	for {
-		n, e := r.Read(discardBuffer)
-		discarded += n
-		if e != nil {
-			return discarded, e
-		}
-	}
-}
-
-// DiscardBytesToEOF will read in all bytes from a Reader until it
-// encounters an io.EOF, then return the number of bytes.  Be careful
-// of this... if used on a Reader that returns a non-io.EOF error
-// consistently, this will loop forever discarding that error while
-// it waits for an EOF.
-func DiscardBytesToEOF(r io.Reader) (discarded int) {
-	for {
-		n, e := DiscardBytesToFirstError(r)
-		discarded += n
-		if e == io.EOF {
-			return
-		}
 	}
 }
