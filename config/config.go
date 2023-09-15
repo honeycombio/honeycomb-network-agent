@@ -10,7 +10,7 @@ import (
 )
 
 // TODO hard-coded for now, make configurable
-const DebugAddr = "localhost:6060"
+const DebugAddr = "0.0.0.0:6060"
 
 var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
 var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
