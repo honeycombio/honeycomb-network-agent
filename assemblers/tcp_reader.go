@@ -7,8 +7,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/honeycombio/gopacket"
-	"github.com/honeycombio/gopacket/reassembly"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/reassembly"
 	"github.com/rs/zerolog/log"
 )
 

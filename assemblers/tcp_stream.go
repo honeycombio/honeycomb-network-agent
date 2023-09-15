@@ -3,9 +3,9 @@ package assemblers
 import (
 	"fmt"
 
-	"github.com/honeycombio/gopacket"
-	"github.com/honeycombio/gopacket/layers"
-	"github.com/honeycombio/gopacket/reassembly"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
+	"github.com/gopacket/gopacket/reassembly"
 	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/rs/zerolog/log"
 )

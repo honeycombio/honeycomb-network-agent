@@ -12,8 +12,14 @@ ifeq (,$(wildcard /sys/kernel/btf/vmlinux))
 	BPF_HEADERS += -DBPF_NO_PRESERVE_ACCESS_INDEX
 endif
 
+RELEASE_VERSION ?= $(shell git describe --always --match "v[0-9]*")
 IMG_NAME ?= hny/network-agent
 IMG_TAG ?= local
+
+.PHONY: version
+#: display the current computed project version
+version:
+	@echo $(RELEASE_VERSION)
 
 .PHONY: generate
 generate: export CFLAGS := $(BPF_HEADERS)
@@ -30,7 +36,10 @@ docker-generate:
 .PHONY: build
 #: compile the agent executable
 build:
-	CGO_ENABLED=1 GOOS=linux go build -o hny-network-agent main.go
+	CGO_ENABLED=1 GOOS=linux \
+		go build \
+			--ldflags "-X main.Version=$(RELEASE_VERSION)" \
+			-o hny-network-agent main.go
 
 .PHONY: docker-build
 #: build the agent image
