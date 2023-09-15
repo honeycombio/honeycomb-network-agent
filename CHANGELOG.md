@@ -1,5 +1,11 @@
 # Honeycomb Network Agent changelog
 
+## [0.0.15-alpha] - 2023-09-15
+
+### Enhancements
+
+- Refactor readers to not hold byte buffers (#184) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+
 ## [0.0.14-alpha] - 2023-09-15
 
 ### Maintenance
