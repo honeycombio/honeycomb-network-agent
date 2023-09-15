@@ -56,7 +56,7 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return
 		} else if err != nil {
-			log.Info().
+			log.Debug().
 				Err(err).
 				Str("ident", reader.streamIdent).
 				Msg("Error reading HTTP request")
@@ -75,7 +75,7 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return
 		} else if err != nil {
-			log.Info().
+			log.Debug().
 				Err(err).
 				Str("ident", resIdent).
 				Msg("Error reading HTTP response")
