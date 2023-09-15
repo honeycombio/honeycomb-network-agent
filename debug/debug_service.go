@@ -20,7 +20,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const addr = "localhost:6060"
+const addr = "0.0.0.0:6060"
 
 // injectable debug service
 type DebugService struct {
