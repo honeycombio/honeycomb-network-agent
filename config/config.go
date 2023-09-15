@@ -3,6 +3,8 @@ package config
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -31,7 +33,7 @@ var snaplen = flag.Int("s", 262144, "Snap length (number of bytes max to read pe
 var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
 var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 var packetSource = flag.String("source", "pcap", "Packet source (defaults to pcap)")
-var bpfFilter = flag.String("filter", "tcp", "BPF filter")
+var bpfFilter = flag.String("filter", "", "BPF filter")
 var channelBufferSize = flag.Int("channel_buffer_size", 1000, "Channel buffer size (defaults to 1000)")
 var streamFlushTimeout = flag.Int("stream_flush_timeout", 10, "Stream flush timeout in seconds (defaults to 10)")
 var streamCloseTimeout = flag.Int("stream_close_timeout", 90, "Stream close timeout in seconds (defaults to 90)")
@@ -93,6 +95,11 @@ func NewConfig() Config {
 		DebugAddr:                     DebugAddr,
 	}
 
+	// Get the agent's IP and ignore all traffic to/from it
+	if agentIP := os.Getenv("POD_IP"); agentIP != "" {
+		c.BpfFilter = fmt.Sprintf("not host %s and ", agentIP)
+	}
+
 	// Add filters to only capture common HTTP methods
 	// TODO "not host me", // how do we get our current IP?
 	// reference links:
@@ -109,7 +116,7 @@ func NewConfig() Config {
 		// HTTP 1.1 is the response start string
 		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x48545450", // 'HTTP' 1.1
 	}
-	c.BpfFilter = strings.Join(filters, " or ")
+	c.BpfFilter += strings.Join(filters, " or ")
 
 	if c.Debug {
 		b, err := json.MarshalIndent(c, "", "  ")
