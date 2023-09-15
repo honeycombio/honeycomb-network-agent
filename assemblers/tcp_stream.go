@@ -2,7 +2,6 @@ package assemblers
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
@@ -11,40 +10,33 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// tcpStream has two unidirectional httpReaders, one for client and one for server
+// tcpStream has two unidirectional tcpReaders, one for client and one for server
 type tcpStream struct {
-	id             uint64
-	tcpstate       *reassembly.TCPSimpleFSM
-	fsmerr         bool
-	optchecker     reassembly.TCPOptionCheck
-	net, transport gopacket.Flow
-	client         *tcpReader
-	server         *tcpReader
-	ident          string
-	closed         bool
-	config         config.Config
-	sync.Mutex
-	matcher httpMatcher
-	events  chan HttpEvent
+	id         uint64
+	ident      string
+	config     config.Config
+	tcpstate   *reassembly.TCPSimpleFSM
+	fsmerr     bool
+	optchecker reassembly.TCPOptionCheck
+	client     *tcpReader
+	server     *tcpReader
 }
 
 func NewTcpStream(streamId uint64, net gopacket.Flow, transport gopacket.Flow, config config.Config, httpEvents chan HttpEvent) *tcpStream {
-	stream := &tcpStream{
-		config:    config,
-		id:        streamId,
-		net:       net,
-		transport: transport,
+	streamIdent := fmt.Sprintf("%s:%s:%d", net, transport, streamId)
+	matcher := newRequestResponseMatcher()
+	return &tcpStream{
+		id:     streamId,
+		ident:  streamIdent,
+		config: config,
 		tcpstate: reassembly.NewTCPSimpleFSM(reassembly.TCPSimpleFSMOptions{
 			SupportMissingEstablishment: true,
 		}),
-		ident:      fmt.Sprintf("%s:%s:%d", net, transport, streamId),
+		fsmerr:     false, // TODO: verify whether we need this
 		optchecker: reassembly.NewTCPOptionCheck(),
-		matcher:    newRequestResponseMatcher(),
-		events:     httpEvents,
+		client:     NewTcpReader(streamIdent, true, net, transport, matcher, httpEvents),
+		server:     NewTcpReader(streamIdent, false, net.Reverse(), transport.Reverse(), matcher, httpEvents),
 	}
-	stream.client = NewTcpReader(true, stream, net, transport, config)
-	stream.server = NewTcpReader(false, stream, net.Reverse(), transport.Reverse(), config)
-	return stream
 }
 
 func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassembly.TCPFlowDirection, nextSeq reassembly.Sequence, start *bool, ac reassembly.AssemblerContext) bool {
@@ -94,83 +86,11 @@ func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir re
 }
 
 func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.AssemblerContext) {
-	dir, start, end, skip := sg.Info()
-	length, saved := sg.Lengths()
-	// update stats
-	sgStats := sg.Stats()
-	if skip > 0 {
-		stats.missedBytes += skip
-	}
-	stats.sz += length - saved
-	stats.pkt += sgStats.Packets
-	if sgStats.Chunks > 1 {
-		stats.reassembled++
-	}
-	stats.outOfOrderPackets += sgStats.QueuedPackets
-	stats.outOfOrderBytes += sgStats.QueuedBytes
-	if length > stats.biggestChunkBytes {
-		stats.biggestChunkBytes = length
-	}
-	if sgStats.Packets > stats.biggestChunkPackets {
-		stats.biggestChunkPackets = sgStats.Packets
-	}
-	if sgStats.OverlapBytes != 0 && sgStats.OverlapPackets == 0 {
-		log.Fatal().
-			Int("bytes", sgStats.OverlapBytes).
-			Int("packets", sgStats.OverlapPackets).
-			Msg("Invalid overlap")
-		panic("Invalid overlap")
-	}
-	stats.overlapBytes += sgStats.OverlapBytes
-	stats.overlapPackets += sgStats.OverlapPackets
-
-	var ident string
+	dir, _, _, _ := sg.Info()
 	if dir == reassembly.TCPDirClientToServer {
-		ident = fmt.Sprintf("%v %v", stream.net, stream.transport)
+		stream.client.reassembledSG(sg, ac)
 	} else {
-		ident = fmt.Sprintf("%v %v", stream.net.Reverse(), stream.transport.Reverse())
-	}
-	log.Debug().
-		Str("ident", ident).            // ex: "192.168.65.4->192.168.65.4 6443->38304"
-		Str("direction", dir.String()). // ex: "client->server" or "server->client"
-		Int("byte_count", length).
-		Bool("start", start).
-		Bool("end", end).
-		Int("skip", skip).
-		Int("saved", saved).
-		Int("packet_count", sgStats.Packets).
-		Int("chunk_count", sgStats.Chunks).
-		Int("overlap_byte_count", sgStats.OverlapBytes).
-		Int("overlap_packet_count", sgStats.OverlapPackets).
-		Msg("SG reassembled packet")
-	if skip == -1 && stream.config.Allowmissinginit {
-		// this is allowed
-	} else if skip != 0 {
-		// Missing bytes in stream: do not even try to parse it
-		return
-	}
-
-	ctx, ok := ac.(*Context)
-	if !ok {
-		log.Warn().
-			Msg("Failed to cast ScatterGather to ContextWithSeq")
-	}
-
-	if length > 0 {
-		data := sg.Fetch(length)
-		if dir == reassembly.TCPDirClientToServer {
-			stream.client.messages <- message{
-				data:      data,
-				timestamp: ctx.CaptureInfo.Timestamp,
-				Seq:       int(ctx.ack), // client ACK matches server SEQ
-			}
-		} else {
-			stream.server.messages <- message{
-				data:      data,
-				timestamp: ctx.CaptureInfo.Timestamp,
-				Seq:       int(ctx.seq), // server SEQ matches client ACK
-			}
-		}
+		stream.server.reassembledSG(sg, ac)
 	}
 }
 
@@ -179,21 +99,8 @@ func (stream *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool
 	log.Debug().
 		Str("tcp_stream_ident", stream.ident).
 		Msg("Connection closed")
-	stream.close()
 
 	// decrement the number of active streams
 	DecrementActiveStreamCount()
 	return true // remove the connection, heck with the last ACK
-}
-
-// close closes the tcpStream and its httpReaders.
-func (stream *tcpStream) close() {
-	stream.Lock()
-	defer stream.Unlock()
-
-	if !stream.closed {
-		stream.closed = true
-		stream.client.close()
-		stream.server.close()
-	}
 }
