@@ -62,6 +62,11 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 				Msg("Error reading HTTP request")
 			return
 		}
+		// We don't need the body, so just close it if set
+		if req.Body != nil {
+			req.Body.Close()
+		}
+
 		if entry, ok := reader.matcher.GetOrStoreRequest(reqIdent, ctx.CaptureInfo.Timestamp, req); ok {
 			// we have a match, process complete request/response pair
 			reader.processEvent(reqIdent, entry)
@@ -81,6 +86,11 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 				Msg("Error reading HTTP response")
 			return
 		}
+		// We don't need the body, so just close it if set
+		if res.Body != nil {
+			res.Body.Close()
+		}
+
 		if entry, ok := reader.matcher.GetOrStoreResponse(resIdent, ctx.CaptureInfo.Timestamp, res); ok {
 			// we have a match, process complete request/response pair
 			reader.processEvent(resIdent, entry)
