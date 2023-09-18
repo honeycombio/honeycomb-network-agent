@@ -89,9 +89,9 @@ func NewConfig() Config {
 }
 
 // GetMaskedAPIKey masks the API key for logging purposes
-// if the API key is less than 8 characters, it will be completely masked
+// if the API key is less than 4 characters, it will be completely masked
 func (c *Config) GetMaskedAPIKey() string {
-	if len(c.APIKey) < 16 {
+	if len(c.APIKey) <= 4 {
 		return strings.Repeat("*", len(c.APIKey))
 	}
 	return strings.Repeat("*", len(c.APIKey)-4) + c.APIKey[len(c.APIKey)-4:]
