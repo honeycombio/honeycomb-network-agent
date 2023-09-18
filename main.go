@@ -23,7 +23,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-var Version string = "dev"
+const Version string = "0.0.16-alpha"
 
 func main() {
 	config := config.NewConfig()
@@ -48,19 +48,8 @@ func main() {
 		debug.Start()
 	}
 
-	// TODO: Should we remove these now we don't use eBPF?
-	kernelVersion, err := utils.HostKernelVersion()
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to get host kernel version")
-	}
-	btfEnabled := utils.HostBtfEnabled()
-	log.Info().
-		Str("kernel_version", kernelVersion.String()).
-		Bool("btf_enabled", btfEnabled).
-		Msg("Detected host kernel")
-
 	// setup libhoney
-	closeLibhoney := setupLibhoney(config, kernelVersion, btfEnabled)
+	closeLibhoney := setupLibhoney(config)
 	defer closeLibhoney()
 
 	// setup k8s
@@ -190,7 +179,7 @@ func setupLogging(c config.Config) {
 }
 
 // setupLibhoney initializes libhoney and sets global fields
-func setupLibhoney(config config.Config, kernelVersion utils.KernelVersion, btfEnabled bool) func() {
+func setupLibhoney(config config.Config) func() {
 	libhoney.Init(libhoney.Config{
 		APIKey:  config.APIKey,
 		Dataset: config.Dataset,
@@ -202,8 +191,7 @@ func setupLibhoney(config config.Config, kernelVersion utils.KernelVersion, btfE
 
 	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", Version)
-	libhoney.AddField("meta.kernel_version", kernelVersion.String())
-	libhoney.AddField("meta.btf_enabled", btfEnabled)
+
 	return libhoney.Close
 }
 
