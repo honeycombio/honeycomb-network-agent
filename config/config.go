@@ -96,7 +96,7 @@ func NewConfig() Config {
 	}
 
 	// Get the agent's IP and ignore all traffic to/from it
-	if podIP := os.Getenv("POD_IP"); podIP != "" {
+	if podIP := os.Getenv("AGENT_POD_IP"); podIP != "" {
 		c.BpfFilter = fmt.Sprintf("not host %s and ", podIP)
 	}
 

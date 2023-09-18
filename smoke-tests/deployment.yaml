@@ -92,7 +92,7 @@ spec:
           # ports:
           #   - containerPort: 6060
           env:
-            - name: POD_IP
+            - name: AGENT_POD_IP
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
