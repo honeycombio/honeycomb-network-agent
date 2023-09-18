@@ -12,14 +12,14 @@ ifeq (,$(wildcard /sys/kernel/btf/vmlinux))
 	BPF_HEADERS += -DBPF_NO_PRESERVE_ACCESS_INDEX
 endif
 
-I_MADE_THIS_UP ?= $(shell git describe --always --match "v[0-9]*")
+RELEASE_VERSION ?= $(shell git describe --always --match "v[0-9]*")
 IMG_NAME ?= hny/network-agent
 IMG_TAG ?= local
 
 .PHONY: version
 #: display the current computed project version
 version:
-	@echo $(I_MADE_THIS_UP)
+	@echo $(RELEASE_VERSION)
 
 .PHONY: generate
 generate: export CFLAGS := $(BPF_HEADERS)
@@ -38,13 +38,13 @@ docker-generate:
 build:
 	CGO_ENABLED=1 GOOS=linux \
 		go build \
-			--ldflags "-X main.Version=$(I_MADE_THIS_UP)" \
+			--ldflags "-X main.Version=$(RELEASE_VERSION)" \
 			-o hny-network-agent main.go
 
 .PHONY: docker-build
 #: build the agent image
 docker-build:
-	docker build --tag $(IMG_NAME):$(IMG_TAG) .
+	docker build --tag $(IMG_NAME):$(IMG_TAG) --build-arg="RELEASE_VERSION=$(RELEASE_VERSION)" .
 
 .PHONY: update-headers
 #: retrieve libbpf headers
