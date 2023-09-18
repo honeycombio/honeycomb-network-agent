@@ -187,7 +187,7 @@ func setupLibhoney(config config.Config) func() {
 	})
 
 	// appends libhoney's user-agent (TODO: doesn't work, no useragent right now)
-	libhoney.UserAgentAddition = fmt.Sprintf("hny/network-agent/%s", Version)
+	libhoney.UserAgentAddition = fmt.Sprintf("hny-network-agent/%s", Version)
 
 	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", Version)
