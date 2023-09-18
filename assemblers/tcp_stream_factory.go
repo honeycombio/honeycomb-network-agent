@@ -1,18 +1,14 @@
 package assemblers
 
 import (
-	"fmt"
 	"sync"
-	"sync/atomic"
 
-	"github.com/honeycombio/ebpf-agent/config"
-	"github.com/honeycombio/gopacket"
-	"github.com/honeycombio/gopacket/layers"
-	"github.com/honeycombio/gopacket/reassembly"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
+	"github.com/gopacket/gopacket/reassembly"
+	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/rs/zerolog/log"
 )
-
-var streamId uint64 = 0
 
 type tcpStreamFactory struct {
 	config     config.Config
@@ -32,46 +28,11 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 		Str("net", net.String()).
 		Str("transport", transport.String()).
 		Msg("NEW tcp stream")
-	fsmOptions := reassembly.TCPSimpleFSMOptions{
-		SupportMissingEstablishment: true,
-	}
-	streamId := atomic.AddUint64(&streamId, 1)
-	stream := &tcpStream{
-		config:     factory.config,
-		id:         streamId,
-		net:        net,
-		transport:  transport,
-		tcpstate:   reassembly.NewTCPSimpleFSM(fsmOptions),
-		ident:      fmt.Sprintf("%s:%s:%d", net, transport, streamId),
-		optchecker: reassembly.NewTCPOptionCheck(),
-		matcher:    newRequestResponseMatcher(),
-		events:     factory.httpEvents,
-	}
+	streamId := IncrementStreamCount()
+	stream := NewTcpStream(streamId, net, transport, factory.config, factory.httpEvents)
 
-	stream.client = httpReader{
-		bytes:    make(chan []byte),
-		parent:   stream,
-		isClient: true,
-		srcIp:    net.Src().String(),
-		dstIp:    net.Dst().String(),
-		srcPort:  transport.Src().String(),
-		dstPort:  transport.Dst().String(),
-		messages: make(chan message, factory.config.ChannelBufferSize),
-	}
-	stream.server = httpReader{
-		bytes:    make(chan []byte),
-		parent:   stream,
-		isClient: false,
-		srcIp:    net.Reverse().Src().String(),
-		dstIp:    net.Reverse().Dst().String(),
-		srcPort:  transport.Reverse().Src().String(),
-		dstPort:  transport.Reverse().Dst().String(),
-		messages: make(chan message, factory.config.ChannelBufferSize),
-	}
-	factory.wg.Add(2)
-	go stream.logStreamStats()
-	go stream.client.run(&factory.wg)
-	go stream.server.run(&factory.wg)
+	// increment the number of active streams
+	IncrementActiveStreamCount()
 	return stream
 }
 

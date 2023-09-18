@@ -10,6 +10,8 @@ import (
 )
 
 const StatsDataset = "hny-ebpf-agent-stats"
+// TODO hard-coded for now, make configurable
+const DebugAddr = "0.0.0.0:6060"
 
 var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
 var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
@@ -26,7 +28,7 @@ var quiet = flag.Bool("quiet", false, "Be quiet regarding errors")
 // capture
 var iface = flag.String("i", "any", "Interface to read packets from")
 var fname = flag.String("r", "", "Filename to read from, overrides -i")
-var snaplen = flag.Int("s", 65536, "Snap length (number of bytes max to read per packet")
+var snaplen = flag.Int("s", 262144, "Snap length (number of bytes max to read per packet") // 262144 is the default snaplen for tcpdump
 var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
 var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 var packetSource = flag.String("source", "pcap", "Packet source (defaults to pcap)")
@@ -61,6 +63,7 @@ type Config struct {
 	ChannelBufferSize             int
 	MaxBufferedPagesTotal         int
 	MaxBufferedPagesPerConnection int
+	DebugAddr                     string
 }
 
 func NewConfig() Config {
@@ -88,6 +91,7 @@ func NewConfig() Config {
 		ChannelBufferSize:             *channelBufferSize,
 		MaxBufferedPagesTotal:         *maxBufferedPagesTotal,
 		MaxBufferedPagesPerConnection: *maxBufferedPagesPerConnection,
+		DebugAddr:                     DebugAddr,
 	}
 
 	// Add filters to only capture common HTTP methods

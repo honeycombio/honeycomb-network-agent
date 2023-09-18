@@ -23,7 +23,7 @@ When building with `make docker-build`, the generated files are included in the 
 
 ## To pull a published image from ghcr
 
-Docker images are found in [`ghcr.io/honeycombio/ebpf-agent:latest`](https://github.com/honeycombio/honeycomb-ebpf-agent/pkgs/container/ebpf-agent).
+Docker images are found in [`ghcr.io/honeycombio/network-agent:latest`](https://github.com/honeycombio/honeycomb-network-agent/pkgs/container/network-agent).
 
 Because this is a private registry, you must have a Github [personal access token](https://github.com/settings/tokens) (classic) with `read:packages` permission.
 
@@ -46,34 +46,34 @@ kubectl create secret docker-registry ghcr-secret \
 
 ## To create a local docker image
 
-`make docker-build` will create a local docker image called `hny/ebpf-agent:local`.
+`make docker-build` will create a local docker image called `hny/network-agent:local`.
 
 Verify that it published to your local docker images:
 
 ```sh
-$ docker images | grep ebpf-agent
-REPOSITORY        TAG       IMAGE ID        CREATED          SIZE
-hny/ebpf-agent    local     326362e52d9c    5 minutes ago    120MB
+$ docker images | grep network-agent
+REPOSITORY           TAG       IMAGE ID        CREATED          SIZE
+hny/network-agent    local     326362e52d9c    5 minutes ago    120MB
 ```
 
 For a custom name and/or tag, pass `IMG_NAME` and/or `IMG_TAG` in the make command.
-For example, to get a local docker image called `hny/ebpf-agent-go:custom`:
+For example, to get a local docker image called `hny/network-agent-go:custom`:
 
-`IMG_NAME=hny/ebpf-agent-go IMG_TAG=custom make docker-build`
+`IMG_NAME=hny/network-agent-go IMG_TAG=custom make docker-build`
 
 ## Deploying the agent to a Kubernetes cluster
 
 Set environment variables like `HONEYCOMB_API_KEY` and the previously noted `GITHUB_TOKEN` and `BASE64_TOKEN` in a file called `.env`.
 These environment variables get passed in the make command.
 
-`make apply-ebpf-agent`
+`make apply-network-agent`
 
 ```sh
-$ make apply-ebpf-agent
+$ make apply-network-agent
 namespace/honeycomb created
 secret/honeycomb created
 secret/ghcr created
-daemonset.apps/hny-ebpf-agent created
+daemonset.apps/hny-network-agent created
 ```
 
 If you're on a Mac, try `brew install gettext` if `envsubst` isn't available.
@@ -82,13 +82,13 @@ Confirm that the pods are up by using `k9s` or with `kubectl`:
 
 ```sh
 $ kubectl get pods --namespace=honeycomb
-NAME                   READY   STATUS    RESTARTS   AGE
-hny-ebpf-agent-bqcvl   1/1     Running   0          94s
+NAME                      READY   STATUS    RESTARTS   AGE
+hny-network-agent-bqcvl   1/1     Running   0          94s
 ```
 
 To remove the agent:
 
-`make unapply-ebpf-agent` or `kubectl delete -f smoke-tests/deployment.yaml`
+`make unapply-network-agent` or `kubectl delete -f smoke-tests/deployment.yaml`
 
 ## Optionally install the "greetings" example app
 
@@ -165,3 +165,39 @@ Steps to generate `vmlinux.h` files:
 - Install additional linux commands so libbpf can work - `apt install linux-tools-$(uname -r)`
 - Use libbpf to generate the vmlinux.h file - `bpftool btf dump file /sys/kernel/btf/vmlinux format c`
 - Check in output vmlinux.h, note which architecture in file format - eg `bpf/headers/vmlinux-arm64.h`
+
+## Gopacket
+
+We maintain a fork of [gopacket/gopacket](https://github.com/gopacket/gopacket) as [honeycombio/gopacket](https://github.com/honeycombio/gopacket).
+The agent is configured to use the official gopacket repo as part of its main dependency chain and import paths.
+The Honeycomb fork is swapped in using a `replace` directive in `go.mod`.
+This allows the fork to remain cleaner, easier to manage and makes it easier to provide upstream contributions.
+We will not be doing releases on our fork of gopacket, and instead here will use specific commit shas from our fork.
+
+### Updating gopacket
+
+- Go to our fork and identify the commit sha you want to update to, which will be used in the next step.
+- Run `go get github.com/honeycombio/gopacket@<commit-sha>`
+
+The above command will fail because of a module name mismatch, but it will print the full pseudo version/commit SHA that Go found as a result of that command.
+
+For example:
+
+```shell
+$ go get github.com/honeycombio/gopacket@82dde036188549768ff5b13414ff8a7441b9a17f
+go: github.com/honeycombio/gopacket@v1.1.2-0.20230914230614-82dde0361885: parsing go.mod:
+  module declares its path as: github.com/gopacket/gopacket
+    but was required as: github.com/honeycombio/gopacket
+```
+
+`v1.1.2-0.20230914230614-82dde0361885` is the "version" we want to replace upstream with in the next step.
+
+- Edit `go.mod` to update the `replace` directive for gopacket's pseudo version.
+
+For example
+
+```golang
+replace github.com/gopacket/gopacket => github.com/honeycombio/gopacket v1.1.2-0.20230914230614-82dde0361885
+```
+
+- Run `go mod tidy`

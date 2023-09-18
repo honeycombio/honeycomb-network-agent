@@ -2,14 +2,15 @@ package assemblers
 
 import (
 	"runtime"
+	"sync/atomic"
 	"time"
 
-	"github.com/honeycombio/ebpf-agent/config"
-	"github.com/honeycombio/gopacket"
-	"github.com/honeycombio/gopacket/ip4defrag"
-	"github.com/honeycombio/gopacket/layers"
-	"github.com/honeycombio/gopacket/pcap"
-	"github.com/honeycombio/gopacket/reassembly"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/ip4defrag"
+	"github.com/gopacket/gopacket/layers"
+	"github.com/gopacket/gopacket/pcap"
+	"github.com/gopacket/gopacket/reassembly"
+	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -34,6 +35,20 @@ var stats struct {
 	source_received     int
 	source_dropped      int
 	source_if_dropped   int
+	total_streams       uint64
+	active_streams      int64
+}
+
+func IncrementStreamCount() uint64 {
+	return atomic.AddUint64(&stats.total_streams, 1)
+}
+
+func IncrementActiveStreamCount() {
+	atomic.AddInt64(&stats.active_streams, 1)
+}
+
+func DecrementActiveStreamCount() {
+	atomic.AddInt64(&stats.active_streams, -1)
 }
 
 type Context struct {
@@ -206,6 +221,8 @@ func (a *tcpAssembler) logAssemblerStats() {
 		"source_if_dropped":     stats.source_if_dropped,
 		"event_queue_length":    len(a.httpEvents),
 		"goroutines":            runtime.NumGoroutine(),
+		"total_streams":         stats.total_streams,
+		"active_streams":        stats.active_streams,
 	}
 	statsEvent := libhoney.NewEvent()
 	statsEvent.Dataset = config.StatsDataset
@@ -225,7 +242,7 @@ func newPcapPacketSource(config config.Config) (*gopacket.PacketSource, error) {
 		Bool("promiscuous", config.Promiscuous).
 		Str("bpf_filter", config.BpfFilter).
 		Msg("Configuring pcap packet source")
-	handle, err := pcap.OpenLive(config.Interface, int32(config.Snaplen), config.Promiscuous, time.Second)
+	handle, err := pcap.OpenLive(config.Interface, int32(config.Snaplen), config.Promiscuous, pcap.BlockForever)
 	if err != nil {
 		log.Fatal().
 			Err(err).

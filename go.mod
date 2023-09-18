@@ -1,10 +1,10 @@
-module github.com/honeycombio/ebpf-agent
+module github.com/honeycombio/honeycomb-network-agent
 
 go 1.20
 
 require (
 	github.com/cilium/ebpf v0.11.0
-	github.com/honeycombio/gopacket v1.1.21
+	github.com/gopacket/gopacket v1.1.1
 	github.com/honeycombio/libhoney-go v1.20.0
 	github.com/rs/zerolog v1.30.0
 	go.opentelemetry.io/otel v1.17.0
@@ -38,6 +38,8 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/pyroscope-io/godeltaprof v0.1.2
+	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2 // indirect
@@ -60,3 +62,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace github.com/gopacket/gopacket => github.com/honeycombio/gopacket v1.1.1
