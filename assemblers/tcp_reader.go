@@ -48,7 +48,7 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 	}
 
 	// reset the buffer reader to use the new packet data
-	// bufio.NewReader creates a new 4mb buffer on each call which we want to avoid
+	// bufio.NewReader creates a new 16 byte buffer on each call which we want to avoid
 	// https://github.com/golang/go/blob/master/src/bufio/bufio.go#L57
 	reader.buffer.Reset(bytes.NewReader(data))
 	if reader.isClient {
