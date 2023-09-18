@@ -18,10 +18,16 @@ jobs:
         with:
           buildkitd-flags: --debug
 
+      - name: Determine build release version
+        id: get_version
+        run: echo "RELEASE_VERSION=$(make version)" >> "$GITHUB_ENV"
+
       - name: Build docker image
         uses: docker/build-push-action@v4.1.1
         with:
           context: .
+          build-args: |
+            RELEASE_VERSION=${{ env.RELEASE_VERSION }}
           push: false
           platforms: linux/amd64
           # platforms: linux/amd64,linux/arm64 - don't build arm64 on PRs for now

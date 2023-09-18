@@ -36,9 +36,6 @@ jobs:
         id: get_version
         run: echo "RELEASE_VERSION=$(make version)" >> "$GITHUB_ENV"
 
-      - name: Show the version to be built
-        run: echo $RELEASE_VERSION
-
       - name: Build and push
         uses: docker/build-push-action@v4.1.1
         with:
