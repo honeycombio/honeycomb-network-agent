@@ -21,9 +21,10 @@ jobs:
       - name: Determine build release version
         id: get_version
         run: |
-          echo "RELEASE_VERSION is currently: $(RELEASE_VERSION)"
-          echo "I'm going to set it to: $(make version)"
-          echo "RELEASE_VERSION=$(make version)" >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION is currently: ${RELEASE_VERSION}"
+          version=$(git describe --always --match "v[0-9]*")
+          echo "I'm going to set it to: ${version}"
+          echo "RELEASE_VERSION=${version}" >> "$GITHUB_ENV"
 
       - name: Build docker image
         uses: docker/build-push-action@v4.1.1
