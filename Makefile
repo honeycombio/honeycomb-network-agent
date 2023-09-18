@@ -12,8 +12,7 @@ ifeq (,$(wildcard /sys/kernel/btf/vmlinux))
 	BPF_HEADERS += -DBPF_NO_PRESERVE_ACCESS_INDEX
 endif
 
-# I_MADE_THIS_UP ?= $(shell git describe --always --match "v[0-9]*")
-I_MADE_THIS_UP ?= v0.0.14-alpha-8-g57c7eb0
+I_MADE_THIS_UP ?= $(shell git describe --always --match "v[0-9]*")
 IMG_NAME ?= hny/network-agent
 IMG_TAG ?= local
 
@@ -39,7 +38,7 @@ docker-generate:
 build:
 	CGO_ENABLED=1 GOOS=linux \
 		go build \
-			--ldflags "-X main.Version=v0.0.14-alpha-8-g57c7eb0" \
+			--ldflags "-X main.Version=$(I_MADE_THIS_UP)" \
 			-o hny-network-agent main.go
 
 .PHONY: docker-build
