@@ -43,16 +43,6 @@ func main() {
 
 	log.Info().Str("agent_version", Version).Msg("Starting Honeycomb Network agent")
 
-	kernelVersion, err := utils.HostKernelVersion()
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to get host kernel version")
-	}
-	btfEnabled := utils.HostBtfEnabled()
-	log.Info().
-		Str("kernel_version", kernelVersion.String()).
-		Bool("btf_enabled", btfEnabled).
-		Msg("Detected host kernel")
-
 	apikey := os.Getenv("HONEYCOMB_API_KEY")
 	if apikey == "" {
 		log.Fatal().Msg("Honeycomb API key not set, unable to send events\n")
@@ -77,8 +67,6 @@ func main() {
 
 	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", Version)
-	libhoney.AddField("meta.kernel_version", kernelVersion.String())
-	libhoney.AddField("meta.btf_enabled", btfEnabled)
 
 	defer libhoney.Close()
 
