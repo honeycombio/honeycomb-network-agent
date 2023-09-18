@@ -19,6 +19,7 @@ jobs:
       - name: Determine build release version
         id: get_version
         run: |
+          git fetch --tags
           echo "RELEASE_VERSION is currently: ${RELEASE_VERSION}"
           version=$(git describe --always --match "v[0-9]*")
           echo "I'm going to set it to: ${version}"
