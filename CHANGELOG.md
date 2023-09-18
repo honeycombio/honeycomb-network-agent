@@ -1,5 +1,22 @@
 # Honeycomb Network Agent changelog
 
+## [0.0.15-alpha] - 2023-09-15
+
+### Enhancements
+
+- Refactor readers to not hold byte buffers (#184) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+
+## [0.0.14-alpha] - 2023-09-15
+
+### Maintenance
+
+- maint: Use go mod replace to pull gopacket dependency (#183) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint: update RELEASING now that version is computed from a tag (#187) | [Robb Kidd](https://github.com/robbkidd)
+- ci: inject a version at build time based on tags (#186) | [Robb Kidd](https://github.com/robbkidd)
+- maint: fix debug address (#185) | [Jamie Danielson](https://github.com/JamieDanielson)
+- maint: Refactor TCP stream and reader files (#180) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint: Rename project to network agent (#172) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+
 ## [0.0.13-alpha] - 2023-09-14
 
 ### Enhancements

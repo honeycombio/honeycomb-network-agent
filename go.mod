@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/cilium/ebpf v0.11.0
-	github.com/honeycombio/gopacket v1.1.21
+	github.com/gopacket/gopacket v1.1.1
 	github.com/honeycombio/libhoney-go v1.20.0
 	github.com/rs/zerolog v1.30.0
 	go.opentelemetry.io/otel v1.17.0
@@ -62,3 +62,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace github.com/gopacket/gopacket => github.com/honeycombio/gopacket v1.1.1

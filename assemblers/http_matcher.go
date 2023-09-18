@@ -18,8 +18,8 @@ type entry struct {
 	responseTimestamp time.Time
 }
 
-func newRequestResponseMatcher() httpMatcher {
-	return httpMatcher{
+func newRequestResponseMatcher() *httpMatcher {
+	return &httpMatcher{
 		messages: make(map[string]entry),
 	}
 }

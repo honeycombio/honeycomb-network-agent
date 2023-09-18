@@ -1,12 +1,11 @@
 package assemblers
 
 import (
-	"fmt"
 	"sync"
 
-	"github.com/honeycombio/gopacket"
-	"github.com/honeycombio/gopacket/layers"
-	"github.com/honeycombio/gopacket/reassembly"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
+	"github.com/gopacket/gopacket/reassembly"
 	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/rs/zerolog/log"
 )
@@ -29,45 +28,8 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 		Str("net", net.String()).
 		Str("transport", transport.String()).
 		Msg("NEW tcp stream")
-	fsmOptions := reassembly.TCPSimpleFSMOptions{
-		SupportMissingEstablishment: true,
-	}
-
-	// increment total stream count and use as stream id
 	streamId := IncrementStreamCount()
-	stream := &tcpStream{
-		config:     factory.config,
-		id:         streamId,
-		net:        net,
-		transport:  transport,
-		tcpstate:   reassembly.NewTCPSimpleFSM(fsmOptions),
-		ident:      fmt.Sprintf("%s:%s:%d", net, transport, streamId),
-		optchecker: reassembly.NewTCPOptionCheck(),
-		matcher:    newRequestResponseMatcher(),
-		events:     factory.httpEvents,
-	}
-
-	stream.client = httpReader{
-		parent:   stream,
-		isClient: true,
-		srcIp:    net.Src().String(),
-		dstIp:    net.Dst().String(),
-		srcPort:  transport.Src().String(),
-		dstPort:  transport.Dst().String(),
-		messages: make(chan message, factory.config.ChannelBufferSize),
-	}
-	stream.server = httpReader{
-		parent:   stream,
-		isClient: false,
-		srcIp:    net.Reverse().Src().String(),
-		dstIp:    net.Reverse().Dst().String(),
-		srcPort:  transport.Reverse().Src().String(),
-		dstPort:  transport.Reverse().Dst().String(),
-		messages: make(chan message, factory.config.ChannelBufferSize),
-	}
-	factory.wg.Add(2)
-	go stream.client.run(&factory.wg)
-	go stream.server.run(&factory.wg)
+	stream := NewTcpStream(streamId, net, transport, factory.config, factory.httpEvents)
 
 	// increment the number of active streams
 	IncrementActiveStreamCount()

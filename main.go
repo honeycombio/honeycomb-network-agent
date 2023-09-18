@@ -23,7 +23,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-const Version string = "0.0.13-alpha"
+var Version string = "dev"
+
 const defaultDataset = "hny-network-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 

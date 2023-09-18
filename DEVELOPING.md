@@ -141,3 +141,39 @@ mount | grep -i debugfs
 cat /sys/kernel/debug/tracing/trace_pipe
 # look around sys/kernel/debug
 ```
+
+## Gopacket
+
+We maintain a fork of [gopacket/gopacket](https://github.com/gopacket/gopacket) as [honeycombio/gopacket](https://github.com/honeycombio/gopacket).
+The agent is configured to use the official gopacket repo as part of its main dependency chain and import paths.
+The Honeycomb fork is swapped in using a `replace` directive in `go.mod`.
+This allows the fork to remain cleaner, easier to manage and makes it easier to provide upstream contributions.
+We will not be doing releases on our fork of gopacket, and instead here will use specific commit shas from our fork.
+
+### Updating gopacket
+
+- Go to our fork and identify the commit sha you want to update to, which will be used in the next step.
+- Run `go get github.com/honeycombio/gopacket@<commit-sha>`
+
+The above command will fail because of a module name mismatch, but it will print the full pseudo version/commit SHA that Go found as a result of that command.
+
+For example:
+
+```shell
+$ go get github.com/honeycombio/gopacket@82dde036188549768ff5b13414ff8a7441b9a17f
+go: github.com/honeycombio/gopacket@v1.1.2-0.20230914230614-82dde0361885: parsing go.mod:
+  module declares its path as: github.com/gopacket/gopacket
+    but was required as: github.com/honeycombio/gopacket
+```
+
+`v1.1.2-0.20230914230614-82dde0361885` is the "version" we want to replace upstream with in the next step.
+
+- Edit `go.mod` to update the `replace` directive for gopacket's pseudo version.
+
+For example
+
+```golang
+replace github.com/gopacket/gopacket => github.com/honeycombio/gopacket v1.1.2-0.20230914230614-82dde0361885
+```
+
+- Run `go mod tidy`
