@@ -1,32 +1,5 @@
-# Obtain an absolute path to the directory of the Makefile.
-# Assume the Makefile is in the root of the repository.
-REPODIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-
-# Build the list of header directories to compile the bpf program
-BPF_HEADERS += -I${REPODIR}/bpf/headers
-
-# Disable BTF if the kernel doesn't support it (eg local dev on Docker Desktop)
-# needed until BTF is enabled for Docker Desktop
-# see https://github.com/docker/for-mac/issues/6800
-ifeq (,$(wildcard /sys/kernel/btf/vmlinux))
-	BPF_HEADERS += -DBPF_NO_PRESERVE_ACCESS_INDEX
-endif
-
 IMG_NAME ?= hny/network-agent
 IMG_TAG ?= local
-
-.PHONY: generate
-generate: export CFLAGS := $(BPF_HEADERS)
-#: generate go/bpf interop code
-generate:
-	go generate ./...
-
-.PHONY: docker-generate
-#: generate go/bpf interop code but in Docker
-docker-generate:
-	docker build --tag hny/network-agent-builder . -f bpf/Dockerfile
-	docker run --rm -v $(shell pwd):/src hny/network-agent-builder
-
 .PHONY: build
 #: compile the agent executable
 build:
@@ -36,12 +9,6 @@ build:
 #: build the agent image
 docker-build:
 	docker build --tag $(IMG_NAME):$(IMG_TAG) .
-
-.PHONY: update-headers
-#: retrieve libbpf headers
-update-headers:
-	cd bpf/headers && ./update.sh
-	@echo "*** Also update bpf_tracing.h file! ***"
 
 ### Testing targets
 
