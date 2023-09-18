@@ -34,7 +34,7 @@ jobs:
 
       - name: Determine build release version
         id: get_version
-        run: echo "RELEASE_VERSION::$(make version)" >> "$GITHUB_ENV"
+        run: echo "RELEASE_VERSION=$(make version)" >> "$GITHUB_ENV"
 
       - name: Build and push
         uses: docker/build-push-action@v4.1.1
