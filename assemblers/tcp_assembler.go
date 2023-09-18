@@ -225,7 +225,7 @@ func (a *tcpAssembler) logAssemblerStats() {
 		"active_streams":        stats.active_streams,
 	}
 	statsEvent := libhoney.NewEvent()
-	statsEvent.Dataset = config.StatsDataset
+	statsEvent.Dataset = a.config.StatsDataset
 	statsEvent.AddField("name", "tcp_assembler_stats")
 	statsEvent.Add(statsFields)
 	statsEvent.Send()
