@@ -4,6 +4,7 @@ WORKDIR /src
 COPY go.* .
 RUN go mod download
 COPY . .
+RUN make version
 RUN make build
 
 FROM ubuntu:22.04
