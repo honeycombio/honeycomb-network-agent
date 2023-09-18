@@ -15,8 +15,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2.9.0
-        with:
-          buildkitd-flags: --debug
 
       - name: Determine build release version
         id: get_version
