@@ -21,6 +21,7 @@ type tcpReader struct {
 	dstPort     string
 	matcher     *httpMatcher
 	events      chan HttpEvent
+	buffer      *bufio.Reader
 }
 
 func NewTcpReader(streamIdent string, isClient bool, net gopacket.Flow, transport gopacket.Flow, matcher *httpMatcher, httpEvents chan HttpEvent) *tcpReader {
@@ -33,6 +34,7 @@ func NewTcpReader(streamIdent string, isClient bool, net gopacket.Flow, transpor
 		dstPort:     transport.Dst().String(),
 		matcher:     matcher,
 		events:      httpEvents,
+		buffer:      bufio.NewReader(bytes.NewReader(nil)),
 	}
 }
 
@@ -45,14 +47,16 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 			Msg("Failed to cast ScatterGather to ContextWithSeq")
 	}
 
-	b := bytes.NewReader(data)
-	r := bufio.NewReader(b)
+	// reset the buffer reader to use the new packet data
+	// bufio.NewReader creates a new 16 byte buffer on each call which we want to avoid
+	// https://github.com/golang/go/blob/master/src/bufio/bufio.go#L57
+	reader.buffer.Reset(bytes.NewReader(data))
 	if reader.isClient {
 		// We use TCP SEQ & ACK numbers to identify request/response pairs
 		// ACK corresponds to SEQ of the HTTP response
 		// https://madpackets.com/2018/04/25/tcp-sequence-and-acknowledgement-numbers-explained/
 		reqIdent := fmt.Sprintf("%s:%d", reader.streamIdent, ctx.ack)
-		req, err := http.ReadRequest(r)
+		req, err := http.ReadRequest(reader.buffer)
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return
 		} else if err != nil {
@@ -62,6 +66,11 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 				Msg("Error reading HTTP request")
 			return
 		}
+		// We don't need the body, so just close it if set
+		if req.Body != nil {
+			req.Body.Close()
+		}
+
 		if entry, ok := reader.matcher.GetOrStoreRequest(reqIdent, ctx.CaptureInfo.Timestamp, req); ok {
 			// we have a match, process complete request/response pair
 			reader.processEvent(reqIdent, entry)
@@ -71,7 +80,7 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 		// SEQ corresponds to ACK of the HTTP request
 		// https://madpackets.com/2018/04/25/tcp-sequence-and-acknowledgement-numbers-explained/
 		resIdent := fmt.Sprintf("%s:%d", reader.streamIdent, ctx.seq)
-		res, err := http.ReadResponse(r, nil)
+		res, err := http.ReadResponse(reader.buffer, nil)
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return
 		} else if err != nil {
@@ -81,6 +90,11 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 				Msg("Error reading HTTP response")
 			return
 		}
+		// We don't need the body, so just close it if set
+		if res.Body != nil {
+			res.Body.Close()
+		}
+
 		if entry, ok := reader.matcher.GetOrStoreResponse(resIdent, ctx.CaptureInfo.Timestamp, res); ok {
 			// we have a match, process complete request/response pair
 			reader.processEvent(resIdent, entry)
