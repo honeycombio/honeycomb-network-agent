@@ -9,7 +9,7 @@ import (
 // or the default value if the environment variable is not set or cannot be parsed as a bool
 func LookupEnvOrBool(key string, def bool) bool {
 	if env := os.Getenv(key); env != "" {
-		if b, err := strconv.ParseBool(env); err != nil {
+		if b, err := strconv.ParseBool(env); err == nil {
 			return b
 		}
 	}
