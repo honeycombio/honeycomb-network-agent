@@ -111,7 +111,7 @@ spec:
             #   value: $LOG_LEVEL
             ## uncomment this to enable profiling
             # - name: DEBUG
-            #   value: "true"
+            #   value: "$DEBUG"
           securityContext:
             capabilities:
               add:
