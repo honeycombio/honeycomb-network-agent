@@ -128,18 +128,20 @@ See more details in [`smoke-tests/loadtest.md`](./smoke-tests/loadtest.md)
 
 ## Debugging
 
-From an agent pod terminal, which must be run in privileged mode:
+Set `LOG_LEVEL=DEBUG` to generate debug log statements in the agent logs.
+
+### Debug Service
+
+The agent includes an optional debug service that can be used with any tools that can collect pprof data.
+
+The debug service is generally only used when debugging the agent itself, and will only run if the `DEBUG` environment variable is set to `true`.
+
+`DEBUG_ADDRESS` is the IP and port where the debug service runs.
+If this value is not specified, then the debug service runs on the first open port between `0.0.0.0:6060` and `0.0.0.0:6069`.
 
 ```sh
-# Print kernel messages:
-dmesg
-# Mount debugfs:
-mount -t debugfs nodev /sys/kernel/debug
-# Check:
-mount | grep -i debugfs
-# output:
-cat /sys/kernel/debug/tracing/trace_pipe
-# look around sys/kernel/debug
+DEBUG=true
+DEBUG_ADDRESS="1.2.3.4:1234"
 ```
 
 ## Gopacket
