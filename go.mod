@@ -6,6 +6,7 @@ require (
 	github.com/gopacket/gopacket v1.1.1
 	github.com/honeycombio/libhoney-go v1.20.0
 	github.com/rs/zerolog v1.30.0
+	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/otel v1.18.0
 	k8s.io/api v0.28.2
 	k8s.io/apimachinery v0.28.2
@@ -37,6 +38,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/pyroscope-io/godeltaprof v0.1.2
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
