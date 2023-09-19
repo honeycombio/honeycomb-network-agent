@@ -16,32 +16,14 @@ Recommended:
 
 ## Local Development
 
-When making changes to C files, run `make docker-generate` to update the generated go files.
-For example, run it after changing the `tcp_event` struct in `tcp_probe.c`.
-
-When building with `make docker-build`, the generated files are included in the build but not updated locally.
+Build with `make docker-build`.
 
 ## To pull a published image from ghcr
 
 Docker images are found in [`ghcr.io/honeycombio/network-agent:latest`](https://github.com/honeycombio/honeycomb-network-agent/pkgs/container/network-agent).
 
-Because this is a private registry, you must have a Github [personal access token](https://github.com/settings/tokens) (classic) with `read:packages` permission.
-
-The example deployment creates the secret using environment variables (similar to how it mounts the API Key secret below).
-
 ```sh
-export GITHUB_TOKEN=githubusername:githubaccesstoken
-export BASE64_TOKEN=$(echo -n $GITHUB_TOKEN | base64)
-```
-
-An alternative way to create the secret is to comment out the sections for `ghcr-secret` in the deployment and create it manually:
-
-```sh
-kubectl create secret docker-registry ghcr-secret \
-  --docker-server=https://ghcr.io/ \
-  --docker-username=<githubusername> \
-  --docker-password=<githubaccesstoken> \
-  --namespace=honeycomb
+docker pull ghcr.io/honeycombio/network-agent:latest
 ```
 
 ## To create a local docker image
@@ -72,7 +54,6 @@ These environment variables get passed in the make command.
 $ make apply-network-agent
 namespace/honeycomb created
 secret/honeycomb created
-secret/ghcr created
 daemonset.apps/hny-network-agent created
 ```
 
@@ -131,40 +112,21 @@ See more details in [`smoke-tests/loadtest.md`](./smoke-tests/loadtest.md)
 
 ## Debugging
 
-From an agent pod terminal, which must be run in privileged mode:
+Set `LOG_LEVEL=DEBUG` to generate debug log statements in the agent logs.
+
+### Debug Service
+
+The agent includes an optional debug service that can be used with any tools that can collect pprof data.
+
+The debug service is generally only used when debugging the agent itself, and will only run if the `DEBUG` environment variable is set to `true`.
+
+`DEBUG_ADDRESS` is the IP and port where the debug service runs.
+If this value is not specified, then the debug service runs on the first open port between `0.0.0.0:6060` and `0.0.0.0:6069`.
 
 ```sh
-# Print kernel messages:
-dmesg
-# Mount debugfs:
-mount -t debugfs nodev /sys/kernel/debug
-# Check:
-mount | grep -i debugfs
-# output:
-cat /sys/kernel/debug/tracing/trace_pipe
-# look around sys/kernel/debug
+DEBUG=true
+DEBUG_ADDRESS="1.2.3.4:1234"
 ```
-
-## Updating bpf header files
-
-Update the version in `bpf/headers/update.sh`.
-
-`make update-headers` or run `cd bpf/headers && ./update.sh`
-
-Fix line in `bpf_tracing.h` from `#include <bpf/bpf_helpers.h>` to `#include "bpf_helpers.h"`
-
-## Generating vmlinux.h files
-
-`vmlinux.h` files contain all the linux types and structs to interop with a linux OS, e.g. the raw Socket class.
-
-We need a version for each supported architecture (eg arm & amd) and it's generated from a real linux distro.
-
-Steps to generate `vmlinux.h` files:
-
-- Start a ubuntu VM (not docker, use virtualbox, multipass, ec2, etc)
-- Install additional linux commands so libbpf can work - `apt install linux-tools-$(uname -r)`
-- Use libbpf to generate the vmlinux.h file - `bpftool btf dump file /sys/kernel/btf/vmlinux format c`
-- Check in output vmlinux.h, note which architecture in file format - eg `bpf/headers/vmlinux-arm64.h`
 
 ## Gopacket
 
