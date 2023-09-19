@@ -10,31 +10,6 @@ import (
 	"github.com/honeycombio/libhoney-go"
 )
 
-var apiKey = flag.String("api_key", utils.LookupEnvOrString("HONEYCOMB_API_KEY", ""), "Honeycomb API key")
-var endpoint = flag.String("endpoint", utils.LookupEnvOrString("HONEYCOMB_API_ENDPOINT", "https://api.honeycomb.io"), "Honeycomb API endpoint")
-var dataset = flag.String("dataset", utils.LookupEnvOrString("HONEYCOMB_DATASET", "hny-network-agent"), "Honeycomb dataset name")
-var statsDataset = flag.String("stats_dataset", utils.LookupEnvOrString("HONEYCOMB_STATS_DATASET", "hny-network-agent-stats"), "Honeycomb dataset name for stats")
-var logLevel = flag.String("log_level", utils.LookupEnvOrString("LOG_LEVEL", "INFO"), "Log level (defaults to INFO)")
-var debug = flag.Bool("debug", utils.LookupEnvOrBool("DEBUG", false), "Runs the agent in debug mode including setting up debug service")
-var debugAddress = flag.String("debug_address", utils.LookupEnvOrString("DEBUG_ADDRESS", "0.0.0.0:6060"), "Debug service address")
-
-// unsure if we want to expose these as env vars or even flags yet -- maybe just defaults?
-var lazy = flag.Bool("lazy", false, "If true, do lazy decoding")
-var nodefrag = flag.Bool("nodefrag", false, "If true, do not do IPv4 defrag")
-var checksum = flag.Bool("checksum", false, "Check TCP checksum")
-var nooptcheck = flag.Bool("nooptcheck", true, "Do not check TCP options (useful to ignore MSS on captures with TSO)")
-var ignorefsmerr = flag.Bool("ignorefsmerr", true, "Ignore TCP FSM errors")
-var allowmissinginit = flag.Bool("allowmissinginit", true, "Support streams without SYN/SYN+ACK/ACK sequence")
-var iface = flag.String("i", "any", "Interface to read packets from")
-var snaplen = flag.Int("s", 262144, "Snap length (number of bytes max to read per packet") // 262144 is the default snaplen for tcpdump
-var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
-var packetSource = flag.String("source", "pcap", "Packet source (defaults to pcap)")
-var channelBufferSize = flag.Int("channel_buffer_size", 1000, "Channel buffer size (defaults to 1000)")
-var streamFlushTimeout = flag.Int("stream_flush_timeout", 10, "Stream flush timeout in seconds (defaults to 10)")
-var streamCloseTimeout = flag.Int("stream_close_timeout", 90, "Stream close timeout in seconds (defaults to 90)")
-var maxBufferedPagesTotal = flag.Int("gopacket_pages", 150_000, "Maximum number of TCP reassembly pages to allocate per interface")
-var maxBufferedPagesPerConnection = flag.Int("gopacket_per_conn", 4000, "Maximum number of TCP reassembly pages per connection")
-
 type Config struct {
 	APIKey                        string
 	Endpoint                      string
@@ -63,29 +38,29 @@ type Config struct {
 
 func NewConfig() Config {
 	return Config{
-		APIKey:                        *apiKey,
-		Endpoint:                      *endpoint,
-		Dataset:                       *dataset,
-		StatsDataset:                  *statsDataset,
-		LogLevel:                      *logLevel,
-		Debug:                         *debug,
-		DebugAddress:                  *debugAddress,
-		Lazy:                          *lazy,
-		Nodefrag:                      *nodefrag,
-		Checksum:                      *checksum,
-		Nooptcheck:                    *nooptcheck,
-		Ignorefsmerr:                  *ignorefsmerr,
-		Allowmissinginit:              *allowmissinginit,
-		Interface:                     *iface,
-		Snaplen:                       *snaplen,
-		Promiscuous:                   *promisc,
-		StreamFlushTimeout:            time.Duration(*streamFlushTimeout) * time.Second,
-		StreamCloseTimeout:            time.Duration(*streamCloseTimeout) * time.Second,
-		PacketSource:                  *packetSource,
+		APIKey:                        *flag.String("api_key", utils.LookupEnvOrString("HONEYCOMB_API_KEY", ""), "Honeycomb API key"),
+		Endpoint:                      *flag.String("endpoint", utils.LookupEnvOrString("HONEYCOMB_API_ENDPOINT", "https://api.honeycomb.io"), "Honeycomb API endpoint"),
+		Dataset:                       *flag.String("dataset", utils.LookupEnvOrString("HONEYCOMB_DATASET", "hny-network-agent"), "Honeycomb dataset name"),
+		StatsDataset:                  *flag.String("stats_dataset", utils.LookupEnvOrString("HONEYCOMB_STATS_DATASET", "hny-network-agent-stats"), "Honeycomb dataset name for stats"),
+		LogLevel:                      *flag.String("log_level", utils.LookupEnvOrString("LOG_LEVEL", "INFO"), "Log level (defaults to INFO)"),
+		Debug:                         *flag.Bool("debug", utils.LookupEnvOrBool("DEBUG", false), "Runs the agent in debug mode including setting up debug service"),
+		DebugAddress:                  *flag.String("debug_address", utils.LookupEnvOrString("DEBUG_ADDRESS", "0.0.0.0:6060"), "Debug service address"),
+		Lazy:                          *flag.Bool("lazy", false, "If true, do lazy decoding"),
+		Nodefrag:                      *flag.Bool("nodefrag", false, "If true, do not do IPv4 defrag"),
+		Checksum:                      *flag.Bool("checksum", false, "Check TCP checksum"),
+		Nooptcheck:                    *flag.Bool("nooptcheck", true, "Do not check TCP options (useful to ignore MSS on captures with TSO)"),
+		Ignorefsmerr:                  *flag.Bool("ignorefsmerr", true, "Ignore TCP FSM errors"),
+		Allowmissinginit:              *flag.Bool("allowmissinginit", true, "Support streams without SYN/SYN+ACK/ACK sequence"),
+		Interface:                     *flag.String("i", "any", "Interface to read packets from"),
+		Snaplen:                       *flag.Int("s", 262144, "Snap length (number of bytes max to read per packet"), // 262144 is the default snaplen for tcpdump
+		Promiscuous:                   *flag.Bool("promisc", true, "Set promiscuous mode"),
+		StreamFlushTimeout:            time.Duration(*flag.Int("stream_flush_timeout", 10, "Stream flush timeout in seconds (defaults to 10)")) * time.Second,
+		StreamCloseTimeout:            time.Duration(*flag.Int("stream_close_timeout", 90, "Stream close timeout in seconds (defaults to 90)")) * time.Second,
+		PacketSource:                  *flag.String("source", "pcap", "Packet source (defaults to pcap)"),
 		BpfFilter:                     buildBpfFilter(),
-		ChannelBufferSize:             *channelBufferSize,
-		MaxBufferedPagesTotal:         *maxBufferedPagesTotal,
-		MaxBufferedPagesPerConnection: *maxBufferedPagesPerConnection,
+		ChannelBufferSize:             *flag.Int("channel_buffer_size", 1000, "Channel buffer size (defaults to 1000)"),
+		MaxBufferedPagesTotal:         *flag.Int("gopacket_pages", 150_000, "Maximum number of TCP reassembly pages to allocate per interface"),
+		MaxBufferedPagesPerConnection: *flag.Int("gopacket_per_conn", 4000, "Maximum number of TCP reassembly pages per connection"),
 	}
 }
 
