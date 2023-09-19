@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -23,88 +21,45 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-var Version string = "dev"
-
-const defaultDataset = "hny-network-agent"
-const defaultEndpoint = "https://api.honeycomb.io"
+const Version string = "0.0.16-alpha"
 
 func main() {
-	// Set logging level
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if os.Getenv("LOG_LEVEL") == "DEBUG" {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	config := config.NewConfig()
+	if err := config.Validate(); err != nil {
+		log.Fatal().Err(err).Msg("Config validation failed")
 	}
-	if os.Getenv("DEBUG") == "true" {
-		debug := &debug.DebugService{}
+
+	// setup logging first
+	setupLogging(config)
+
+	log.Info().
+		Str("agent_version", Version).
+		Str("api_key", config.GetMaskedAPIKey()).
+		Str("endpoint", config.Endpoint).
+		Str("dataset", config.Dataset).
+		Str("stats_dataset", config.StatsDataset).
+		Msg("Starting Honeycomb Network Agent")
+	if config.Debug {
+		log.Info().
+			Str("debug_address", config.DebugAddress).
+			Msg("Debug service enabled")
+		// enable debug service
+		debug := &debug.DebugService{Config: config}
 		debug.Start()
 	}
-	// TODO: add a flag to enable human readable logs
-	// log.Logger = log.Output(zerolog.NewConsoleWriter())
-
-	log.Info().Str("agent_version", Version).Msg("Starting Honeycomb Network agent")
-
-	kernelVersion, err := utils.HostKernelVersion()
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to get host kernel version")
-	}
-	btfEnabled := utils.HostBtfEnabled()
-	log.Info().
-		Str("kernel_version", kernelVersion.String()).
-		Bool("btf_enabled", btfEnabled).
-		Msg("Detected host kernel")
-
-	apikey := os.Getenv("HONEYCOMB_API_KEY")
-	if apikey == "" {
-		log.Fatal().Msg("Honeycomb API key not set, unable to send events\n")
-	}
-
-	dataset := getEnvOrDefault("HONEYCOMB_DATASET", defaultDataset)
-	endpoint := getEnvOrDefault("HONEYCOMB_API_ENDPOINT", defaultEndpoint)
-	log.Info().
-		Str("hny_endpoint", endpoint).
-		Str("hny_dataset", dataset).
-		Msg("Honeycomb API config")
 
 	// setup libhoney
-	libhoney.Init(libhoney.Config{
-		APIKey:  apikey,
-		Dataset: dataset,
-		APIHost: endpoint,
-	})
+	closeLibhoney := setupLibhoney(config)
+	defer closeLibhoney()
 
-	// appends libhoney's user-agent (TODO: doesn't work, no useragent right now)
-	libhoney.UserAgentAddition = fmt.Sprintf("hny/network-agent/%s", Version)
+	// setup k8s
+	cachedK8sClient, closeK8s := setupK8s(config)
+	defer closeK8s()
 
-	// configure global fields that are set on all events
-	libhoney.AddField("honeycomb.agent_version", Version)
-	libhoney.AddField("meta.kernel_version", kernelVersion.String())
-	libhoney.AddField("meta.btf_enabled", btfEnabled)
-
-	defer libhoney.Close()
-
-	// creates the in-cluster config
-	k8sConfig, err := rest.InClusterConfig()
-	if err != nil {
-		panic(err.Error())
-	}
-
-	// creates the clientset
-	k8sClient, err := kubernetes.NewForConfig(k8sConfig)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	// create k8s monitor that caches k8s objects
-	ctx, done := context.WithCancel(context.Background())
-	defer done()
-	cachedK8sClient := utils.NewCachedK8sClient(k8sClient)
-	cachedK8sClient.Start(ctx)
-
-	agentConfig := config.NewConfig()
-
-	// setup TCP stream reader
-	httpEvents := make(chan assemblers.HttpEvent, agentConfig.ChannelBufferSize)
-	assembler := assemblers.NewTcpAssembler(agentConfig, httpEvents)
+	// setup packet capture and analysis
+	// TODO: Move event handling into the assembler
+	httpEvents := make(chan assemblers.HttpEvent, config.ChannelBufferSize)
+	assembler := assemblers.NewTcpAssembler(config, httpEvents)
 	go handleHttpEvents(httpEvents, cachedK8sClient)
 	go assembler.Start()
 	defer assembler.Stop()
@@ -150,10 +105,9 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 
 	// common attributes
 	ev.Timestamp = event.RequestTimestamp
-	ev.AddField("httpEvent_handled_at", time.Now())
-	ev.AddField("meta.httpEvent_request_handled_latency_ms", time.Now().Sub(event.RequestTimestamp).Milliseconds())
-	ev.AddField("meta.httpEvent_response_handled_latency_ms", time.Now().Sub(event.ResponseTimestamp).Milliseconds())
-	ev.AddField("goroutine_count", runtime.NumGoroutine())
+	ev.AddField("meta.httpEvent_handled_at", time.Now())
+	ev.AddField("meta.httpEvent_request_handled_latency_ms", time.Since(event.RequestTimestamp).Milliseconds())
+	ev.AddField("meta.httpEvent_response_handled_latency_ms", time.Since(event.ResponseTimestamp).Milliseconds())
 	ev.AddField("duration_ms", eventDuration.Milliseconds())
 	ev.AddField("http.request.timestamp", event.RequestTimestamp)
 	ev.AddField("http.response.timestamp", event.ResponseTimestamp)
@@ -167,14 +121,11 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	// request attributes
 	if event.Request != nil {
 		requestURI = event.Request.RequestURI
-
-		bodySizeString := event.Request.Header.Get("Content-Length")
-		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
 		ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
 		ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
 		ev.AddField(string(semconv.HTTPURLKey), requestURI)
 		ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
-		ev.AddField("http.request.body.size", bodySize)
+		ev.AddField("http.request.body.size", event.Request.ContentLength)
 	} else {
 		ev.AddField("name", "HTTP")
 		ev.AddField("http.request.missing", "no request on this event")
@@ -182,11 +133,8 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 
 	// response attributes
 	if event.Response != nil {
-		bodySizeString := event.Response.Header.Get("Content-Length")
-		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
-
 		ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
-		ev.AddField("http.response.body.size", bodySize)
+		ev.AddField("http.response.body.size", event.Response.ContentLength)
 
 	} else {
 		ev.AddField("http.response.missing", "no response on this event")
@@ -208,9 +156,56 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	}
 }
 
-func getEnvOrDefault(key string, defaultValue string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
+// setupLogging initializes zerolog
+func setupLogging(c config.Config) {
+	level, err := zerolog.ParseLevel(c.LogLevel)
+	if err != nil {
+		log.Warn().Err(err).Str("log_level", c.LogLevel).Msg("Failed to parse log level, defaulting to INFO")
+		level = zerolog.InfoLevel
 	}
-	return defaultValue
+	zerolog.SetGlobalLevel(level)
+
+	// enable pretty printing
+	if level == zerolog.DebugLevel {
+		log.Logger = log.Output(zerolog.NewConsoleWriter())
+	}
+}
+
+// setupLibhoney initializes libhoney and sets global fields
+func setupLibhoney(config config.Config) func() {
+	libhoney.Init(libhoney.Config{
+		APIKey:  config.APIKey,
+		Dataset: config.Dataset,
+		APIHost: config.Endpoint,
+	})
+
+	// appends libhoney's user-agent (TODO: doesn't work, no useragent right now)
+	libhoney.UserAgentAddition = fmt.Sprintf("hny-network-agent/%s", Version)
+
+	// configure global fields that are set on all events
+	libhoney.AddField("honeycomb.agent_version", Version)
+
+	return libhoney.Close
+}
+
+// setupK8s gets the k8s cluster config, creates a k8s clientset then creates and starts
+// cached k8s client that caches k8s objects
+func setupK8s(config config.Config) (*utils.CachedK8sClient, func()) {
+	// get the k8s in-cluster config
+	k8sConfig, err := rest.InClusterConfig()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to get kubernetes cluster config")
+	}
+
+	// create k8s clientset
+	k8sClient, err := kubernetes.NewForConfig(k8sConfig)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create kubernetes client")
+	}
+
+	// create k8s monitor that caches k8s objects
+	ctx, done := context.WithCancel(context.Background())
+	cachedK8sClient := utils.NewCachedK8sClient(k8sClient)
+	cachedK8sClient.Start(ctx)
+	return cachedK8sClient, done
 }

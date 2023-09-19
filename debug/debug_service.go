@@ -60,7 +60,7 @@ func (s *DebugService) Start() error {
 	s.Publish("memstats", Func(memstats))
 
 	go func() {
-		configAddr := s.Config.DebugAddr
+		configAddr := s.Config.DebugAddress
 		if configAddr != "" {
 			host, portStr, _ := net.SplitHostPort(configAddr)
 			addr := net.JoinHostPort(host, portStr)
