@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -23,8 +21,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-var Version string = "dev"
-
+const Version string = "0.0.16-alpha"
 const defaultDataset = "hny-network-agent"
 const defaultEndpoint = "https://api.honeycomb.io"
 
@@ -42,16 +39,6 @@ func main() {
 	// log.Logger = log.Output(zerolog.NewConsoleWriter())
 
 	log.Info().Str("agent_version", Version).Msg("Starting Honeycomb Network agent")
-
-	kernelVersion, err := utils.HostKernelVersion()
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to get host kernel version")
-	}
-	btfEnabled := utils.HostBtfEnabled()
-	log.Info().
-		Str("kernel_version", kernelVersion.String()).
-		Bool("btf_enabled", btfEnabled).
-		Msg("Detected host kernel")
 
 	apikey := os.Getenv("HONEYCOMB_API_KEY")
 	if apikey == "" {
@@ -77,8 +64,6 @@ func main() {
 
 	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", Version)
-	libhoney.AddField("meta.kernel_version", kernelVersion.String())
-	libhoney.AddField("meta.btf_enabled", btfEnabled)
 
 	defer libhoney.Close()
 
@@ -150,10 +135,9 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 
 	// common attributes
 	ev.Timestamp = event.RequestTimestamp
-	ev.AddField("httpEvent_handled_at", time.Now())
-	ev.AddField("meta.httpEvent_request_handled_latency_ms", time.Now().Sub(event.RequestTimestamp).Milliseconds())
-	ev.AddField("meta.httpEvent_response_handled_latency_ms", time.Now().Sub(event.ResponseTimestamp).Milliseconds())
-	ev.AddField("goroutine_count", runtime.NumGoroutine())
+	ev.AddField("meta.httpEvent_handled_at", time.Now())
+	ev.AddField("meta.httpEvent_request_handled_latency_ms", time.Since(event.RequestTimestamp).Milliseconds())
+	ev.AddField("meta.httpEvent_response_handled_latency_ms", time.Since(event.ResponseTimestamp).Milliseconds())
 	ev.AddField("duration_ms", eventDuration.Milliseconds())
 	ev.AddField("http.request.timestamp", event.RequestTimestamp)
 	ev.AddField("http.response.timestamp", event.ResponseTimestamp)
@@ -167,14 +151,11 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	// request attributes
 	if event.Request != nil {
 		requestURI = event.Request.RequestURI
-
-		bodySizeString := event.Request.Header.Get("Content-Length")
-		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
 		ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
 		ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
 		ev.AddField(string(semconv.HTTPURLKey), requestURI)
 		ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
-		ev.AddField("http.request.body.size", bodySize)
+		ev.AddField("http.request.body.size", event.Request.ContentLength)
 	} else {
 		ev.AddField("name", "HTTP")
 		ev.AddField("http.request.missing", "no request on this event")
@@ -182,11 +163,8 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 
 	// response attributes
 	if event.Response != nil {
-		bodySizeString := event.Response.Header.Get("Content-Length")
-		bodySize, _ := strconv.ParseInt(bodySizeString, 10, 64)
-
 		ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
-		ev.AddField("http.response.body.size", bodySize)
+		ev.AddField("http.response.body.size", event.Response.ContentLength)
 
 	} else {
 		ev.AddField("http.response.missing", "no response on this event")
