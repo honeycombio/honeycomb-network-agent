@@ -32,32 +32,19 @@ export HONEYCOMB_API_KEY=mykey
 kubectl create secret generic honeycomb --from-literal=api-key=$HONEYCOMB_API_KEY --namespace=honeycomb
 ```
 
-Create secret for ghcr login (alternatively, use `examples/secret-ghcr.yaml`):
-
-```sh
-export GITHUB_USERNAME=githubusername
-export GITHUB_ACCESS_TOKEN=githubaccesstoken
-kubectl create secret docker-registry ghcr-secret \
-  --docker-server=https://ghcr.io/ \
-  --docker-username=$GITHUB_USERNAME \
-  --docker-password=$GITHUB_ACCESS_TOKEN \
-  --namespace=honeycomb
-```
-
-
 ### Configuration
 
 The network agent can be configured using the following environment variables.
 
-| Environment Variable | Description | Default | Required |
-| -------------------- | ----------- | ------- | -------- |
-| `HONEYCOMB_API_KEY` | The Honeycomb API key used when sending events | `` (empty) | `true` |
-| `HONEYCOMB_API_ENDPOINT` | The endpoint to send events to | `https://api.honeycomb.io` | `false` |
-| `HONEYCOMB_DATASET` | Dataset where network events are stored | `hny-network-agent` | `false` |
-| `HONEYCOMB_STATS_DATASET` | Dataset where operational statistics for the network agent are stored  | `hny-network-agent-stats` | `false` |
-| `LOG_LEVEL`  | The log level to use when printing logs to console | `INFO` | `false` |
-| `DEBUG` | Runs the agent in debug mode including enabling a profiling endpoint using Debug Address  | `false` | `false` |
-| `DEBUG_ADDRESS` | The endpoint to listen to when running the profile endpoint | `localhost:6060` | `false` |
+| Environment Variable      | Description                                                                              | Default                    | Required? |
+| ------------------------- | ---------------------------------------------------------------------------------------- | -------------------------- | --------- |
+| `HONEYCOMB_API_KEY`       | The Honeycomb API key used when sending events                                           | `` (empty)                 | **Yes**   |
+| `HONEYCOMB_API_ENDPOINT`  | The endpoint to send events to                                                           | `https://api.honeycomb.io` | No        |
+| `HONEYCOMB_DATASET`       | Dataset where network events are stored                                                  | `hny-network-agent`        | No        |
+| `HONEYCOMB_STATS_DATASET` | Dataset where operational statistics for the network agent are stored                    | `hny-network-agent-stats`  | No        |
+| `LOG_LEVEL`               | The log level to use when printing logs to console                                       | `INFO`                     | No        |
+| `DEBUG`                   | Runs the agent in debug mode including enabling a profiling endpoint using Debug Address | `false`                    | No        |
+| `DEBUG_ADDRESS`           | The endpoint to listen to when running the profile endpoint                              | `localhost:6060`           | No        |
 
 ### Run
 
@@ -72,6 +59,6 @@ Alternative options for configuration and running can be found in [Deploying the
 ## Supported Versions
 
 - Kubernetes version 1.24+
-- Linux Kernel 5.10+ with BPF, PERFMON, and NET_RAW capabilities
+- Linux Kernel 5.10+ with NET_RAW capabilities
 
 Other versions may work but these are the minimum versions currently being tested.
