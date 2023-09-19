@@ -72,6 +72,6 @@ Alternative options for configuration and running can be found in [Deploying the
 ## Supported Versions
 
 - Kubernetes version 1.24+
-- Linux Kernel 5.10+ with BPF, PERFMON, and NET_RAW capabilities
+- Linux Kernel 5.10+ with NET_RAW capabilities
 
 Other versions may work but these are the minimum versions currently being tested.
