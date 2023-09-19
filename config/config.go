@@ -19,11 +19,11 @@ type Config struct {
 	// Set via HONEYCOMB_API_ENDPOINT environment variable.
 	Endpoint string
 
-	// Honeycomb dataset name where events are stored.
+	// Honeycomb destination dataset for events.
 	// Set via HONEYCOMB_DATASET environment variable.
 	Dataset string
 
-	// Honeycomb dataset name where stats events are stored.
+	// Honeycomb destination dataset for agent performance stats.
 	// Set via HONEYCOMB_STATS_DATASET environment variable.
 	StatsDataset string
 
