@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/honeycombio/honeycomb-network-agent/utils"
+	"github.com/honeycombio/libhoney-go"
 )
 
 var apiKey = flag.String("api_key", utils.LookupEnvOrString("HONEYCOMB_API_KEY", ""), "Honeycomb API key")
@@ -137,7 +138,8 @@ func (c *Config) Validate() error {
 	if c.APIKey == "" {
 		e = append(e, &MissingAPIKeyError{})
 	}
-	if len(c.APIKey) < 22 {
+	libhoneyConfig := libhoney.Config{APIKey: c.APIKey}
+	if _, err := libhoney.VerifyAPIKey(libhoneyConfig); err != nil {
 		e = append(e, &InvalidAPIKeyError{})
 	}
 	// returns nil if no errors in slice
