@@ -2,14 +2,15 @@ package assemblers
 
 import (
 	"runtime"
+	"sync/atomic"
 	"time"
 
-	"github.com/honeycombio/ebpf-agent/config"
-	"github.com/honeycombio/gopacket"
-	"github.com/honeycombio/gopacket/ip4defrag"
-	"github.com/honeycombio/gopacket/layers"
-	"github.com/honeycombio/gopacket/pcap"
-	"github.com/honeycombio/gopacket/reassembly"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/ip4defrag"
+	"github.com/gopacket/gopacket/layers"
+	"github.com/gopacket/gopacket/pcap"
+	"github.com/gopacket/gopacket/reassembly"
+	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -34,10 +35,25 @@ var stats struct {
 	source_received     int
 	source_dropped      int
 	source_if_dropped   int
+	total_streams       uint64
+	active_streams      int64
+}
+
+func IncrementStreamCount() uint64 {
+	return atomic.AddUint64(&stats.total_streams, 1)
+}
+
+func IncrementActiveStreamCount() {
+	atomic.AddInt64(&stats.active_streams, 1)
+}
+
+func DecrementActiveStreamCount() {
+	atomic.AddInt64(&stats.active_streams, -1)
 }
 
 type Context struct {
 	CaptureInfo gopacket.CaptureInfo
+	seq, ack    reassembly.Sequence
 }
 
 func (c *Context) GetCaptureInfo() gopacket.CaptureInfo {
@@ -76,6 +92,10 @@ func NewTcpAssembler(config config.Config, httpEvents chan HttpEvent) tcpAssembl
 	streamPool := reassembly.NewStreamPool(&streamFactory)
 	assembler := reassembly.NewAssembler(streamPool)
 
+	// Set total max pages and per-connection max pages -- this is very important to limit memory usage
+	assembler.AssemblerOptions.MaxBufferedPagesTotal = config.MaxBufferedPagesTotal
+	assembler.AssemblerOptions.MaxBufferedPagesPerConnection = config.MaxBufferedPagesPerConnection
+
 	return tcpAssembler{
 		config:        config,
 		packetSource:  packetSource,
@@ -88,15 +108,22 @@ func NewTcpAssembler(config config.Config, httpEvents chan HttpEvent) tcpAssembl
 
 func (h *tcpAssembler) Start() {
 	log.Info().Msg("Starting TCP assembler")
-	flushTicker := time.NewTicker(time.Second * 5)
+	// Tick on the tightest loop. The flush timeout is the shorter of the two timeouts using this ticker.
+	// Tick even more frequently than the flush interval (4 is somewhat arbitrary)
+	flushCloseTicker := time.NewTicker(h.config.StreamFlushTimeout / 4)
 	statsTicker := time.NewTicker(time.Second * 10)
 	h.startedAt = time.Now()
 	defragger := ip4defrag.NewIPv4Defragmenter()
 
 	for {
 		select {
-		case <-flushTicker.C:
-			flushed, closed := h.assembler.FlushCloseOlderThan(time.Now().Add(-h.config.Timeout))
+		case <-flushCloseTicker.C:
+			flushed, closed := h.assembler.FlushWithOptions(
+				reassembly.FlushOptions{
+					T:  time.Now().Add(-h.config.StreamFlushTimeout),
+					TC: time.Now().Add(-h.config.StreamCloseTimeout),
+				},
+			)
 			log.Debug().
 				Int("flushed", flushed).
 				Int("closed", closed).
@@ -104,6 +131,11 @@ func (h *tcpAssembler) Start() {
 		case <-statsTicker.C:
 			h.logAssemblerStats()
 		case packet := <-h.packetSource.Packets():
+			if packet.NetworkLayer() == nil {
+				// can't use this packet
+				continue
+			}
+
 			// defrag the IPv4 packet if required
 			if ipv4Layer := packet.Layer(layers.LayerTypeIPv4); ipv4Layer != nil {
 				ipv4 := ipv4Layer.(*layers.IPv4)
@@ -141,6 +173,8 @@ func (h *tcpAssembler) Start() {
 				}
 				context := Context{
 					CaptureInfo: packet.Metadata().CaptureInfo,
+					seq:         reassembly.Sequence(tcp.Seq),
+					ack:         reassembly.Sequence(tcp.Ack),
 				}
 				stats.totalsz += len(tcp.Payload)
 				h.assembler.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &context)
@@ -187,9 +221,11 @@ func (a *tcpAssembler) logAssemblerStats() {
 		"source_if_dropped":     stats.source_if_dropped,
 		"event_queue_length":    len(a.httpEvents),
 		"goroutines":            runtime.NumGoroutine(),
+		"total_streams":         stats.total_streams,
+		"active_streams":        stats.active_streams,
 	}
 	statsEvent := libhoney.NewEvent()
-	statsEvent.Dataset = "hny-ebpf-agent-stats"
+	statsEvent.Dataset = "hny-network-agent-stats"
 	statsEvent.AddField("name", "tcp_assembler_stats")
 	statsEvent.Add(statsFields)
 	statsEvent.Send()
@@ -206,7 +242,7 @@ func newPcapPacketSource(config config.Config) (*gopacket.PacketSource, error) {
 		Bool("promiscuous", config.Promiscuous).
 		Str("bpf_filter", config.BpfFilter).
 		Msg("Configuring pcap packet source")
-	handle, err := pcap.OpenLive(config.Interface, int32(config.Snaplen), config.Promiscuous, time.Second)
+	handle, err := pcap.OpenLive(config.Interface, int32(config.Snaplen), config.Promiscuous, pcap.BlockForever)
 	if err != nil {
 		log.Fatal().
 			Err(err).

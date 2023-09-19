@@ -8,5 +8,5 @@ RUN make build
 
 FROM ubuntu:22.04
 RUN apt-get update -yq && apt-get install -yq ca-certificates libpcap-dev
-COPY --from=builder /src/hny-ebpf-agent /bin/hny-ebpf-agent
-ENTRYPOINT [ "/bin/hny-ebpf-agent" ]
+COPY --from=builder /src/hny-network-agent /bin/hny-network-agent
+ENTRYPOINT [ "/bin/hny-network-agent" ]
