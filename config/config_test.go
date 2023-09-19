@@ -29,9 +29,9 @@ func TestAPIMask(t *testing.T) {
 			expected: "****5678",
 		},
 		{
-			name:     "long api key - 16 chars",
-			apiKey:   "1234567890123456",
-			expected: "************3456",
+			name:     "valid api key - 22 chars",
+			apiKey:   "1234567890123456789012",
+			expected: "******************9012",
 		},
 	}
 
