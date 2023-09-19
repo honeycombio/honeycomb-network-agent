@@ -69,39 +69,6 @@ Events should show up in Honeycomb in the `hny-network-agent` dataset.
 
 Alternative options for configuration and running can be found in [Deploying the agent to a Kubernetes cluster](./DEVELOPING.md#deploying-the-agent-to-a-kubernetes-cluster):
 
-## Example Event
-
-```json
-{
-  "Timestamp": "2023-08-24T19:42:17.65267Z",
-  "destination.address": "192.168.65.4",
-  "destination.k8s.pod.name": "storage-provisioner",
-  "destination.k8s.pod.uid": "87e44763-257b-4a52-91cc-f959292ff416",
-  "duration_ms": 11,
-  "goroutine_count": 274,
-  "honeycomb.agent_version": "0.0.6-alpha",
-  "http.method": "GET",
-  "http.request.body.size": 0,
-  "http.response.body.size": 25,
-  "http.status_code": 200,
-  "http.url": "/greeting",
-  "httpEvent_handled_at": "2023-08-24T19:42:18.575463885Z",
-  "httpEvent_handled_latency_ms": 922,
-  "k8s.container.name": "frontend",
-  "k8s.namespace.name": "greetings",
-  "k8s.node.name": "docker-desktop",
-  "k8s.node.uid": "54fe4a74-f29d-49ba-815f-a411bab8e166",
-  "k8s.pod.name": "frontend-go-646c6f4b7d-848xz",
-  "k8s.pod.uid": "faed166d-b598-48fc-b1f9-45f4bbaa92b7",
-  "k8s.service.name": "frontend",
-  "meta.btf_enabled": false,
-  "meta.kernel_version": "5.15.49",
-  "name": "HTTP GET",
-  "net.sock.host.addr": "10.1.3.192",
-  "user_agent.original": "curl/8.1.2"
-}
-```
-
 ## Supported Versions
 
 - Kubernetes version 1.24+
