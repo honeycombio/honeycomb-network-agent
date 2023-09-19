@@ -3,7 +3,6 @@ package assemblers
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -13,28 +12,28 @@ import (
 )
 
 type tcpReader struct {
-	streamIdent string
-	isClient    bool
-	srcIp       string
-	srcPort     string
-	dstIp       string
-	dstPort     string
-	matcher     *httpMatcher
-	events      chan HttpEvent
-	buffer      *bufio.Reader
+	streamId uint64
+	isClient bool
+	srcIp    string
+	srcPort  string
+	dstIp    string
+	dstPort  string
+	matcher  *httpMatcher
+	events   chan HttpEvent
+	buffer   *bufio.Reader
 }
 
-func NewTcpReader(streamIdent string, isClient bool, net gopacket.Flow, transport gopacket.Flow, matcher *httpMatcher, httpEvents chan HttpEvent) *tcpReader {
+func NewTcpReader(streamId uint64, isClient bool, net gopacket.Flow, transport gopacket.Flow, matcher *httpMatcher, httpEvents chan HttpEvent) *tcpReader {
 	return &tcpReader{
-		streamIdent: streamIdent,
-		isClient:    isClient,
-		srcIp:       net.Src().String(),
-		dstIp:       net.Dst().String(),
-		srcPort:     transport.Src().String(),
-		dstPort:     transport.Dst().String(),
-		matcher:     matcher,
-		events:      httpEvents,
-		buffer:      bufio.NewReader(bytes.NewReader(nil)),
+		streamId: streamId,
+		isClient: isClient,
+		srcIp:    net.Src().String(),
+		dstIp:    net.Dst().String(),
+		srcPort:  transport.Src().String(),
+		dstPort:  transport.Dst().String(),
+		matcher:  matcher,
+		events:   httpEvents,
+		buffer:   bufio.NewReader(bytes.NewReader(nil)),
 	}
 }
 
@@ -55,14 +54,19 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 		// We use TCP SEQ & ACK numbers to identify request/response pairs
 		// ACK corresponds to SEQ of the HTTP response
 		// https://madpackets.com/2018/04/25/tcp-sequence-and-acknowledgement-numbers-explained/
-		reqIdent := fmt.Sprintf("%s:%d", reader.streamIdent, ctx.ack)
+		requestId := int64(ctx.ack)
 		req, err := http.ReadRequest(reader.buffer)
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return
 		} else if err != nil {
 			log.Debug().
 				Err(err).
-				Str("ident", reader.streamIdent).
+				Int64("request_id", requestId).
+				Uint64("stream_id", reader.streamId).
+				Str("src_ip", reader.srcIp).
+				Str("src_port", reader.srcPort).
+				Str("dst_ip", reader.dstIp).
+				Str("dst_port", reader.dstPort).
 				Msg("Error reading HTTP request")
 			return
 		}
@@ -71,22 +75,27 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 			req.Body.Close()
 		}
 
-		if entry, ok := reader.matcher.GetOrStoreRequest(reqIdent, ctx.CaptureInfo.Timestamp, req); ok {
+		if entry, ok := reader.matcher.GetOrStoreRequest(requestId, ctx.CaptureInfo.Timestamp, req); ok {
 			// we have a match, process complete request/response pair
-			reader.processEvent(reqIdent, entry)
+			reader.processEvent(requestId, entry)
 		}
 	} else {
 		// We use TCP SEQ & ACK numbers to identify request/response pairs
 		// SEQ corresponds to ACK of the HTTP request
 		// https://madpackets.com/2018/04/25/tcp-sequence-and-acknowledgement-numbers-explained/
-		resIdent := fmt.Sprintf("%s:%d", reader.streamIdent, ctx.seq)
+		requestId := int64(ctx.seq)
 		res, err := http.ReadResponse(reader.buffer, nil)
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return
 		} else if err != nil {
 			log.Debug().
 				Err(err).
-				Str("ident", resIdent).
+				Int64("request_id", requestId).
+				Uint64("stream_id", reader.streamId).
+				Str("src_ip", reader.srcIp).
+				Str("src_port", reader.srcPort).
+				Str("dst_ip", reader.dstIp).
+				Str("dst_port", reader.dstPort).
 				Msg("Error reading HTTP response")
 			return
 		}
@@ -95,16 +104,17 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 			res.Body.Close()
 		}
 
-		if entry, ok := reader.matcher.GetOrStoreResponse(resIdent, ctx.CaptureInfo.Timestamp, res); ok {
+		if entry, ok := reader.matcher.GetOrStoreResponse(requestId, ctx.CaptureInfo.Timestamp, res); ok {
 			// we have a match, process complete request/response pair
-			reader.processEvent(resIdent, entry)
+			reader.processEvent(requestId, entry)
 		}
 	}
 }
 
-func (reader *tcpReader) processEvent(ident string, entry *entry) {
+func (reader *tcpReader) processEvent(requestId int64, entry *entry) {
 	reader.events <- HttpEvent{
-		RequestId:         ident,
+		StreamId:          reader.streamId,
+		RequestId:         requestId,
 		Request:           entry.request,
 		Response:          entry.response,
 		RequestTimestamp:  entry.requestTimestamp,

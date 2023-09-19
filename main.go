@@ -119,14 +119,16 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	// being zero which causes the event duration to be negative.
 	if event.RequestTimestamp.IsZero() {
 		log.Debug().
-			Str("request_id", event.RequestId).
+			Uint64("stream_id", event.StreamId).
+			Int64("request_id", event.RequestId).
 			Msg("Request timestamp is zero")
 		ev.AddField("http.request.timestamp_missing", true)
 		event.RequestTimestamp = time.Now()
 	}
 	if event.ResponseTimestamp.IsZero() {
 		log.Debug().
-			Str("request_id", event.RequestId).
+			Uint64("stream_id", event.StreamId).
+			Int64("request_id", event.RequestId).
 			Msg("Response timestamp is zero")
 		ev.AddField("http.response.timestamp_missing", true)
 		event.ResponseTimestamp = time.Now()
@@ -174,7 +176,8 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	ev.Add(k8sEventAttrs)
 
 	log.Debug().
-		Str("request_id", event.RequestId).
+		Uint64("stream_id", event.StreamId).
+		Int64("request_id", event.RequestId).
 		Time("event.timestamp", ev.Timestamp).
 		Str("http.url", requestURI).
 		Msg("Event sent")

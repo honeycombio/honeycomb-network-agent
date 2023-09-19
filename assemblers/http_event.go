@@ -6,7 +6,8 @@ import (
 )
 
 type HttpEvent struct {
-	RequestId         string
+	StreamId          uint64
+	RequestId         int64
 	Request           *http.Request
 	Response          *http.Response
 	RequestTimestamp  time.Time

@@ -7,7 +7,7 @@ import (
 )
 
 type httpMatcher struct {
-	messages map[string]entry
+	messages map[int64]entry
 	sync.Mutex
 }
 
@@ -20,19 +20,21 @@ type entry struct {
 
 func newRequestResponseMatcher() *httpMatcher {
 	return &httpMatcher{
-		messages: make(map[string]entry),
+		messages: make(map[int64]entry),
 	}
 }
 
-func (m *httpMatcher) GetOrStoreRequest(ident string, timestamp time.Time, request *http.Request) (*entry, bool) {
+// GetOrStoreRequest returns the request for the given key if it exists, otherwise it stores the request and returns nil
+// key is the TCP ACK number of the request
+func (m *httpMatcher) GetOrStoreRequest(key int64, timestamp time.Time, request *http.Request) (*entry, bool) {
 	m.Lock()
 	defer m.Unlock()
 
 	// check if we already have a response for this request, if yes, return it
-	if e, ok := m.messages[ident]; ok {
+	if e, ok := m.messages[key]; ok {
 		e.request = request
 		e.requestTimestamp = timestamp
-		delete(m.messages, ident)
+		delete(m.messages, key)
 		return &e, true
 	}
 
@@ -41,19 +43,21 @@ func (m *httpMatcher) GetOrStoreRequest(ident string, timestamp time.Time, reque
 		request:          request,
 		requestTimestamp: timestamp,
 	}
-	m.messages[ident] = entry
+	m.messages[key] = entry
 	return nil, false
 }
 
-func (m *httpMatcher) GetOrStoreResponse(ident string, timestamp time.Time, response *http.Response) (*entry, bool) {
+// GetOrStoreResponse returns the response for the given key if it exists, otherwise it stores the response and returns nil
+// key is the TCP SEQ number of the response
+func (m *httpMatcher) GetOrStoreResponse(key int64, timestamp time.Time, response *http.Response) (*entry, bool) {
 	m.Lock()
 	defer m.Unlock()
 
 	// check if we already have a request for this response, if yes, return it
-	if e, ok := m.messages[ident]; ok {
+	if e, ok := m.messages[key]; ok {
 		e.response = response
 		e.responseTimestamp = timestamp
-		delete(m.messages, ident)
+		delete(m.messages, key)
 		return &e, true
 	}
 
@@ -62,6 +66,6 @@ func (m *httpMatcher) GetOrStoreResponse(ident string, timestamp time.Time, resp
 		response:          response,
 		responseTimestamp: timestamp,
 	}
-	m.messages[ident] = entry
+	m.messages[key] = entry
 	return nil, false
 }
