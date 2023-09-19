@@ -97,14 +97,21 @@ spec:
                 secretKeyRef:
                   name: honeycomb
                   key: api-key
-            - name: HONEYCOMB_DATASET
-              value: hny-network-agent
-            ## uncomment this to enable debug log level
+            ## uncomment this to set the destination dataset for events
+            # - name: HONEYCOMB_DATASET
+            #   value: $HONEYCOMB_DATASET
+            ## uncomment this to set the destination dataset for agent performance stats
+            # - name: HONEYCOMB_STATS_DATASET
+            #   value: $HONEYCOMB_STATS_DATASET
+            ## uncomment this to set the listen address for debug service
+            # - name: DEBUG_ADDRESS
+            #   value: $DEBUG_ADDRESS
+            ## uncomment this to enable set log level
             # - name: LOG_LEVEL
-              # value: "DEBUG"
+            #   value: $LOG_LEVEL
             ## uncomment this to enable profiling
             # - name: DEBUG
-            #   value: "true"
+            #   value: $DEBUG
           args:
             - tcp
           securityContext:
