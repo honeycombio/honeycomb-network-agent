@@ -2,7 +2,6 @@ package config
 
 import (
 	"errors"
-	"flag"
 	"strings"
 	"time"
 
@@ -10,57 +9,112 @@ import (
 	"github.com/honeycombio/libhoney-go"
 )
 
+// Config holds the configuration for the agent
 type Config struct {
-	APIKey                        string
-	Endpoint                      string
-	Dataset                       string
-	StatsDataset                  string
-	LogLevel                      string
-	Debug                         bool
-	DebugAddress                  string
-	Lazy                          bool
-	Nodefrag                      bool
-	Checksum                      bool
-	Nooptcheck                    bool
-	Ignorefsmerr                  bool
-	Allowmissinginit              bool
-	Interface                     string
-	Snaplen                       int
-	Promiscuous                   bool
-	StreamFlushTimeout            time.Duration
-	StreamCloseTimeout            time.Duration
-	PacketSource                  string
-	BpfFilter                     string
-	ChannelBufferSize             int
-	MaxBufferedPagesTotal         int
+	// Honeycomb API key used to send events.
+	// Set via HONEYCOMB_API_KEY environment variable.
+	APIKey string
+
+	// Honeycomb API endpoint events are sent to.
+	// Set via HONEYCOMB_API_ENDPOINT environment variable.
+	Endpoint string
+
+	// Honeycomb dataset name where events are stored.
+	// Set via HONEYCOMB_DATASET environment variable.
+	Dataset string
+
+	// Honeycomb dataset name where stats events are stored.
+	// Set via HONEYCOMB_STATS_DATASET environment variable.
+	StatsDataset string
+
+	// Log level used by the agent.
+	// Set via LOG_LEVEL environment variable
+	LogLevel string
+
+	// Run the agent in debug mode.
+	// Set via DEBUG environment variable.
+	Debug bool
+
+	// Debug service address.
+	// Set via DEBUG_ADDRESS environment variable.
+	DebugAddress string
+
+	// Do lazy decoding of layers when processing packets.
+	Lazy bool
+
+	// Do not do IPv4 defragmentation when processing packets.
+	Nodefrag bool
+
+	// Check TCP checksum when processing packets.
+	Checksum bool
+
+	// Do not check TCP options (useful to ignore MSS on captures with TSO).
+	Nooptcheck bool
+
+	// Ignore TCP FSM errors.
+	Ignorefsmerr bool
+
+	// Support streams without SYN/SYN+ACK/ACK sequence.
+	Allowmissinginit bool
+
+	// Interface to read packets from.
+	Interface string
+
+	// Snap length (number of bytes max to read per packet (defaults to 262144 which is the default snaplen tcpdump).
+	Snaplen int
+
+	// Set promiscuous mode on the interface.
+	Promiscuous bool
+
+	// Stream flush timeout in seconds (defaults to 10 seconds).
+	StreamFlushTimeout time.Duration
+
+	// Stream close timeout in seconds (defaults to 90 seconds).
+	StreamCloseTimeout time.Duration
+
+	// Packet source (defaults to pcap).
+	PacketSource string
+
+	// Channel buffer size (defaults to 1000).
+	BpfFilter string
+
+	// Maximum number of HTTP events waiting to be processed to buffer before dropping.
+	ChannelBufferSize int
+
+	// Maximum number of TCP reassembly pages to allocate per interface.
+	MaxBufferedPagesTotal int
+
+	// Maximum number of TCP reassembly pages per connection.
 	MaxBufferedPagesPerConnection int
 }
 
+// NewConfig returns a new Config struct.
+// Values are set from environment variables if they exist, otherwise they are set to default
 func NewConfig() Config {
 	return Config{
-		APIKey:                        *flag.String("api_key", utils.LookupEnvOrString("HONEYCOMB_API_KEY", ""), "Honeycomb API key"),
-		Endpoint:                      *flag.String("endpoint", utils.LookupEnvOrString("HONEYCOMB_API_ENDPOINT", "https://api.honeycomb.io"), "Honeycomb API endpoint"),
-		Dataset:                       *flag.String("dataset", utils.LookupEnvOrString("HONEYCOMB_DATASET", "hny-network-agent"), "Honeycomb dataset name"),
-		StatsDataset:                  *flag.String("stats_dataset", utils.LookupEnvOrString("HONEYCOMB_STATS_DATASET", "hny-network-agent-stats"), "Honeycomb dataset name for stats"),
-		LogLevel:                      *flag.String("log_level", utils.LookupEnvOrString("LOG_LEVEL", "INFO"), "Log level (defaults to INFO)"),
-		Debug:                         *flag.Bool("debug", utils.LookupEnvOrBool("DEBUG", false), "Runs the agent in debug mode including setting up debug service"),
-		DebugAddress:                  *flag.String("debug_address", utils.LookupEnvOrString("DEBUG_ADDRESS", "0.0.0.0:6060"), "Debug service address"),
-		Lazy:                          *flag.Bool("lazy", false, "If true, do lazy decoding"),
-		Nodefrag:                      *flag.Bool("nodefrag", false, "If true, do not do IPv4 defrag"),
-		Checksum:                      *flag.Bool("checksum", false, "Check TCP checksum"),
-		Nooptcheck:                    *flag.Bool("nooptcheck", true, "Do not check TCP options (useful to ignore MSS on captures with TSO)"),
-		Ignorefsmerr:                  *flag.Bool("ignorefsmerr", true, "Ignore TCP FSM errors"),
-		Allowmissinginit:              *flag.Bool("allowmissinginit", true, "Support streams without SYN/SYN+ACK/ACK sequence"),
-		Interface:                     *flag.String("i", "any", "Interface to read packets from"),
-		Snaplen:                       *flag.Int("s", 262144, "Snap length (number of bytes max to read per packet"), // 262144 is the default snaplen for tcpdump
-		Promiscuous:                   *flag.Bool("promisc", true, "Set promiscuous mode"),
-		StreamFlushTimeout:            time.Duration(*flag.Int("stream_flush_timeout", 10, "Stream flush timeout in seconds (defaults to 10)")) * time.Second,
-		StreamCloseTimeout:            time.Duration(*flag.Int("stream_close_timeout", 90, "Stream close timeout in seconds (defaults to 90)")) * time.Second,
-		PacketSource:                  *flag.String("source", "pcap", "Packet source (defaults to pcap)"),
+		APIKey:                        utils.LookupEnvOrString("HONEYCOMB_API_KEY", ""),
+		Endpoint:                      utils.LookupEnvOrString("HONEYCOMB_API_ENDPOINT", "https://api.honeycomb.io"),
+		Dataset:                       utils.LookupEnvOrString("HONEYCOMB_DATASET", "hny-network-agent"),
+		StatsDataset:                  utils.LookupEnvOrString("HONEYCOMB_STATS_DATASET", "hny-network-agent-stats"),
+		LogLevel:                      utils.LookupEnvOrString("LOG_LEVEL", "INFO"),
+		Debug:                         utils.LookupEnvOrBool("DEBUG", false),
+		DebugAddress:                  utils.LookupEnvOrString("DEBUG_ADDRESS", "0.0.0.0:6060"),
+		Lazy:                          false,
+		Nodefrag:                      false,
+		Checksum:                      false,
+		Nooptcheck:                    true,
+		Ignorefsmerr:                  true,
+		Allowmissinginit:              true,
+		Interface:                     "any",
+		Snaplen:                       262144,
+		Promiscuous:                   true,
+		StreamFlushTimeout:            time.Duration(10 * time.Second),
+		StreamCloseTimeout:            time.Duration(90 * time.Second),
+		PacketSource:                  "pcap",
 		BpfFilter:                     buildBpfFilter(),
-		ChannelBufferSize:             *flag.Int("channel_buffer_size", 1000, "Channel buffer size (defaults to 1000)"),
-		MaxBufferedPagesTotal:         *flag.Int("gopacket_pages", 150_000, "Maximum number of TCP reassembly pages to allocate per interface"),
-		MaxBufferedPagesPerConnection: *flag.Int("gopacket_per_conn", 4000, "Maximum number of TCP reassembly pages per connection"),
+		ChannelBufferSize:             1000,
+		MaxBufferedPagesTotal:         150_000,
+		MaxBufferedPagesPerConnection: 4000,
 	}
 }
 
