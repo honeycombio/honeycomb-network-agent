@@ -55,15 +55,9 @@ spec:
                 secretKeyRef:
                   name: honeycomb
                   key: api-key
-            - name: HONEYCOMB_DATASET
-              value: hny-network-agent
-          args:
-            - tcp
           securityContext:
             capabilities:
               add:
-                - BPF
-                - PERFMON
                 - NET_RAW
       imagePullSecrets:
         - name: ghcr

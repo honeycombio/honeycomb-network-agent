@@ -12,7 +12,21 @@ metadata:
   namespace: honeycomb
 type: Opaque
 stringData:
-  api-key: $HONEYCOMB_API_KEY # export HONEYCOMB_API_KEY env var
+  # export HONEYCOMB_API_KEY env var
+  api-key: $HONEYCOMB_API_KEY
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ghcr
+  namespace: honeycomb
+type: kubernetes.io/dockerconfigjson
+stringData:
+  # export GITHUB_TOKEN env var as 'github_username:github_token'
+  # export BASE64_TOKEN=$(echo -n $GITHUB_TOKEN | base64)
+  .dockerconfigjson: "{\"auths\":{\"ghcr.io\":{\"auth\":\"$BASE64_TOKEN\"}}}"
+
+## Permissions to access pod metadata
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -72,6 +86,7 @@ spec:
         - name: hny-network-agent
           # use locally built image from make docker-build
           image: hny/network-agent:local
+          # image: ghcr.io/honeycombio/network-agent:latest
           imagePullPolicy: IfNotPresent
           # uncomment this to enable profiling listener on port 6060
           # ports:
@@ -82,19 +97,17 @@ spec:
                 secretKeyRef:
                   name: honeycomb
                   key: api-key
-            - name: HONEYCOMB_DATASET
-              value: hny-network-agent
             ## uncomment this to enable debug log level
             # - name: LOG_LEVEL
               # value: "DEBUG"
             ## uncomment this to enable profiling
             # - name: DEBUG
             #   value: "true"
-          args:
-            - tcp
           securityContext:
             capabilities:
               add:
                 - NET_RAW
             # for local debugging
             # privileged: true
+      imagePullSecrets:
+        - name: ghcr
