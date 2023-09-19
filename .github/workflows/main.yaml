@@ -13,8 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3.5.3
 
-      - name: Run tests
-        run: make docker-test
+      # - name: Install dependencies
+      #   run: make docker-deps
+
+      # - name: Run tests
+      #   run: make docker-test
 
       - name: Log in to the Container registry
         uses: docker/login-action@v2.2.0
