@@ -12,6 +12,9 @@ jobs:
 
       - name: Run tests
         run: make docker-test
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2.2.0
