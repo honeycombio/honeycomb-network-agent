@@ -15,19 +15,7 @@ stringData:
   # export HONEYCOMB_API_KEY env var
   api-key: $HONEYCOMB_API_KEY
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ghcr
-  namespace: honeycomb
-type: kubernetes.io/dockerconfigjson
-stringData:
-  # export GITHUB_TOKEN env var as 'github_username:github_token'
-  # export BASE64_TOKEN=$(echo -n $GITHUB_TOKEN | base64)
-  .dockerconfigjson: "{\"auths\":{\"ghcr.io\":{\"auth\":\"$BASE64_TOKEN\"}}}"
-
 ## Permissions to access pod metadata
----
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -111,16 +99,10 @@ spec:
             #   value: $LOG_LEVEL
             ## uncomment this to enable profiling
             # - name: DEBUG
-            #   value: $DEBUG
-          args:
-            - tcp
+            #   value: "$DEBUG"
           securityContext:
             capabilities:
               add:
-                - BPF
-                - PERFMON
                 - NET_RAW
             # for local debugging
             # privileged: true
-      imagePullSecrets:
-        - name: ghcr
