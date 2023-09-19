@@ -32,19 +32,6 @@ export HONEYCOMB_API_KEY=mykey
 kubectl create secret generic honeycomb --from-literal=api-key=$HONEYCOMB_API_KEY --namespace=honeycomb
 ```
 
-Create secret for ghcr login (alternatively, use `examples/secret-ghcr.yaml`):
-
-```sh
-export GITHUB_USERNAME=githubusername
-export GITHUB_ACCESS_TOKEN=githubaccesstoken
-kubectl create secret docker-registry ghcr-secret \
-  --docker-server=https://ghcr.io/ \
-  --docker-username=$GITHUB_USERNAME \
-  --docker-password=$GITHUB_ACCESS_TOKEN \
-  --namespace=honeycomb
-```
-
-
 ### Configuration
 
 The network agent can be configured using the following environment variables.
@@ -72,6 +59,6 @@ Alternative options for configuration and running can be found in [Deploying the
 ## Supported Versions
 
 - Kubernetes version 1.24+
-- Linux Kernel 5.10+ with BPF, PERFMON, and NET_RAW capabilities
+- Linux Kernel 5.10+ with NET_RAW capabilities
 
 Other versions may work but these are the minimum versions currently being tested.
