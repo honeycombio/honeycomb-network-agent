@@ -57,13 +57,9 @@ spec:
                   key: api-key
             - name: HONEYCOMB_DATASET
               value: hny-network-agent
-          args:
-            - tcp
+            - name: HONEYCOMB_STATS_DATASET
+              value: hny-network-agent-stats
           securityContext:
             capabilities:
               add:
-                - BPF
-                - PERFMON
                 - NET_RAW
-      imagePullSecrets:
-        - name: ghcr
