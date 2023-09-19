@@ -6,7 +6,7 @@ require (
 	github.com/gopacket/gopacket v1.1.1
 	github.com/honeycombio/libhoney-go v1.20.0
 	github.com/rs/zerolog v1.30.0
-	go.opentelemetry.io/otel v1.17.0
+	go.opentelemetry.io/otel v1.18.0
 	k8s.io/api v0.28.2
 	k8s.io/apimachinery v0.28.2
 	k8s.io/client-go v0.28.2
