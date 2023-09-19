@@ -43,11 +43,8 @@ func main() {
 		log.Info().
 			Str("debug_address", config.DebugAddress).
 			Msg("Debug service enabled")
-	}
-
-	// enable debug service
-	if config.Debug {
-		debug := &debug.DebugService{}
+		// enable debug service
+		debug := &debug.DebugService{Config: config}
 		debug.Start()
 	}
 
