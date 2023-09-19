@@ -41,6 +41,11 @@ func main() {
 		Str("dataset", config.Dataset).
 		Str("stats_dataset", config.StatsDataset).
 		Msg("Starting Honeycomb Network Agent")
+	if config.Debug {
+		log.Info().
+			Str("debug_address", config.DebugAddress).
+			Msg("Debug service enabled")
+	}
 
 	// enable debug service
 	if config.Debug {
