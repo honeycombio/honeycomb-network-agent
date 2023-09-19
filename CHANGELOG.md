@@ -1,5 +1,14 @@
 # Honeycomb Network Agent changelog
 
+## [0.0.16-alpha] - 2023-09-18
+
+### Fixes
+
+- maint: Use debug instead of info for HTTP parse errors (#191) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- fix: Revert 186 and 187 for injecting version during build (#206) | [Jamie Danielson](https://github.com/JamieDanielson)
+- fix: Close HTTP request & response body readers (#195) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- fix: Reuse buffer in stream reader (#200) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+
 ## [0.0.15-alpha] - 2023-09-15
 
 ### Enhancements

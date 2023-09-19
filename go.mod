@@ -3,14 +3,13 @@ module github.com/honeycombio/honeycomb-network-agent
 go 1.20
 
 require (
-	github.com/cilium/ebpf v0.11.0
 	github.com/gopacket/gopacket v1.1.1
 	github.com/honeycombio/libhoney-go v1.20.0
 	github.com/rs/zerolog v1.30.0
-	go.opentelemetry.io/otel v1.17.0
-	k8s.io/api v0.28.1
-	k8s.io/apimachinery v0.28.1
-	k8s.io/client-go v0.28.1
+	go.opentelemetry.io/otel v1.18.0
+	k8s.io/api v0.28.2
+	k8s.io/apimachinery v0.28.2
+	k8s.io/client-go v0.28.2
 )
 
 require (
@@ -42,7 +41,6 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2 // indirect
 	golang.org/x/net v0.13.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
