@@ -10,6 +10,16 @@ build:
 docker-build:
 	docker build --tag $(IMG_NAME):$(IMG_TAG) .
 
+.PHONY: test
+#: run unit tests
+test:
+	go test ./...
+
+.PHONY: docker-test
+#: run unit tests in docker
+docker-test:
+	docker build -f Dockerfile.test .
+
 ### Testing targets
 
 .PHONY: apply-agent
