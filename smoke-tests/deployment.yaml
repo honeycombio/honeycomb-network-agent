@@ -97,9 +97,12 @@ spec:
                 secretKeyRef:
                   name: honeycomb
                   key: api-key
+            ## uncoment to change the dataset name
+            # - name: HONEYCOMB_DATASET
+            #   value: "hny-network-agent"
             ## uncomment this to enable debug log level
             # - name: LOG_LEVEL
-              # value: "DEBUG"
+            #   value: "DEBUG"
             ## uncomment this to enable profiling
             # - name: DEBUG
             #   value: "true"
