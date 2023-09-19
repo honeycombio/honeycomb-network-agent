@@ -22,23 +22,8 @@ Build with `make docker-build`.
 
 Docker images are found in [`ghcr.io/honeycombio/network-agent:latest`](https://github.com/honeycombio/honeycomb-network-agent/pkgs/container/network-agent).
 
-Because this is a private registry, you must have a Github [personal access token](https://github.com/settings/tokens) (classic) with `read:packages` permission.
-
-The example deployment creates the secret using environment variables (similar to how it mounts the API Key secret below).
-
 ```sh
-export GITHUB_TOKEN=githubusername:githubaccesstoken
-export BASE64_TOKEN=$(echo -n $GITHUB_TOKEN | base64)
-```
-
-An alternative way to create the secret is to comment out the sections for `ghcr-secret` in the deployment and create it manually:
-
-```sh
-kubectl create secret docker-registry ghcr-secret \
-  --docker-server=https://ghcr.io/ \
-  --docker-username=<githubusername> \
-  --docker-password=<githubaccesstoken> \
-  --namespace=honeycomb
+docker pull ghcr.io/honeycombio/network-agent:latest
 ```
 
 ## To create a local docker image
@@ -69,7 +54,6 @@ These environment variables get passed in the make command.
 $ make apply-network-agent
 namespace/honeycomb created
 secret/honeycomb created
-secret/ghcr created
 daemonset.apps/hny-network-agent created
 ```
 

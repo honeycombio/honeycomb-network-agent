@@ -63,5 +63,3 @@ spec:
             capabilities:
               add:
                 - NET_RAW
-      imagePullSecrets:
-        - name: ghcr
