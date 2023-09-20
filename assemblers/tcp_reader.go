@@ -71,7 +71,7 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 			req.Body.Close()
 		}
 
-		if entry, ok := reader.matcher.GetOrStoreRequest(reqIdent, ctx.CaptureInfo.Timestamp, req); ok {
+		if entry, matchFound := reader.matcher.GetOrStoreRequest(reqIdent, ctx.CaptureInfo.Timestamp, req); matchFound {
 			// we have a match, process complete request/response pair
 			reader.processEvent(reqIdent, entry)
 		}
@@ -95,7 +95,7 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 			res.Body.Close()
 		}
 
-		if entry, ok := reader.matcher.GetOrStoreResponse(resIdent, ctx.CaptureInfo.Timestamp, res); ok {
+		if entry, matchFound := reader.matcher.GetOrStoreResponse(resIdent, ctx.CaptureInfo.Timestamp, res); matchFound {
 			// we have a match, process complete request/response pair
 			reader.processEvent(resIdent, entry)
 		}
