@@ -14,6 +14,21 @@ Recommended:
   - View them with `remake --tasks`
 - [locust](https://docs.locust.io/en/stable/what-is-locust.html) - A performance testing tool, required for load testing
 
+## Installing with Helm
+
+We have an example Helm chart that can be used to configure and run the agent.
+Update [values.yaml](./chart/values.yaml) with your Honeycomb API key then run:
+
+```sh
+helm install -f chart/values.yaml hny-network-agent ./chart
+```
+
+When ready to uninstall, you can run:
+
+```sh
+helm uninstall hny-network-agent
+```
+
 ## Local Development
 
 Build with `make docker-build`.

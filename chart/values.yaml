@@ -1,0 +1,14 @@
+honeycomb:
+  # Honeycomb API key used to send events (required)
+  apikey: ""
+  # Honeycomb API endpoint events are sent to (defaults to 'https://api.honeycomb.io')
+  endpoint: ""
+  # Honeycomb destination dataset for events (defaults to 'hny-network-agent')
+  dataset: ""
+  # Honeycomb destination dataset for agent performance stats (defaults to 'hny-network-agent-stats')
+  stats_dataset: ""
+
+image:
+  repository: ghcr.io/honeycombio/network-agent
+  version: ""
+  pullPolicy: IfNotPresent
