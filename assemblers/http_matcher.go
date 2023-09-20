@@ -35,9 +35,12 @@ func (m *httpMatcher) GetOrStoreRequest(ident string, timestamp time.Time, reque
 		request:          request,
 		requestTimestamp: timestamp,
 	}
+
 	if v, loaded := m.entries.LoadOrStore(ident, e); loaded {
+		// matching entry found
 		m.entries.Delete(ident)
-		e = v.(*entry)
+		e = v.(*entry) // reuse allocated &entry{} to hold the match
+		// found entry has Response, so update it with Request
 		e.request = request
 		e.requestTimestamp = timestamp
 		return e, true
@@ -57,9 +60,12 @@ func (m *httpMatcher) GetOrStoreResponse(ident string, timestamp time.Time, resp
 		response:          response,
 		responseTimestamp: timestamp,
 	}
+
 	if v, loaded := m.entries.LoadOrStore(ident, e); loaded {
+		// matching entry found
 		m.entries.Delete(ident)
-		e = v.(*entry)
+		e = v.(*entry) // reuse allocated &entry{} to hold the match
+		// found entry has Request, so update it with Response
 		e.response = response
 		e.responseTimestamp = timestamp
 		return e, true
