@@ -23,6 +23,11 @@ func newRequestResponseMatcher() *httpMatcher {
 	}
 }
 
+// GetOrStoreRequest receives a tcpStream ident, a timestamp, and a request.
+//
+// If the response that matches the stream ident has been seen before, return an entry with both Request and Response.
+//
+// If the response hasn't been seen yet, store the Request for later lookup.
 func (m *httpMatcher) GetOrStoreRequest(ident string, timestamp time.Time, request *http.Request) (*entry, bool) {
 	e := &entry{
 		request:          request,
@@ -38,6 +43,11 @@ func (m *httpMatcher) GetOrStoreRequest(ident string, timestamp time.Time, reque
 	return nil, false
 }
 
+// GetOrStoreResponse receives a tcpStream ident, a timestamp, and a response.
+//
+// If the request that matches the stream ident has been seen before, return an entry with both Request and Response.
+//
+// If the request hasn't been seen yet, store the Response for later lookup.
 func (m *httpMatcher) GetOrStoreResponse(ident string, timestamp time.Time, response *http.Response) (*entry, bool) {
 	e := &entry{
 		response:          response,
