@@ -7,7 +7,7 @@ import (
 )
 
 type httpMatcher struct {
-	messages *sync.Map
+	entries *sync.Map
 }
 
 type entry struct {
@@ -19,7 +19,7 @@ type entry struct {
 
 func newRequestResponseMatcher() *httpMatcher {
 	return &httpMatcher{
-		messages: &sync.Map{},
+		entries: &sync.Map{},
 	}
 }
 
@@ -35,8 +35,8 @@ func (m *httpMatcher) GetOrStoreRequest(ident string, timestamp time.Time, reque
 		request:          request,
 		requestTimestamp: timestamp,
 	}
-	if v, loaded := m.messages.LoadOrStore(ident, e); loaded {
-		m.messages.Delete(ident)
+	if v, loaded := m.entries.LoadOrStore(ident, e); loaded {
+		m.entries.Delete(ident)
 		e = v.(*entry)
 		e.request = request
 		e.requestTimestamp = timestamp
@@ -57,8 +57,8 @@ func (m *httpMatcher) GetOrStoreResponse(ident string, timestamp time.Time, resp
 		response:          response,
 		responseTimestamp: timestamp,
 	}
-	if v, loaded := m.messages.LoadOrStore(ident, e); loaded {
-		m.messages.Delete(ident)
+	if v, loaded := m.entries.LoadOrStore(ident, e); loaded {
+		m.entries.Delete(ident)
 		e = v.(*entry)
 		e.response = response
 		e.responseTimestamp = timestamp
