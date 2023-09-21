@@ -7,8 +7,7 @@ import (
 )
 
 type httpMatcher struct {
-	messages map[string]entry
-	sync.Mutex
+	entries *sync.Map
 }
 
 type entry struct {
@@ -20,48 +19,56 @@ type entry struct {
 
 func newRequestResponseMatcher() *httpMatcher {
 	return &httpMatcher{
-		messages: make(map[string]entry),
+		entries: &sync.Map{},
 	}
 }
 
-func (m *httpMatcher) GetOrStoreRequest(ident string, timestamp time.Time, request *http.Request) (*entry, bool) {
-	m.Lock()
-	defer m.Unlock()
-
-	// check if we already have a response for this request, if yes, return it
-	if e, ok := m.messages[ident]; ok {
-		e.request = request
-		e.requestTimestamp = timestamp
-		delete(m.messages, ident)
-		return &e, true
-	}
-
-	// we don't have a response for this request yet, so store it for later
-	entry := entry{
+// GetOrStoreRequest receives a tcpStream ident, a timestamp, and a request.
+//
+// If the response that matches the stream ident has been seen before,
+// returns a match entry containing both Request and Response and matchFound will be true.
+//
+// If the response hasn't been seen yet,
+// stores the Request for later lookup and returns match as nil and matchFound will be false.
+func (m *httpMatcher) GetOrStoreRequest(ident string, timestamp time.Time, request *http.Request) (match *entry, matchFound bool) {
+	e := &entry{
 		request:          request,
 		requestTimestamp: timestamp,
 	}
-	m.messages[ident] = entry
+
+	if v, loaded := m.entries.LoadOrStore(ident, e); loaded {
+		// matching entry found
+		m.entries.Delete(ident)
+		e = v.(*entry) // reuse allocated &entry{} to hold the match
+		// found entry has Response, so update it with Request
+		e.request = request
+		e.requestTimestamp = timestamp
+		return e, true
+	}
 	return nil, false
 }
 
-func (m *httpMatcher) GetOrStoreResponse(ident string, timestamp time.Time, response *http.Response) (*entry, bool) {
-	m.Lock()
-	defer m.Unlock()
-
-	// check if we already have a request for this response, if yes, return it
-	if e, ok := m.messages[ident]; ok {
-		e.response = response
-		e.responseTimestamp = timestamp
-		delete(m.messages, ident)
-		return &e, true
-	}
-
-	// we don't have a request for this response yet, so store it for later
-	entry := entry{
+// GetOrStoreResponse receives a tcpStream ident, a timestamp, and a response.
+//
+// If the request that matches the stream ident has been seen before,
+// returns a match entry containing both Request and Response and matchFound will be true.
+//
+// If the request hasn't been seen yet,
+// stores the Response for later lookup and returns match as nil and matchFound will be false.
+func (m *httpMatcher) GetOrStoreResponse(ident string, timestamp time.Time, response *http.Response) (match *entry, matchFound bool) {
+	e := &entry{
 		response:          response,
 		responseTimestamp: timestamp,
 	}
-	m.messages[ident] = entry
+
+	if v, loaded := m.entries.LoadOrStore(ident, e); loaded {
+		// matching entry found
+		m.entries.Delete(ident)
+		e = v.(*entry) // reuse allocated &entry{} to hold the match
+		// found entry has Request, so update it with Response
+		e.response = response
+		e.responseTimestamp = timestamp
+		return e, true
+	}
 	return nil, false
 }
