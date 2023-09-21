@@ -1,5 +1,19 @@
 # Honeycomb Network Agent changelog
 
+## [0.0.17-alpha] - 2023-09-20
+
+### Maintenance
+
+- maint: Remove unused source directory (#198) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint: Make the configuration table clearer (#212) | [Phillip Carter](https://github.com/cartermp)
+- maint: Remove unused kernel capabilities and update deployment examples (#203) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint: README updates prior to changing repo visibility (#211) | [Robb Kidd](https://github.com/robbkidd)
+- maint: Refactor Config (#197) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint: Tidy up event processing fields (#196) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint: Remove unused eBPF code and makefile targets (#181) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint(deps): bump go.opentelemetry.io/otel from 1.17.0 to 1.18.0 (#205) | dependabot[bot]
+- maint(deps): bump the k8s-dependencies group with 2 updates (#204) | dependabot[bot]
+
 ## [0.0.16-alpha] - 2023-09-18
 
 ### Fixes
