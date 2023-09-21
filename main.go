@@ -133,8 +133,8 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 
 	// response attributes
 	if event.Response != nil {
-		ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
-		ev.AddField("http.response.body.size", event.Response.ContentLength)
+		ev.AddField(string(semconv.HTTPResponseStatusCodeKey), event.Response.StatusCode)
+		ev.AddField(string(semconv.HTTPResponseBodySizeKey), event.Response.ContentLength)
 
 	} else {
 		ev.AddField("http.response.missing", "no response on this event")
