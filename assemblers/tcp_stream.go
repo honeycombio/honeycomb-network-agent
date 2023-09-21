@@ -23,19 +23,19 @@ type tcpStream struct {
 }
 
 func NewTcpStream(streamId uint64, net gopacket.Flow, transport gopacket.Flow, config config.Config, httpEvents chan HttpEvent) *tcpStream {
-	streamIdent := fmt.Sprintf("%s:%s:%d", net, transport, streamId)
+	ident := fmt.Sprintf("%s:%s:%d", net, transport, streamId)
 	matcher := newRequestResponseMatcher()
 	return &tcpStream{
 		id:     streamId,
-		ident:  streamIdent,
+		ident:  ident,
 		config: config,
 		tcpstate: reassembly.NewTCPSimpleFSM(reassembly.TCPSimpleFSMOptions{
 			SupportMissingEstablishment: true,
 		}),
 		fsmerr:     false, // TODO: verify whether we need this
 		optchecker: reassembly.NewTCPOptionCheck(),
-		client:     NewTcpReader(streamIdent, true, net, transport, matcher, httpEvents),
-		server:     NewTcpReader(streamIdent, false, net.Reverse(), transport.Reverse(), matcher, httpEvents),
+		client:     NewTcpReader(ident, true, net, transport, matcher, httpEvents),
+		server:     NewTcpReader(ident, false, net.Reverse(), transport.Reverse(), matcher, httpEvents),
 	}
 }
 
@@ -68,12 +68,12 @@ func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir re
 		if err != nil {
 			log.Error().
 				Err(err).
-				Str("tcp_stream_ident", stream.ident).
+				Str("stream_ident", stream.ident).
 				Msg("ChecksumCompute")
 			accept = false
 		} else if c != 0x0 {
 			log.Error().
-				Str("tcp_stream_ident", stream.ident).
+				Str("stream_ident", stream.ident).
 				Uint16("checksum", c).
 				Msg("InvalidChecksum")
 			accept = false
@@ -97,7 +97,7 @@ func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembl
 // ReassemblyComplete is called when the TCP assembler believes a stream has completed.
 func (stream *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
 	log.Debug().
-		Str("tcp_stream_ident", stream.ident).
+		Str("stream_ident", stream.ident).
 		Msg("Connection closed")
 
 	// decrement the number of active streams

@@ -3,7 +3,6 @@ package assemblers
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -55,14 +54,19 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 		// We use TCP SEQ & ACK numbers to identify request/response pairs
 		// ACK corresponds to SEQ of the HTTP response
 		// https://madpackets.com/2018/04/25/tcp-sequence-and-acknowledgement-numbers-explained/
-		reqIdent := fmt.Sprintf("%s:%d", reader.streamIdent, ctx.ack)
+		requestId := int64(ctx.ack)
 		req, err := http.ReadRequest(reader.buffer)
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return
 		} else if err != nil {
 			log.Debug().
 				Err(err).
-				Str("ident", reader.streamIdent).
+				Int64("request_id", requestId).
+				Str("stream_ident", reader.streamIdent).
+				Str("src_ip", reader.srcIp).
+				Str("src_port", reader.srcPort).
+				Str("dst_ip", reader.dstIp).
+				Str("dst_port", reader.dstPort).
 				Msg("Error reading HTTP request")
 			return
 		}
@@ -71,22 +75,27 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 			req.Body.Close()
 		}
 
-		if entry, matchFound := reader.matcher.GetOrStoreRequest(reqIdent, ctx.CaptureInfo.Timestamp, req); matchFound {
+		if entry, matchFound := reader.matcher.GetOrStoreRequest(requestId, ctx.CaptureInfo.Timestamp, req); matchFound {
 			// we have a match, process complete request/response pair
-			reader.processEvent(reqIdent, entry)
+			reader.processEvent(requestId, entry)
 		}
 	} else {
 		// We use TCP SEQ & ACK numbers to identify request/response pairs
 		// SEQ corresponds to ACK of the HTTP request
 		// https://madpackets.com/2018/04/25/tcp-sequence-and-acknowledgement-numbers-explained/
-		resIdent := fmt.Sprintf("%s:%d", reader.streamIdent, ctx.seq)
+		requestId := int64(ctx.seq)
 		res, err := http.ReadResponse(reader.buffer, nil)
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			return
 		} else if err != nil {
 			log.Debug().
 				Err(err).
-				Str("ident", resIdent).
+				Int64("request_id", requestId).
+				Str("stream_ident", reader.streamIdent).
+				Str("src_ip", reader.srcIp).
+				Str("src_port", reader.srcPort).
+				Str("dst_ip", reader.dstIp).
+				Str("dst_port", reader.dstPort).
 				Msg("Error reading HTTP response")
 			return
 		}
@@ -95,16 +104,17 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 			res.Body.Close()
 		}
 
-		if entry, matchFound := reader.matcher.GetOrStoreResponse(resIdent, ctx.CaptureInfo.Timestamp, res); matchFound {
+		if entry, matchFound := reader.matcher.GetOrStoreResponse(requestId, ctx.CaptureInfo.Timestamp, res); matchFound {
 			// we have a match, process complete request/response pair
-			reader.processEvent(resIdent, entry)
+			reader.processEvent(requestId, entry)
 		}
 	}
 }
 
-func (reader *tcpReader) processEvent(ident string, entry *entry) {
+func (reader *tcpReader) processEvent(requestId int64, entry *entry) {
 	reader.events <- HttpEvent{
-		RequestId:         ident,
+		StreamIdent:       reader.streamIdent,
+		RequestId:         requestId,
 		Request:           entry.request,
 		Response:          entry.response,
 		RequestTimestamp:  entry.requestTimestamp,
