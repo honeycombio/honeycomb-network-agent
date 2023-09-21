@@ -51,19 +51,19 @@ func Test_sendHttpEventToHoneycomb(t *testing.T) {
 	delete(attrs, "meta.httpEvent_response_handled_latency_ms")
 
 	expectedAttrs := map[string]interface{}{
-		"name":                    "HTTP GET",
-		"net.sock.host.addr":      "1.2.3.4",
-		"destination.address":     "5.6.7.8",
-		"http.request.id":         "c->s:1->2",
-		"http.method":             "GET",
-		"http.url":                "/check?teapot=true",
-		"http.request.body.size":  int64(42),
-		"http.request.timestamp":  testReqTime,
-		"http.response.timestamp": testReqTime.Add(3 * time.Millisecond),
-		"http.status_code":        418,
-		"http.response.body.size": int64(84),
-		"duration_ms":             int64(3),
-		"user_agent.original":     "teapot-checker/1.0",
+		"name":                      "HTTP GET",
+		"client.socket.address":     "1.2.3.4",
+		"server.socket.address":     "5.6.7.8",
+		"http.request.id":           "c->s:1->2",
+		"http.request.method":       "GET",
+		"url.path":                  "/check?teapot=true",
+		"http.request.body.size":    int64(42),
+		"http.request.timestamp":    testReqTime,
+		"http.response.timestamp":   testReqTime.Add(3 * time.Millisecond),
+		"http.response.status_code": 418,
+		"http.response.body.size":   int64(84),
+		"duration_ms":               int64(3),
+		"user_agent.original":       "teapot-checker/1.0",
 	}
 
 	assert.Equal(t, expectedAttrs, attrs)
