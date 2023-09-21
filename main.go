@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 const Version string = "0.0.17-alpha"
@@ -115,8 +115,8 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	ev.AddField("http.request.timestamp", event.RequestTimestamp)
 	ev.AddField("http.response.timestamp", event.ResponseTimestamp)
 
-	ev.AddField(string(semconv.NetSockHostAddrKey), event.SrcIp)
-	ev.AddField("destination.address", event.DstIp)
+	ev.AddField(string(semconv.ClientSocketAddressKey), event.SrcIp)
+	ev.AddField(string(semconv.ServerSocketAddressKey), event.DstIp)
 
 	var requestURI string
 
@@ -124,10 +124,10 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	if event.Request != nil {
 		requestURI = event.Request.RequestURI
 		ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
-		ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
-		ev.AddField(string(semconv.HTTPURLKey), requestURI)
+		ev.AddField(string(semconv.HTTPRequestMethodKey), event.Request.Method)
+		ev.AddField(string(semconv.URLPathKey), requestURI)
 		ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
-		ev.AddField("http.request.body.size", event.Request.ContentLength)
+		ev.AddField(string(semconv.HTTPRequestBodySizeKey), event.Request.ContentLength)
 	} else {
 		ev.AddField("name", "HTTP")
 		ev.AddField("http.request.missing", "no request on this event")
@@ -135,8 +135,8 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 
 	// response attributes
 	if event.Response != nil {
-		ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
-		ev.AddField("http.response.body.size", event.Response.ContentLength)
+		ev.AddField(string(semconv.HTTPResponseStatusCodeKey), event.Response.StatusCode)
+		ev.AddField(string(semconv.HTTPResponseBodySizeKey), event.Response.ContentLength)
 
 	} else {
 		ev.AddField("http.response.missing", "no response on this event")
