@@ -21,7 +21,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-const Version string = "0.0.16-alpha"
+const Version string = "0.0.17-alpha"
 
 func main() {
 	config := config.NewConfig()
