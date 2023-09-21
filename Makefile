@@ -8,7 +8,7 @@ build:
 .PHONY: docker-build
 #: build the agent image
 docker-build:
-	docker build --tag $(IMG_NAME):$(IMG_TAG) .
+	docker build --target build --tag $(IMG_NAME):$(IMG_TAG) .
 
 .PHONY: test
 #: run unit tests
@@ -18,7 +18,7 @@ test:
 .PHONY: docker-test
 #: run unit tests in docker
 docker-test:
-	docker build -f Dockerfile.test .
+	docker build --target test .
 
 ### Testing targets
 
