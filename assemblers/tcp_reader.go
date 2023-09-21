@@ -12,28 +12,28 @@ import (
 )
 
 type tcpReader struct {
-	streamId uint64
-	isClient bool
-	srcIp    string
-	srcPort  string
-	dstIp    string
-	dstPort  string
-	matcher  *httpMatcher
-	events   chan HttpEvent
-	buffer   *bufio.Reader
+	streamIdent string
+	isClient    bool
+	srcIp       string
+	srcPort     string
+	dstIp       string
+	dstPort     string
+	matcher     *httpMatcher
+	events      chan HttpEvent
+	buffer      *bufio.Reader
 }
 
-func NewTcpReader(streamId uint64, isClient bool, net gopacket.Flow, transport gopacket.Flow, matcher *httpMatcher, httpEvents chan HttpEvent) *tcpReader {
+func NewTcpReader(streamIdent string, isClient bool, net gopacket.Flow, transport gopacket.Flow, matcher *httpMatcher, httpEvents chan HttpEvent) *tcpReader {
 	return &tcpReader{
-		streamId: streamId,
-		isClient: isClient,
-		srcIp:    net.Src().String(),
-		dstIp:    net.Dst().String(),
-		srcPort:  transport.Src().String(),
-		dstPort:  transport.Dst().String(),
-		matcher:  matcher,
-		events:   httpEvents,
-		buffer:   bufio.NewReader(bytes.NewReader(nil)),
+		streamIdent: streamIdent,
+		isClient:    isClient,
+		srcIp:       net.Src().String(),
+		dstIp:       net.Dst().String(),
+		srcPort:     transport.Src().String(),
+		dstPort:     transport.Dst().String(),
+		matcher:     matcher,
+		events:      httpEvents,
+		buffer:      bufio.NewReader(bytes.NewReader(nil)),
 	}
 }
 
@@ -62,7 +62,7 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 			log.Debug().
 				Err(err).
 				Int64("request_id", requestId).
-				Uint64("stream_id", reader.streamId).
+				Str("stream_ident", reader.streamIdent).
 				Str("src_ip", reader.srcIp).
 				Str("src_port", reader.srcPort).
 				Str("dst_ip", reader.dstIp).
@@ -91,7 +91,7 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 			log.Debug().
 				Err(err).
 				Int64("request_id", requestId).
-				Uint64("stream_id", reader.streamId).
+				Str("stream_ident", reader.streamIdent).
 				Str("src_ip", reader.srcIp).
 				Str("src_port", reader.srcPort).
 				Str("dst_ip", reader.dstIp).
@@ -113,7 +113,7 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 
 func (reader *tcpReader) processEvent(requestId int64, entry *entry) {
 	reader.events <- HttpEvent{
-		StreamId:          reader.streamId,
+		StreamIdent:       reader.streamIdent,
 		RequestId:         requestId,
 		Request:           entry.request,
 		Response:          entry.response,

@@ -89,7 +89,7 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	// being zero which causes the event duration to be negative.
 	if event.RequestTimestamp.IsZero() {
 		log.Debug().
-			Uint64("stream_id", event.StreamId).
+			Str("stream_ident", event.StreamIdent).
 			Int64("request_id", event.RequestId).
 			Msg("Request timestamp is zero")
 		ev.AddField("http.request.timestamp_missing", true)
@@ -97,7 +97,7 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	}
 	if event.ResponseTimestamp.IsZero() {
 		log.Debug().
-			Uint64("stream_id", event.StreamId).
+			Str("stream_ident", event.StreamIdent).
 			Int64("request_id", event.RequestId).
 			Msg("Response timestamp is zero")
 		ev.AddField("http.response.timestamp_missing", true)
@@ -110,6 +110,7 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	ev.AddField("meta.httpEvent_handled_at", time.Now())
 	ev.AddField("meta.httpEvent_request_handled_latency_ms", time.Since(event.RequestTimestamp).Milliseconds())
 	ev.AddField("meta.httpEvent_response_handled_latency_ms", time.Since(event.ResponseTimestamp).Milliseconds())
+	ev.AddField("meta.stream.ident", event.StreamIdent)
 	ev.AddField("duration_ms", eventDuration.Milliseconds())
 	ev.AddField("http.request.timestamp", event.RequestTimestamp)
 	ev.AddField("http.response.timestamp", event.ResponseTimestamp)
@@ -146,7 +147,7 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	ev.Add(k8sEventAttrs)
 
 	log.Debug().
-		Uint64("stream_id", event.StreamId).
+		Str("stream_ident", event.StreamIdent).
 		Int64("request_id", event.RequestId).
 		Time("event.timestamp", ev.Timestamp).
 		Str("http.url", requestURI).

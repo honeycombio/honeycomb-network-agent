@@ -1,6 +1,8 @@
 package assemblers
 
 import (
+	"fmt"
+
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	"github.com/gopacket/gopacket/reassembly"
@@ -11,6 +13,7 @@ import (
 // tcpStream has two unidirectional tcpReaders, one for client and one for server
 type tcpStream struct {
 	id         uint64
+	ident      string
 	config     config.Config
 	tcpstate   *reassembly.TCPSimpleFSM
 	fsmerr     bool
@@ -20,17 +23,19 @@ type tcpStream struct {
 }
 
 func NewTcpStream(streamId uint64, net gopacket.Flow, transport gopacket.Flow, config config.Config, httpEvents chan HttpEvent) *tcpStream {
+	ident := fmt.Sprintf("%s:%s:%d", net, transport, streamId)
 	matcher := newRequestResponseMatcher()
 	return &tcpStream{
 		id:     streamId,
+		ident:  ident,
 		config: config,
 		tcpstate: reassembly.NewTCPSimpleFSM(reassembly.TCPSimpleFSMOptions{
 			SupportMissingEstablishment: true,
 		}),
 		fsmerr:     false, // TODO: verify whether we need this
 		optchecker: reassembly.NewTCPOptionCheck(),
-		client:     NewTcpReader(streamId, true, net, transport, matcher, httpEvents),
-		server:     NewTcpReader(streamId, false, net.Reverse(), transport.Reverse(), matcher, httpEvents),
+		client:     NewTcpReader(ident, true, net, transport, matcher, httpEvents),
+		server:     NewTcpReader(ident, false, net.Reverse(), transport.Reverse(), matcher, httpEvents),
 	}
 }
 
@@ -63,12 +68,12 @@ func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir re
 		if err != nil {
 			log.Error().
 				Err(err).
-				Uint64("stream_id", stream.id).
+				Str("stream_ident", stream.ident).
 				Msg("ChecksumCompute")
 			accept = false
 		} else if c != 0x0 {
 			log.Error().
-				Uint64("stream_id", stream.id).
+				Str("stream_ident", stream.ident).
 				Uint16("checksum", c).
 				Msg("InvalidChecksum")
 			accept = false

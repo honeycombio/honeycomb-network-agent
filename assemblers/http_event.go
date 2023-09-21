@@ -6,7 +6,7 @@ import (
 )
 
 type HttpEvent struct {
-	StreamId          uint64
+	StreamIdent       string
 	RequestId         int64
 	Request           *http.Request
 	Response          *http.Response
