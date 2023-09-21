@@ -113,8 +113,8 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	ev.AddField("http.response.timestamp", event.ResponseTimestamp)
 	ev.AddField("http.request.id", event.RequestId)
 
-	ev.AddField(string(semconv.NetSockHostAddrKey), event.SrcIp)
-	ev.AddField("destination.address", event.DstIp)
+	ev.AddField(string(semconv.ClientSocketAddressKey), event.SrcIp)
+	ev.AddField(string(semconv.ServerSocketAddressKey), event.DstIp)
 
 	var requestURI string
 
