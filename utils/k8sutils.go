@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 func GetK8sEventAttrs(client *CachedK8sClient, srcIp string, dstIp string) map[string]any {
