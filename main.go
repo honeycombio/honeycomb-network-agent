@@ -116,6 +116,16 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	ev.AddField(string(semconv.ClientSocketAddressKey), event.SrcIp)
 	ev.AddField(string(semconv.ServerSocketAddressKey), event.DstIp)
 
+	if nodeIP := os.Getenv("AGENT_NODE_IP"); nodeIP != "" {
+		ev.AddField("meta.agent.node.ip", nodeIP)
+	}
+	if nodeName := os.Getenv("AGENT_NODE_NAME"); nodeName != "" {
+		ev.AddField("meta.agent.node.name", nodeName)
+	}
+	if serviceAcctName := os.Getenv("AGENT_SERVICE_ACCOUNT_NAME"); serviceAcctName != "" {
+		ev.AddField("meta.agent.serviceaccount.name", serviceAcctName)
+	}
+
 	var requestURI string
 
 	// request attributes

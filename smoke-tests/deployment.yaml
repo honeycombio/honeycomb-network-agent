@@ -80,6 +80,19 @@ spec:
           # ports:
           #   - containerPort: 6060
           env:
+          # https://kubernetes.io/docs/concepts/workloads/pods/downward-api/
+            - name: AGENT_NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: AGENT_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: AGENT_SERVICE_ACCOUNT_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.serviceAccountName
             - name: HONEYCOMB_API_KEY
               valueFrom:
                 secretKeyRef:
