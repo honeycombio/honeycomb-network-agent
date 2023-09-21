@@ -97,7 +97,7 @@ func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembl
 // ReassemblyComplete is called when the TCP assembler believes a stream has completed.
 func (stream *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
 	log.Debug().
-		Uint64("stream_id", stream.id).
+		Str("stream_ident", stream.ident).
 		Msg("Connection closed")
 
 	// decrement the number of active streams
