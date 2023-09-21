@@ -17,8 +17,8 @@ func GetK8sEventAttrs(client *CachedK8sClient, srcIp string, dstIp string) map[s
 	k8sEventAttrs := map[string]any{}
 
 	if srcPod := client.GetPodByIPAddr(srcIp); srcPod != nil {
-		k8sEventAttrs[string(semconv.K8SPodNameKey)] = srcPod.Name
-		k8sEventAttrs[string(semconv.K8SPodUIDKey)] = srcPod.UID
+		k8sEventAttrs[fmt.Sprintf("source.%s", semconv.K8SPodNameKey)] = srcPod.Name
+		k8sEventAttrs[fmt.Sprintf("source.%s", semconv.K8SPodUIDKey)] = srcPod.UID
 		k8sEventAttrs[string(semconv.K8SNamespaceNameKey)] = srcPod.Namespace
 
 		if len(srcPod.Spec.Containers) > 0 {
