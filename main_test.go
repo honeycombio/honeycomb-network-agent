@@ -19,7 +19,7 @@ func Test_sendHttpEventToHoneycomb(t *testing.T) {
 	testReqTime := time.Now()
 
 	httpEvent := assemblers.HttpEvent{
-		RequestId: "c->s:1->2",
+		StreamIdent: "c->s:1->2",
 		Request: &http.Request{
 			Method:        "GET",
 			RequestURI:    "/check?teapot=true",
@@ -54,7 +54,7 @@ func Test_sendHttpEventToHoneycomb(t *testing.T) {
 		"name":                      "HTTP GET",
 		"client.socket.address":     "1.2.3.4",
 		"server.socket.address":     "5.6.7.8",
-		"http.request.id":           "c->s:1->2",
+		"meta.stream.ident":         "c->s:1->2",
 		"http.request.method":       "GET",
 		"url.path":                  "/check?teapot=true",
 		"http.request.body.size":    int64(42),
