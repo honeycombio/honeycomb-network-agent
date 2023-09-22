@@ -127,6 +127,9 @@ func sendHttpEventToHoneycomb(config config.Config, event assemblers.HttpEvent, 
 	if config.ServiceAccount != "" {
 		ev.AddField("meta.agent.serviceaccount.name", config.ServiceAccount)
 	}
+	if config.PodIP != "" {
+		ev.AddField("meta.agent.pod.ip", config.PodIP)
+	}
 
 	var requestURI string
 

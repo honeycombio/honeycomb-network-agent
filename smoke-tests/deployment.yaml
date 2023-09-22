@@ -93,6 +93,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.serviceAccountName
+            - name: AGENT_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
             - name: HONEYCOMB_API_KEY
               valueFrom:
                 secretKeyRef:
