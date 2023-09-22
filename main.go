@@ -201,6 +201,9 @@ func setupLibhoney(config config.Config) func() {
 	if config.AgentPodIP != "" {
 		libhoney.AddField("meta.agent.pod.ip", config.AgentPodIP)
 	}
+	if config.AgentPodName != "" {
+		libhoney.AddField("meta.agent.pod.name", config.AgentPodName)
+	}
 
 	return libhoney.Close
 }

@@ -98,6 +98,9 @@ type Config struct {
 
 	// The IP address of the pod the agent is running on.
 	AgentPodIP string
+
+	// The name of the pod the agent is running on.
+	AgentPodName string
 }
 
 // NewConfig returns a new Config struct.
@@ -131,6 +134,7 @@ func NewConfig() Config {
 		AgentNodeName:                 utils.LookupEnvOrString("AGENT_NODE_NAME", ""),
 		AgentServiceAccount:           utils.LookupEnvOrString("AGENT_SERVICE_ACCOUNT_NAME", ""),
 		AgentPodIP:                    utils.LookupEnvOrString("AGENT_POD_IP", ""),
+		AgentPodName:                  utils.LookupEnvOrString("AGENT_POD_NAME", ""),
 	}
 }
 
