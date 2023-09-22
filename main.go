@@ -20,14 +20,13 @@ import (
 const Version string = "0.0.17-alpha"
 
 func main() {
-	// get agent config
 	config := config.NewConfig()
 	if err := config.Validate(); err != nil {
 		log.Fatal().Err(err).Msg("Config validation failed")
 	}
 
 	// setup logging first
-	// TODO: move to log package
+	// TODO: move to utils package?
 	setupLogging(config)
 
 	log.Info().
@@ -50,7 +49,7 @@ func main() {
 	ctx, done := context.WithCancel(context.Background())
 
 	// setup k8s
-	// TODO: move setupK8s to k8s package?
+	// TODO: move setupK8s to utils package?
 	cachedK8sClient := setupK8s(ctx, config)
 
 	// create events channel for assembler to send events to and event handler to receive events from
