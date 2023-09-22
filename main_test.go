@@ -112,6 +112,11 @@ func Test_sendHttpEventToHoneycomb(t *testing.T) {
 	assert.Equal(t, expectedAttrs, attrs)
 }
 
+// setupTestLibhoney configures a Libhoney with a mock transmission for testing.
+//
+// Events sent can be found on the mock transmission:
+//
+//	events := mockTransmission.Events() // returns []*transmission.Event
 func setupTestLibhoney(t testing.TB) *transmission.MockSender {
 	mockTransmission := &transmission.MockSender{}
 	err := libhoney.Init(
