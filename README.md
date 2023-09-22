@@ -15,17 +15,16 @@ See notes on local development in [`DEVELOPING.md`](./DEVELOPING.md)
 
 - A running Kubernetes cluster (see [Supported Versions](#supported-versions))
 - A Honeycomb API Key
-- A classic [personal access token](https://github.com/settings/tokens) from GitHub with `read:packages` permission
 
 ### Setup
 
-Create honeycomb namespace:
+Create Honeycomb namespace for the agent to run in:
 
 ```sh
-kubectl apply -f examples/ns.yaml
+kubectl create namespace honeycomb
 ```
 
-Create secret for `HONEYCOMB_API_KEY` (alternatively, use `examples/secret-honeycomb.yaml`):
+Create Honeycomb secret for `HONEYCOMB_API_KEY` environment variable so it can be passed into the agent:
 
 ```sh
 export HONEYCOMB_API_KEY=mykey
