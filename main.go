@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 const Version string = "0.0.17-alpha"
@@ -89,14 +89,16 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	// being zero which causes the event duration to be negative.
 	if event.RequestTimestamp.IsZero() {
 		log.Debug().
-			Str("request_id", event.RequestId).
+			Str("stream_ident", event.StreamIdent).
+			Int64("request_id", event.RequestId).
 			Msg("Request timestamp is zero")
 		ev.AddField("http.request.timestamp_missing", true)
 		event.RequestTimestamp = time.Now()
 	}
 	if event.ResponseTimestamp.IsZero() {
 		log.Debug().
-			Str("request_id", event.RequestId).
+			Str("stream_ident", event.StreamIdent).
+			Int64("request_id", event.RequestId).
 			Msg("Response timestamp is zero")
 		ev.AddField("http.response.timestamp_missing", true)
 		event.ResponseTimestamp = time.Now()
@@ -108,13 +110,13 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	ev.AddField("meta.httpEvent_handled_at", time.Now())
 	ev.AddField("meta.httpEvent_request_handled_latency_ms", time.Since(event.RequestTimestamp).Milliseconds())
 	ev.AddField("meta.httpEvent_response_handled_latency_ms", time.Since(event.ResponseTimestamp).Milliseconds())
+	ev.AddField("meta.stream.ident", event.StreamIdent)
 	ev.AddField("duration_ms", eventDuration.Milliseconds())
 	ev.AddField("http.request.timestamp", event.RequestTimestamp)
 	ev.AddField("http.response.timestamp", event.ResponseTimestamp)
-	ev.AddField("http.request.id", event.RequestId)
 
-	ev.AddField(string(semconv.NetSockHostAddrKey), event.SrcIp)
-	ev.AddField("destination.address", event.DstIp)
+	ev.AddField(string(semconv.ClientSocketAddressKey), event.SrcIp)
+	ev.AddField(string(semconv.ServerSocketAddressKey), event.DstIp)
 
 	var requestURI string
 
@@ -122,10 +124,10 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	if event.Request != nil {
 		requestURI = event.Request.RequestURI
 		ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
-		ev.AddField(string(semconv.HTTPMethodKey), event.Request.Method)
-		ev.AddField(string(semconv.HTTPURLKey), requestURI)
+		ev.AddField(string(semconv.HTTPRequestMethodKey), event.Request.Method)
+		ev.AddField(string(semconv.URLPathKey), requestURI)
 		ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
-		ev.AddField("http.request.body.size", event.Request.ContentLength)
+		ev.AddField(string(semconv.HTTPRequestBodySizeKey), event.Request.ContentLength)
 	} else {
 		ev.AddField("name", "HTTP")
 		ev.AddField("http.request.missing", "no request on this event")
@@ -133,8 +135,8 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 
 	// response attributes
 	if event.Response != nil {
-		ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
-		ev.AddField("http.response.body.size", event.Response.ContentLength)
+		ev.AddField(string(semconv.HTTPResponseStatusCodeKey), event.Response.StatusCode)
+		ev.AddField(string(semconv.HTTPResponseBodySizeKey), event.Response.ContentLength)
 
 	} else {
 		ev.AddField("http.response.missing", "no response on this event")
@@ -144,7 +146,8 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	ev.Add(k8sEventAttrs)
 
 	log.Debug().
-		Str("request_id", event.RequestId).
+		Str("stream_ident", event.StreamIdent).
+		Int64("request_id", event.RequestId).
 		Time("event.timestamp", ev.Timestamp).
 		Str("http.url", requestURI).
 		Msg("Event sent")
@@ -173,17 +176,34 @@ func setupLogging(c config.Config) {
 
 // setupLibhoney initializes libhoney and sets global fields
 func setupLibhoney(config config.Config) func() {
+	// appends libhoney's user-agent, has to happen before libhoney.Init()
+	libhoney.UserAgentAddition = fmt.Sprintf("hny-network-agent/%s", Version)
+
 	libhoney.Init(libhoney.Config{
 		APIKey:  config.APIKey,
 		Dataset: config.Dataset,
 		APIHost: config.Endpoint,
 	})
 
-	// appends libhoney's user-agent (TODO: doesn't work, no useragent right now)
-	libhoney.UserAgentAddition = fmt.Sprintf("hny-network-agent/%s", Version)
-
 	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", Version)
+
+	if config.AgentNodeIP != "" {
+		libhoney.AddField("meta.agent.node.ip", config.AgentNodeIP)
+	}
+	if config.AgentNodeName != "" {
+		libhoney.AddField("meta.agent.node.name", config.AgentNodeName)
+	}
+	if config.AgentServiceAccount != "" {
+		libhoney.AddField("meta.agent.serviceaccount.name", config.AgentServiceAccount)
+	}
+	// because we use hostnetwork in deployments, the pod IP and node IP are the same
+	if config.AgentPodIP != "" {
+		libhoney.AddField("meta.agent.pod.ip", config.AgentPodIP)
+	}
+	if config.AgentPodName != "" {
+		libhoney.AddField("meta.agent.pod.name", config.AgentPodName)
+	}
 
 	return libhoney.Close
 }

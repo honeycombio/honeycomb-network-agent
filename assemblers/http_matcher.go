@@ -30,15 +30,14 @@ func newRequestResponseMatcher() *httpMatcher {
 //
 // If the response hasn't been seen yet,
 // stores the Request for later lookup and returns match as nil and matchFound will be false.
-func (m *httpMatcher) GetOrStoreRequest(ident string, timestamp time.Time, request *http.Request) (match *entry, matchFound bool) {
+func (m *httpMatcher) GetOrStoreRequest(key int64, timestamp time.Time, request *http.Request) (match *entry, matchFound bool) {
 	e := &entry{
 		request:          request,
 		requestTimestamp: timestamp,
 	}
 
-	if v, loaded := m.entries.LoadOrStore(ident, e); loaded {
-		// matching entry found
-		m.entries.Delete(ident)
+	if v, matchFound := m.entries.LoadOrStore(key, e); matchFound {
+		m.entries.Delete(key)
 		e = v.(*entry) // reuse allocated &entry{} to hold the match
 		// found entry has Response, so update it with Request
 		e.request = request
@@ -55,15 +54,14 @@ func (m *httpMatcher) GetOrStoreRequest(ident string, timestamp time.Time, reque
 //
 // If the request hasn't been seen yet,
 // stores the Response for later lookup and returns match as nil and matchFound will be false.
-func (m *httpMatcher) GetOrStoreResponse(ident string, timestamp time.Time, response *http.Response) (match *entry, matchFound bool) {
+func (m *httpMatcher) GetOrStoreResponse(key int64, timestamp time.Time, response *http.Response) (match *entry, matchFound bool) {
 	e := &entry{
 		response:          response,
 		responseTimestamp: timestamp,
 	}
 
-	if v, loaded := m.entries.LoadOrStore(ident, e); loaded {
-		// matching entry found
-		m.entries.Delete(ident)
+	if v, matchFound := m.entries.LoadOrStore(key, e); matchFound {
+		m.entries.Delete(key)
 		e = v.(*entry) // reuse allocated &entry{} to hold the match
 		// found entry has Request, so update it with Response
 		e.response = response
