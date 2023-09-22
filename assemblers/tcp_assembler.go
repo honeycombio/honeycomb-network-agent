@@ -190,8 +190,6 @@ func (h *tcpAssembler) Stop() {
 		h.streamPool.Dump()
 	}
 
-	h.streamFactory.WaitGoRoutines()
-	h.logAssemblerStats()
 	log.Debug().
 		Int("closed", closed).
 		Str("assembler_page_usage", h.assembler.Dump()).

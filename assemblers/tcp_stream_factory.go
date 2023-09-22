@@ -1,8 +1,6 @@
 package assemblers
 
 import (
-	"sync"
-
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	"github.com/gopacket/gopacket/reassembly"
@@ -12,7 +10,6 @@ import (
 
 type tcpStreamFactory struct {
 	config     config.Config
-	wg         sync.WaitGroup
 	httpEvents chan HttpEvent
 }
 
@@ -34,8 +31,4 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 	// increment the number of active streams
 	IncrementActiveStreamCount()
 	return stream
-}
-
-func (factory *tcpStreamFactory) WaitGoRoutines() {
-	factory.wg.Wait()
 }
