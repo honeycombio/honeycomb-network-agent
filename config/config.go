@@ -88,16 +88,16 @@ type Config struct {
 	MaxBufferedPagesPerConnection int
 
 	// The IP address of the node the agent is running on.
-	NodeIP string
+	AgentNodeIP string
 
 	// The name of the node the agent is running on.
-	NodeName string
+	AgentNodeName string
 
 	// The name of the service account the agent is running as.
-	ServiceAccount string
+	AgentServiceAccount string
 
 	// The IP address of the pod the agent is running on.
-	PodIP string
+	AgentPodIP string
 }
 
 // NewConfig returns a new Config struct.
@@ -127,10 +127,10 @@ func NewConfig() Config {
 		ChannelBufferSize:             1000,
 		MaxBufferedPagesTotal:         150_000,
 		MaxBufferedPagesPerConnection: 4000,
-		NodeIP:                        utils.LookupEnvOrString("AGENT_NODE_IP", ""),
-		NodeName:                      utils.LookupEnvOrString("AGENT_NODE_NAME", ""),
-		ServiceAccount:                utils.LookupEnvOrString("AGENT_SERVICE_ACCOUNT_NAME", ""),
-		PodIP:                         utils.LookupEnvOrString("AGENT_POD_IP", ""),
+		AgentNodeIP:                   utils.LookupEnvOrString("AGENT_NODE_IP", ""),
+		AgentNodeName:                 utils.LookupEnvOrString("AGENT_NODE_NAME", ""),
+		AgentServiceAccount:           utils.LookupEnvOrString("AGENT_SERVICE_ACCOUNT_NAME", ""),
+		AgentPodIP:                    utils.LookupEnvOrString("AGENT_POD_IP", ""),
 	}
 }
 

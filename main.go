@@ -118,17 +118,17 @@ func sendHttpEventToHoneycomb(config config.Config, event assemblers.HttpEvent, 
 	ev.AddField(string(semconv.ClientSocketAddressKey), event.SrcIp)
 	ev.AddField(string(semconv.ServerSocketAddressKey), event.DstIp)
 
-	if config.NodeIP != "" {
-		ev.AddField("meta.agent.node.ip", config.NodeIP)
+	if config.AgentNodeIP != "" {
+		ev.AddField("meta.agent.node.ip", config.AgentNodeIP)
 	}
-	if config.NodeName != "" {
-		ev.AddField("meta.agent.node.name", config.NodeName)
+	if config.AgentNodeName != "" {
+		ev.AddField("meta.agent.node.name", config.AgentNodeName)
 	}
-	if config.ServiceAccount != "" {
-		ev.AddField("meta.agent.serviceaccount.name", config.ServiceAccount)
+	if config.AgentServiceAccount != "" {
+		ev.AddField("meta.agent.serviceaccount.name", config.AgentServiceAccount)
 	}
-	if config.PodIP != "" {
-		ev.AddField("meta.agent.pod.ip", config.PodIP)
+	if config.AgentPodIP != "" {
+		ev.AddField("meta.agent.pod.ip", config.AgentPodIP)
 	}
 
 	var requestURI string
