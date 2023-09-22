@@ -60,7 +60,7 @@ func main() {
 	// TODO: Move event handling into the assembler
 	httpEvents := make(chan assemblers.HttpEvent, config.ChannelBufferSize)
 	assembler := assemblers.NewTcpAssembler(config, httpEvents)
-	go handleHttpEvents(config, httpEvents, cachedK8sClient)
+	go handleHttpEvents(httpEvents, cachedK8sClient)
 	go assembler.Start()
 	defer assembler.Stop()
 
@@ -73,14 +73,14 @@ func main() {
 	log.Info().Msg("Shutting down...")
 }
 
-func handleHttpEvents(config config.Config, events chan assemblers.HttpEvent, client *utils.CachedK8sClient) {
+func handleHttpEvents(events chan assemblers.HttpEvent, client *utils.CachedK8sClient) {
 	for {
 		event := <-events
-		sendHttpEventToHoneycomb(config, event, client)
+		sendHttpEventToHoneycomb(event, client)
 	}
 }
 
-func sendHttpEventToHoneycomb(config config.Config, event assemblers.HttpEvent, k8sClient *utils.CachedK8sClient) {
+func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.CachedK8sClient) {
 	// create libhoney event
 	ev := libhoney.NewEvent()
 
@@ -117,19 +117,6 @@ func sendHttpEventToHoneycomb(config config.Config, event assemblers.HttpEvent, 
 
 	ev.AddField(string(semconv.ClientSocketAddressKey), event.SrcIp)
 	ev.AddField(string(semconv.ServerSocketAddressKey), event.DstIp)
-
-	if config.AgentNodeIP != "" {
-		ev.AddField("meta.agent.node.ip", config.AgentNodeIP)
-	}
-	if config.AgentNodeName != "" {
-		ev.AddField("meta.agent.node.name", config.AgentNodeName)
-	}
-	if config.AgentServiceAccount != "" {
-		ev.AddField("meta.agent.serviceaccount.name", config.AgentServiceAccount)
-	}
-	if config.AgentPodIP != "" {
-		ev.AddField("meta.agent.pod.ip", config.AgentPodIP)
-	}
 
 	var requestURI string
 
@@ -200,6 +187,19 @@ func setupLibhoney(config config.Config) func() {
 
 	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", Version)
+
+	if config.AgentNodeIP != "" {
+		libhoney.AddField("meta.agent.node.ip", config.AgentNodeIP)
+	}
+	if config.AgentNodeName != "" {
+		libhoney.AddField("meta.agent.node.name", config.AgentNodeName)
+	}
+	if config.AgentServiceAccount != "" {
+		libhoney.AddField("meta.agent.serviceaccount.name", config.AgentServiceAccount)
+	}
+	if config.AgentPodIP != "" {
+		libhoney.AddField("meta.agent.pod.ip", config.AgentPodIP)
+	}
 
 	return libhoney.Close
 }
