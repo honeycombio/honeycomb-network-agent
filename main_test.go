@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -10,14 +11,16 @@ import (
 	"github.com/honeycombio/libhoney-go"
 	"github.com/honeycombio/libhoney-go/transmission"
 	"github.com/stretchr/testify/assert"
-	"k8s.io/client-go/kubernetes"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func Test_sendHttpEventToHoneycomb(t *testing.T) {
-	mockTransmission := setupTestLibhoney(t)
+	// TEST SETUP
 
+	// Test Data - an assembled HTTP Event
 	testReqTime := time.Now()
-
 	httpEvent := assemblers.HttpEvent{
 		StreamIdent: "c->s:1->2",
 		Request: &http.Request{
@@ -36,11 +39,45 @@ func Test_sendHttpEventToHoneycomb(t *testing.T) {
 		DstIp:             "5.6.7.8",
 	}
 
+	// Test Data - k8s metadata
+	srcPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "src-pod",
+			Namespace: "unit-tests",
+			UID:       "src-pod-uid",
+		},
+		Status: v1.PodStatus{
+			PodIP: httpEvent.SrcIp,
+		},
+	}
+
+	destPod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "dest-pod",
+			Namespace: "unit-tests",
+			UID:       "dest-pod-uid",
+		},
+		Status: v1.PodStatus{
+			PodIP: httpEvent.DstIp,
+		},
+	}
+
+	// create a fake k8s clientset with the test pod metadata and start the cached client with it
+	fakeCachedK8sClient := utils.NewCachedK8sClient(fake.NewSimpleClientset(srcPod, destPod))
+	cancelableCtx, done := context.WithCancel(context.Background())
+	fakeCachedK8sClient.Start(cancelableCtx)
+	defer done()
+
+	// Setup libhoney for testing, use mock transmission to retrieve events "sent"
+	mockTransmission := setupTestLibhoney(t)
+
+	// TEST ACTION: convert the httpEvent and send to Honeycomb
 	sendHttpEventToHoneycomb(
 		httpEvent,
-		utils.NewCachedK8sClient(&kubernetes.Clientset{}), // TODO: mock the k8s metadata, silence for now
+		fakeCachedK8sClient,
 	)
 
+	// VALIDATE
 	events := mockTransmission.Events()
 	assert.Equal(t, 1, len(events), "Expected 1 and only 1 event to be sent")
 
@@ -51,19 +88,25 @@ func Test_sendHttpEventToHoneycomb(t *testing.T) {
 	delete(attrs, "meta.httpEvent_response_handled_latency_ms")
 
 	expectedAttrs := map[string]interface{}{
-		"name":                      "HTTP GET",
-		"client.socket.address":     "1.2.3.4",
-		"server.socket.address":     "5.6.7.8",
-		"meta.stream.ident":         "c->s:1->2",
-		"http.request.method":       "GET",
-		"url.path":                  "/check?teapot=true",
-		"http.request.body.size":    int64(42),
-		"http.request.timestamp":    testReqTime,
-		"http.response.timestamp":   testReqTime.Add(3 * time.Millisecond),
-		"http.response.status_code": 418,
-		"http.response.body.size":   int64(84),
-		"duration_ms":               int64(3),
-		"user_agent.original":       "teapot-checker/1.0",
+		"name":                           "HTTP GET",
+		"client.socket.address":          "1.2.3.4",
+		"server.socket.address":          "5.6.7.8",
+		"meta.stream.ident":              "c->s:1->2",
+		"http.request.method":            "GET",
+		"url.path":                       "/check?teapot=true",
+		"http.request.body.size":         int64(42),
+		"http.request.timestamp":         testReqTime,
+		"http.response.timestamp":        testReqTime.Add(3 * time.Millisecond),
+		"http.response.status_code":      418,
+		"http.response.body.size":        int64(84),
+		"duration_ms":                    int64(3),
+		"user_agent.original":            "teapot-checker/1.0",
+		"source.k8s.namespace.name":      "unit-tests",
+		"source.k8s.pod.name":            "src-pod",
+		"source.k8s.pod.uid":             srcPod.UID,
+		"destination.k8s.namespace.name": "unit-tests",
+		"destination.k8s.pod.name":       "dest-pod",
+		"destination.k8s.pod.uid":        destPod.UID,
 	}
 
 	assert.Equal(t, expectedAttrs, attrs)
