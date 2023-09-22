@@ -60,7 +60,7 @@ func main() {
 	// TODO: Move event handling into the assembler
 	httpEvents := make(chan assemblers.HttpEvent, config.ChannelBufferSize)
 	assembler := assemblers.NewTcpAssembler(config, httpEvents)
-	go handleHttpEvents(httpEvents, cachedK8sClient)
+	go handleHttpEvents(config, httpEvents, cachedK8sClient)
 	go assembler.Start()
 	defer assembler.Stop()
 
@@ -73,14 +73,14 @@ func main() {
 	log.Info().Msg("Shutting down...")
 }
 
-func handleHttpEvents(events chan assemblers.HttpEvent, client *utils.CachedK8sClient) {
+func handleHttpEvents(config config.Config, events chan assemblers.HttpEvent, client *utils.CachedK8sClient) {
 	for {
 		event := <-events
-		sendHttpEventToHoneycomb(event, client)
+		sendHttpEventToHoneycomb(config, event, client)
 	}
 }
 
-func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.CachedK8sClient) {
+func sendHttpEventToHoneycomb(config config.Config, event assemblers.HttpEvent, k8sClient *utils.CachedK8sClient) {
 	// create libhoney event
 	ev := libhoney.NewEvent()
 
@@ -118,14 +118,14 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 	ev.AddField(string(semconv.ClientSocketAddressKey), event.SrcIp)
 	ev.AddField(string(semconv.ServerSocketAddressKey), event.DstIp)
 
-	if nodeIP := os.Getenv("AGENT_NODE_IP"); nodeIP != "" {
-		ev.AddField("meta.agent.node.ip", nodeIP)
+	if config.NodeIP != "" {
+		ev.AddField("meta.agent.node.ip", config.NodeIP)
 	}
-	if nodeName := os.Getenv("AGENT_NODE_NAME"); nodeName != "" {
-		ev.AddField("meta.agent.node.name", nodeName)
+	if config.NodeName != "" {
+		ev.AddField("meta.agent.node.name", config.NodeName)
 	}
-	if serviceAcctName := os.Getenv("AGENT_SERVICE_ACCOUNT_NAME"); serviceAcctName != "" {
-		ev.AddField("meta.agent.serviceaccount.name", serviceAcctName)
+	if config.ServiceAccount != "" {
+		ev.AddField("meta.agent.serviceaccount.name", config.ServiceAccount)
 	}
 
 	var requestURI string
