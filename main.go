@@ -188,6 +188,23 @@ func setupLibhoney(config config.Config) func() {
 	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", Version)
 
+	if config.AgentNodeIP != "" {
+		libhoney.AddField("meta.agent.node.ip", config.AgentNodeIP)
+	}
+	if config.AgentNodeName != "" {
+		libhoney.AddField("meta.agent.node.name", config.AgentNodeName)
+	}
+	if config.AgentServiceAccount != "" {
+		libhoney.AddField("meta.agent.serviceaccount.name", config.AgentServiceAccount)
+	}
+	// because we use hostnetwork in deployments, the pod IP and node IP are the same
+	if config.AgentPodIP != "" {
+		libhoney.AddField("meta.agent.pod.ip", config.AgentPodIP)
+	}
+	if config.AgentPodName != "" {
+		libhoney.AddField("meta.agent.pod.name", config.AgentPodName)
+	}
+
 	return libhoney.Close
 }
 
