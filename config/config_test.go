@@ -55,6 +55,10 @@ func TestEnvVars(t *testing.T) {
 	t.Setenv("LOG_LEVEL", "DEBUG")
 	t.Setenv("DEBUG", "true")
 	t.Setenv("DEBUG_ADDRESS", "1.2.3.4:5678")
+	t.Setenv("AGENT_NODE_IP", "node_ip")
+	t.Setenv("AGENT_NODE_NAME", "node_name")
+	t.Setenv("AGENT_SERVICE_ACCOUNT_NAME", "service_account_name")
+	t.Setenv("AGENT_POD_IP", "pod_ip")
 
 	config := config.NewConfig()
 	assert.Equal(t, "1234567890123456789012", config.APIKey)
@@ -64,4 +68,8 @@ func TestEnvVars(t *testing.T) {
 	assert.Equal(t, "DEBUG", config.LogLevel)
 	assert.Equal(t, true, config.Debug)
 	assert.Equal(t, "1.2.3.4:5678", config.DebugAddress)
+	assert.Equal(t, "node_ip", config.AgentNodeIP)
+	assert.Equal(t, "node_name", config.AgentNodeName)
+	assert.Equal(t, "service_account_name", config.AgentServiceAccount)
+	assert.Equal(t, "pod_ip", config.AgentPodIP)
 }
