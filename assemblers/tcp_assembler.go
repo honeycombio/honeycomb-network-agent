@@ -1,6 +1,7 @@
 package assemblers
 
 import (
+	"context"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -106,7 +107,7 @@ func NewTcpAssembler(config config.Config, httpEvents chan HttpEvent) tcpAssembl
 	}
 }
 
-func (h *tcpAssembler) Start() {
+func (h *tcpAssembler) Start(ctx context.Context) {
 	log.Info().Msg("Starting TCP assembler")
 	// Tick on the tightest loop. The flush timeout is the shorter of the two timeouts using this ticker.
 	// Tick even more frequently than the flush interval (4 is somewhat arbitrary)
@@ -117,6 +118,9 @@ func (h *tcpAssembler) Start() {
 
 	for {
 		select {
+		case <-ctx.Done():
+			h.Stop()
+			return
 		case <-flushCloseTicker.C:
 			flushed, closed := h.assembler.FlushWithOptions(
 				reassembly.FlushOptions{
