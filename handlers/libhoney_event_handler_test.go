@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -70,23 +69,18 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 	fakeCachedK8sClient.Start(cancelableCtx)
 	defer done()
 
+	// create event channel used to pass in events to the handler
+	eventsChannel := make(chan assemblers.HttpEvent, 1)
+
+	// create the event handler with default config, fake k8s client & event channel then start it
+	handler := NewLibhoneyEventHandler(config.Config{}, fakeCachedK8sClient, eventsChannel, "test")
+	go handler.Start(cancelableCtx)
+
 	// Setup libhoney for testing, use mock transmission to retrieve events "sent"
+	// must be done after the event handler is created
 	mockTransmission := setupTestLibhoney(t)
 
-	// TEST ACTION: convert the httpEvent and send to Honeycomb
-	config := config.Config{}
-	k8sClient := utils.NewCachedK8sClient(&kubernetes.Clientset{})
-	eventsChannel := make(chan assemblers.HttpEvent, 1)
-	version := "test"
-	// TODO: mock the k8s metadata, silence for now
-	handler := NewLibhoneyEventHandler(config, k8sClient, eventsChannel, version)
-
-	// start handler
-	ctx, done := context.WithCancel(context.Background())
-	go handler.Start(ctx)
-	defer done()
-
-	// send an event to handler
+	// TEST ACTION: pass in httpEvent to handler
 	eventsChannel <- httpEvent
 	time.Sleep(10 * time.Millisecond)
 
