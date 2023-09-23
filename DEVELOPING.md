@@ -45,7 +45,7 @@ For example, to get a local docker image called `hny/network-agent-go:custom`:
 
 ## Deploying the agent to a Kubernetes cluster
 
-Set environment variables like `HONEYCOMB_API_KEY` and the previously noted `GITHUB_TOKEN` and `BASE64_TOKEN` in a file called `.env`.
+Set environment variables like `HONEYCOMB_API_KEY` in a file called `.env`.
 These environment variables get passed in the make command.
 
 `make apply-network-agent`
