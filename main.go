@@ -142,8 +142,8 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 		ev.AddField("http.response.missing", "no response on this event")
 	}
 
-	k8sEventAttrs := utils.GetK8sEventAttrs(k8sClient, event.SrcIp, event.DstIp)
-	ev.Add(k8sEventAttrs)
+	ev.Add(utils.GetK8sAttrsForIp(k8sClient, event.SrcIp, "source"))
+	ev.Add(utils.GetK8sAttrsForIp(k8sClient, event.DstIp, "destination"))
 
 	log.Debug().
 		Str("stream_ident", event.StreamIdent).

@@ -4,57 +4,48 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
-func GetK8sEventAttrs(client *CachedK8sClient, srcIp string, dstIp string) map[string]any {
-	log.Debug().
-		Str("src_ip", srcIp).
-		Str("dst_ip", dstIp).
-		Msg("Getting k8s event attrs")
+// GetK8sAttrsForIp returns a map of kubernetes metadata attributes for a given IP address.
+//
+// Provide a prefix to prepend to the attribute names, example: "source" or "destination".
+//
+// If the IP address is not found in the kubernetes cache, an empty map is returned.
+func GetK8sAttrsForIp(client *CachedK8sClient, ip string, prefix string) map[string]any {
+	k8sAttrs := map[string]any{}
 
-	k8sEventAttrs := map[string]any{}
+	if ip == "" {
+		return k8sAttrs
+	}
 
-	if srcPod := client.GetPodByIPAddr(srcIp); srcPod != nil {
-		k8sEventAttrs[string(semconv.K8SPodNameKey)] = srcPod.Name
-		k8sEventAttrs[string(semconv.K8SPodUIDKey)] = srcPod.UID
-		k8sEventAttrs[string(semconv.K8SNamespaceNameKey)] = srcPod.Namespace
+	if prefix != "" {
+		prefix = fmt.Sprintf("%s.", prefix)
+	}
 
-		if len(srcPod.Spec.Containers) > 0 {
+	if pod := client.GetPodByIPAddr(ip); pod != nil {
+		k8sAttrs[prefix+string(semconv.K8SPodNameKey)] = pod.Name
+		k8sAttrs[prefix+string(semconv.K8SPodUIDKey)] = pod.UID
+		k8sAttrs[prefix+string(semconv.K8SNamespaceNameKey)] = pod.Namespace
+
+		if len(pod.Spec.Containers) > 0 {
 			var containerNames []string
-			for _, container := range srcPod.Spec.Containers {
+			for _, container := range pod.Spec.Containers {
 				containerNames = append(containerNames, container.Name)
 			}
-			k8sEventAttrs[string(semconv.K8SContainerNameKey)] = strings.Join(containerNames, ",")
+			k8sAttrs[prefix+string(semconv.K8SContainerNameKey)] = strings.Join(containerNames, ",")
 		}
 
-		if srcNode := client.GetNodeByName(srcPod.Spec.NodeName); srcNode != nil {
-			k8sEventAttrs[string(semconv.K8SNodeNameKey)] = srcNode.Name
-			k8sEventAttrs[string(semconv.K8SNodeUIDKey)] = srcNode.UID
+		if node := client.GetNodeByName(pod.Spec.NodeName); node != nil {
+			k8sAttrs[prefix+string(semconv.K8SNodeNameKey)] = node.Name
+			k8sAttrs[prefix+string(semconv.K8SNodeUIDKey)] = node.UID
 		}
 
-		if service := client.GetServiceForPod(srcPod); service != nil {
+		if service := client.GetServiceForPod(pod); service != nil {
 			// no semconv for service yet
-			k8sEventAttrs["k8s.service.name"] = service.Name
+			k8sAttrs["k8s.service.name"] = service.Name
 		}
 	}
 
-	if dstPod := client.GetPodByIPAddr(dstIp); dstPod != nil {
-		k8sEventAttrs[fmt.Sprintf("destination.%s", semconv.K8SPodNameKey)] = dstPod.Name
-		k8sEventAttrs[fmt.Sprintf("destination.%s", semconv.K8SPodUIDKey)] = dstPod.UID
-
-		dstNode := client.GetNodeByName(dstPod.Spec.NodeName)
-		if dstNode != nil {
-			k8sEventAttrs[fmt.Sprintf("destination.%s", semconv.K8SNodeNameKey)] = dstNode.Name
-			k8sEventAttrs[fmt.Sprintf("destination.%s", semconv.K8SNodeUIDKey)] = dstNode.UID
-		}
-
-		if service := client.GetServiceForPod(dstPod); service != nil {
-			// no semconv for service yet
-			k8sEventAttrs["destination.k8s.service.name"] = service.Name
-		}
-	}
-
-	return k8sEventAttrs
+	return k8sAttrs
 }

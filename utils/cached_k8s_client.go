@@ -25,8 +25,8 @@ type CachedK8sClient struct {
 	serviceInformer cache.SharedIndexInformer
 }
 
-func NewCachedK8sClient(client *kubernetes.Clientset) *CachedK8sClient {
-	factory := informers.NewSharedInformerFactory(client, ResyncTime)
+func NewCachedK8sClient(clientset kubernetes.Interface) *CachedK8sClient {
+	factory := informers.NewSharedInformerFactory(clientset, ResyncTime)
 	podInformer := factory.Core().V1().Pods().Informer()
 	serviceInformer := factory.Core().V1().Services().Informer()
 	nodeInformer := factory.Core().V1().Nodes().Informer()
