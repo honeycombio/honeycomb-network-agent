@@ -13,14 +13,16 @@ import (
 )
 
 const (
-	ResyncTime = time.Minute * 5
+	ResyncTime      = time.Minute * 5
+	podByIPIndex    = "podIP"
+	nodeByNameIndex = "nodeName"
 )
 
 type CachedK8sClient struct {
 	factory         informers.SharedInformerFactory
-	nodeInformer    cache.SharedInformer
-	podInformer     cache.SharedInformer
-	serviceInformer cache.SharedInformer
+	nodeInformer    cache.SharedIndexInformer
+	podInformer     cache.SharedIndexInformer
+	serviceInformer cache.SharedIndexInformer
 }
 
 func NewCachedK8sClient(clientset kubernetes.Interface) *CachedK8sClient {
@@ -28,10 +30,19 @@ func NewCachedK8sClient(clientset kubernetes.Interface) *CachedK8sClient {
 	podInformer := factory.Core().V1().Pods().Informer()
 	serviceInformer := factory.Core().V1().Services().Informer()
 	nodeInformer := factory.Core().V1().Nodes().Informer()
-	// TODO: add custom indexes to improve lookup speed
-	// - podinformer: pod IP
-	// - serviceinformer: by pod name
-	// - nodeinformer: by pod IP
+
+	podInformer.AddIndexers(map[string]cache.IndexFunc{
+		podByIPIndex: func(obj interface{}) ([]string, error) {
+			pod := obj.(*v1.Pod)
+			return []string{pod.Status.PodIP}, nil
+		},
+	})
+	nodeInformer.AddIndexers(map[string]cache.IndexFunc{
+		nodeByNameIndex: func(obj interface{}) ([]string, error) {
+			node := obj.(*v1.Node)
+			return []string{node.Name}, nil
+		},
+	})
 
 	return &CachedK8sClient{
 		factory:         factory,
@@ -46,85 +57,45 @@ func (c *CachedK8sClient) Start(ctx context.Context) {
 	c.factory.WaitForCacheSync(ctx.Done())
 }
 
-func (c *CachedK8sClient) GetNodes() []*v1.Node {
-	var nodes []*v1.Node
-	items := c.nodeInformer.GetStore().List()
-	for _, node := range items {
-		nodes = append(nodes, node.(*v1.Node))
-	}
-	return nodes
-}
-
-func (c *CachedK8sClient) GetPods() []*v1.Pod {
-	var pods []*v1.Pod
-	items := c.podInformer.GetStore().List()
-	for _, pod := range items {
-		pods = append(pods, pod.(*v1.Pod))
-	}
-	return pods
-}
-
-func (c *CachedK8sClient) GetServices() ([]*v1.Service, error) {
-	var services []*v1.Service
-	items := c.serviceInformer.GetStore().List()
-	for _, service := range items {
-		services = append(services, service.(*v1.Service))
-	}
-	return services, nil
-}
-
-func (c *CachedK8sClient) GetPodsWithSelector(selector labels.Selector) ([]*v1.Pod, error) {
-	pods := c.GetPods()
-	var matchedPods []*v1.Pod
-	for _, pod := range pods {
-		if selector.Matches(labels.Set(pod.Labels)) {
-			matchedPods = append(matchedPods, pod)
-		}
-	}
-	return matchedPods, nil
-}
-
+// GetPodByIPAddr returns the pod with the given IP address
 func (c *CachedK8sClient) GetPodByIPAddr(ipAddr string) *v1.Pod {
-	pods := c.GetPods()
-	var matchedPod *v1.Pod
-	for _, pod := range pods {
-		if ipAddr == pod.Status.PodIP || ipAddr == pod.Status.HostIP {
-			matchedPod = pod
-		}
-	}
-	return matchedPod
-}
-
-func (c *CachedK8sClient) GetServiceForPod(inputPod *v1.Pod) *v1.Service {
-	services, err := c.GetServices()
+	val, err := c.podInformer.GetIndexer().ByIndex(podByIPIndex, ipAddr)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to get service for pod")
+		log.Err(err).Msg("Error getting pod by IP")
+		return nil
 	}
-	var matchedService *v1.Service
-	for _, service := range services {
-		set := labels.Set(service.Spec.Selector)
-		pods, err := c.GetPodsWithSelector(set.AsSelector())
-		if err != nil {
-			log.Error().Str("msg", "failed to get service for pod").Msg("failed to get pods")
-		}
-		for _, pod := range pods {
-			if pod.Name == inputPod.Name {
-				matchedService = service
-			}
-		}
+	if len(val) == 0 {
+		return nil
 	}
-	return matchedService
+	return val[0].(*v1.Pod)
 }
 
-func (c *CachedK8sClient) GetNodeByPod(pod *v1.Pod) *v1.Node {
-	nodes := c.GetNodes()
-	var matchedNode *v1.Node
-	for _, node := range nodes {
-		for _, addr := range node.Status.Addresses {
-			if addr.Address == pod.Status.HostIP {
-				matchedNode = node
-			}
+// GetServiceForPod returns the service that the given pod is associated with
+func (c *CachedK8sClient) GetServiceForPod(pod *v1.Pod) *v1.Service {
+	podLabels := labels.Set(pod.Labels)
+	for _, item := range c.serviceInformer.GetStore().List() {
+		service := item.(*v1.Service)
+		// Ignore services without selectors
+		if service.Spec.Selector == nil {
+			continue
+		}
+		serviceSelector := labels.SelectorFromSet(service.Spec.Selector)
+		if serviceSelector.Matches(podLabels) {
+			return service
 		}
 	}
-	return matchedNode
+	return nil
+}
+
+// GetNodeByName returns the node with the given name
+func (c *CachedK8sClient) GetNodeForPod(pod *v1.Pod) *v1.Node {
+	val, err := c.nodeInformer.GetIndexer().ByIndex(nodeByNameIndex, pod.Spec.NodeName)
+	if err != nil {
+		log.Err(err).Msg("Error getting node by name")
+		return nil
+	}
+	if len(val) == 0 {
+		return nil
+	}
+	return val[0].(*v1.Node)
 }
