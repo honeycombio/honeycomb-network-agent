@@ -11,8 +11,8 @@
 .terraform*
 terraform.tfstate*
 
-# dotenv
-.env
+# env files
+.env*
 
 # python cache (locust)
 __pycache__/
