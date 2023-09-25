@@ -61,7 +61,7 @@ func (c *CachedK8sClient) Start(ctx context.Context) {
 func (c *CachedK8sClient) GetPodByIPAddr(ipAddr string) *v1.Pod {
 	val, err := c.podInformer.GetIndexer().ByIndex(podByIPIndex, ipAddr)
 	if err != nil {
-		log.Err(err).Msg("failed to get pod by IP address")
+		log.Err(err).Msg("Error getting pod by IP")
 		return nil
 	}
 	if len(val) == 0 {
@@ -91,10 +91,10 @@ func (c *CachedK8sClient) GetServiceForPod(pod *v1.Pod) *v1.Service {
 func (c *CachedK8sClient) GetNodeByName(nodeName string) *v1.Node {
 	val, err := c.nodeInformer.GetIndexer().ByIndex(nodeByNameIndex, nodeName)
 	if err != nil {
+		log.Err(err).Msg("Error getting node by name")
 		return nil
 	}
 	if len(val) == 0 {
-		log.Info().Str("node", nodeName).Msg("No node found by name")
 		return nil
 	}
 	return val[0].(*v1.Node)
