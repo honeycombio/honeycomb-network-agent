@@ -36,14 +36,15 @@ func GetK8sAttrsForIp(client *CachedK8sClient, ip string, prefix string) map[str
 			k8sAttrs[prefix+string(semconv.K8SContainerNameKey)] = strings.Join(containerNames, ",")
 		}
 
-		if node := client.GetNodeByName(pod.Spec.NodeName); node != nil {
+		if node := client.GetNodeForPod(pod); node != nil {
 			k8sAttrs[prefix+string(semconv.K8SNodeNameKey)] = node.Name
 			k8sAttrs[prefix+string(semconv.K8SNodeUIDKey)] = node.UID
 		}
 
 		if service := client.GetServiceForPod(pod); service != nil {
 			// no semconv for service yet
-			k8sAttrs["k8s.service.name"] = service.Name
+			k8sAttrs[prefix+"k8s.service.name"] = service.Name
+			k8sAttrs[prefix+"k8s.service.uid"] = service.UID
 		}
 	}
 

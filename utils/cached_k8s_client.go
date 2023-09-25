@@ -88,8 +88,8 @@ func (c *CachedK8sClient) GetServiceForPod(pod *v1.Pod) *v1.Service {
 }
 
 // GetNodeByName returns the node with the given name
-func (c *CachedK8sClient) GetNodeByName(nodeName string) *v1.Node {
-	val, err := c.nodeInformer.GetIndexer().ByIndex(nodeByNameIndex, nodeName)
+func (c *CachedK8sClient) GetNodeForPod(pod *v1.Pod) *v1.Node {
+	val, err := c.nodeInformer.GetIndexer().ByIndex(nodeByNameIndex, pod.Spec.NodeName)
 	if err != nil {
 		log.Err(err).Msg("Error getting node by name")
 		return nil
