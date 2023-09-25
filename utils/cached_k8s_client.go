@@ -31,7 +31,6 @@ func NewCachedK8sClient(client *kubernetes.Clientset) *CachedK8sClient {
 	podInformer := factory.Core().V1().Pods().Informer()
 	serviceInformer := factory.Core().V1().Services().Informer()
 	nodeInformer := factory.Core().V1().Nodes().Informer()
-	// TODO: add index for service by pod name
 
 	podInformer.AddIndexers(map[string]cache.IndexFunc{
 		podByIPIndexName: func(obj interface{}) ([]string, error) {
@@ -59,35 +58,6 @@ func (c *CachedK8sClient) Start(ctx context.Context) {
 	c.factory.WaitForCacheSync(ctx.Done())
 }
 
-func (c *CachedK8sClient) GetPods() []*v1.Pod {
-	var pods []*v1.Pod
-	items := c.podInformer.GetStore().List()
-	for _, pod := range items {
-		pods = append(pods, pod.(*v1.Pod))
-	}
-	return pods
-}
-
-func (c *CachedK8sClient) GetServices() ([]*v1.Service, error) {
-	var services []*v1.Service
-	items := c.serviceInformer.GetStore().List()
-	for _, service := range items {
-		services = append(services, service.(*v1.Service))
-	}
-	return services, nil
-}
-
-func (c *CachedK8sClient) GetPodsWithSelector(selector labels.Selector) ([]*v1.Pod, error) {
-	pods := c.GetPods()
-	var matchedPods []*v1.Pod
-	for _, pod := range pods {
-		if selector.Matches(labels.Set(pod.Labels)) {
-			matchedPods = append(matchedPods, pod)
-		}
-	}
-	return matchedPods, nil
-}
-
 // GetPodByIPAddr returns the pod with the given IP address
 func (c *CachedK8sClient) GetPodByIPAddr(ipAddr string) *v1.Pod {
 	val, err := c.podInformer.GetIndexer().ByIndex(podByIPIndexName, ipAddr)
@@ -102,25 +72,20 @@ func (c *CachedK8sClient) GetPodByIPAddr(ipAddr string) *v1.Pod {
 }
 
 // GetServiceForPod returns the service that the given pod is associated with
-func (c *CachedK8sClient) GetServiceForPod(inputPod *v1.Pod) *v1.Service {
-	services, err := c.GetServices()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get service for pod")
-	}
-	var matchedService *v1.Service
-	for _, service := range services {
-		set := labels.Set(service.Spec.Selector)
-		pods, err := c.GetPodsWithSelector(set.AsSelector())
-		if err != nil {
-			log.Error().Str("msg", "failed to get service for pod").Msg("failed to get pods")
+func (c *CachedK8sClient) GetServiceForPod(pod *v1.Pod) *v1.Service {
+	podLabels := labels.Set(pod.Labels)
+	for _, item := range c.serviceInformer.GetStore().List() {
+		service := item.(*v1.Service)
+		// Ignore services without selectors
+		if service.Spec.Selector == nil {
+			continue
 		}
-		for _, pod := range pods {
-			if pod.Name == inputPod.Name {
-				matchedService = service
-			}
+		serviceSelector := labels.SelectorFromSet(service.Spec.Selector)
+		if serviceSelector.Matches(podLabels) {
+			return service
 		}
 	}
-	return matchedService
+	return nil
 }
 
 // GetNodeByName returns the node with the given name
