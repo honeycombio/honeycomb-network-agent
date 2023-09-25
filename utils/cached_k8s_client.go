@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	ResyncTime       = time.Minute * 5
-	podByIPIndexName = "podIP"
-	nodeByNameIndex  = "nodeName"
+	ResyncTime      = time.Minute * 5
+	podByIPIndex    = "podIP"
+	nodeByNameIndex = "nodeName"
 )
 
 type CachedK8sClient struct {
@@ -32,7 +32,7 @@ func NewCachedK8sClient(client *kubernetes.Clientset) *CachedK8sClient {
 	nodeInformer := factory.Core().V1().Nodes().Informer()
 
 	podInformer.AddIndexers(map[string]cache.IndexFunc{
-		podByIPIndexName: func(obj interface{}) ([]string, error) {
+		podByIPIndex: func(obj interface{}) ([]string, error) {
 			pod := obj.(*v1.Pod)
 			return []string{pod.Status.PodIP}, nil
 		},
@@ -59,7 +59,7 @@ func (c *CachedK8sClient) Start(ctx context.Context) {
 
 // GetPodByIPAddr returns the pod with the given IP address
 func (c *CachedK8sClient) GetPodByIPAddr(ipAddr string) *v1.Pod {
-	val, err := c.podInformer.GetIndexer().ByIndex(podByIPIndexName, ipAddr)
+	val, err := c.podInformer.GetIndexer().ByIndex(podByIPIndex, ipAddr)
 	if err != nil {
 		log.Err(err).Msg("failed to get pod by IP address")
 		return nil
