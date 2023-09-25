@@ -18,26 +18,16 @@ import (
 )
 
 var stats struct {
-	ipdefrag            int
-	missedBytes         int
-	pkt                 int
-	sz                  int
-	totalsz             int
-	rejectFsm           int
-	rejectOpt           int
-	rejectConnFsm       int
-	reassembled         int
-	outOfOrderBytes     int
-	outOfOrderPackets   int
-	biggestChunkBytes   int
-	biggestChunkPackets int
-	overlapBytes        int
-	overlapPackets      int
-	source_received     int
-	source_dropped      int
-	source_if_dropped   int
-	total_streams       uint64
-	active_streams      int64
+	ipdefrag          int
+	totalsz           int
+	rejectFsm         int
+	rejectOpt         int
+	rejectConnFsm     int
+	source_received   int
+	source_dropped    int
+	source_if_dropped int
+	total_streams     uint64
+	active_streams    int64
 }
 
 func IncrementStreamCount() uint64 {
@@ -204,29 +194,19 @@ func (h *tcpAssembler) Stop() {
 
 func (a *tcpAssembler) logAssemblerStats() {
 	statsFields := map[string]interface{}{
-		"uptime_ms":             time.Since(a.startedAt).Milliseconds(),
-		"IPdefrag":              stats.ipdefrag,
-		"missed_bytes":          stats.missedBytes,
-		"total_packets":         stats.pkt,
-		"rejected_FSM":          stats.rejectFsm,
-		"rejected_Options":      stats.rejectOpt,
-		"reassembled_bytes":     stats.sz,
-		"total_TCP_bytes":       stats.totalsz,
-		"conn_rejected_FSM":     stats.rejectConnFsm,
-		"reassembled_chunks":    stats.reassembled,
-		"out_of_order_packets":  stats.outOfOrderPackets,
-		"out_of_order_bytes":    stats.outOfOrderBytes,
-		"biggest_chunk_packets": stats.biggestChunkPackets,
-		"biggest_chunk_bytes":   stats.biggestChunkBytes,
-		"overlap_packets":       stats.overlapPackets,
-		"overlap_bytes":         stats.overlapBytes,
-		"source_received":       stats.source_received,
-		"source_dropped":        stats.source_dropped,
-		"source_if_dropped":     stats.source_if_dropped,
-		"event_queue_length":    len(a.httpEvents),
-		"goroutines":            runtime.NumGoroutine(),
-		"total_streams":         stats.total_streams,
-		"active_streams":        stats.active_streams,
+		"uptime_ms":          time.Since(a.startedAt).Milliseconds(),
+		"IPdefrag":           stats.ipdefrag,
+		"rejected_FSM":       stats.rejectFsm,
+		"rejected_Options":   stats.rejectOpt,
+		"total_TCP_bytes":    stats.totalsz,
+		"conn_rejected_FSM":  stats.rejectConnFsm,
+		"source_received":    stats.source_received,
+		"source_dropped":     stats.source_dropped,
+		"source_if_dropped":  stats.source_if_dropped,
+		"event_queue_length": len(a.httpEvents),
+		"goroutines":         runtime.NumGoroutine(),
+		"total_streams":      stats.total_streams,
+		"active_streams":     stats.active_streams,
 	}
 	statsEvent := libhoney.NewEvent()
 	statsEvent.Dataset = a.config.StatsDataset
