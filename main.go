@@ -142,8 +142,8 @@ func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.Cache
 		ev.AddField("http.response.missing", "no response on this event")
 	}
 
-	k8sEventAttrs := utils.GetK8sEventAttrs(k8sClient, event.SrcIp, event.DstIp)
-	ev.Add(k8sEventAttrs)
+	ev.Add(utils.GetK8sAttrsForSourceIp(k8sClient, event.SrcIp))
+	ev.Add(utils.GetK8sAttrsForDestinationIp(k8sClient, event.DstIp))
 
 	log.Debug().
 		Str("stream_ident", event.StreamIdent).
@@ -176,14 +176,14 @@ func setupLogging(c config.Config) {
 
 // setupLibhoney initializes libhoney and sets global fields
 func setupLibhoney(config config.Config) func() {
+	// appends libhoney's user-agent, has to happen before libhoney.Init()
+	libhoney.UserAgentAddition = fmt.Sprintf("hny-network-agent/%s", Version)
+
 	libhoney.Init(libhoney.Config{
 		APIKey:  config.APIKey,
 		Dataset: config.Dataset,
 		APIHost: config.Endpoint,
 	})
-
-	// appends libhoney's user-agent (TODO: doesn't work, no useragent right now)
-	libhoney.UserAgentAddition = fmt.Sprintf("hny-network-agent/%s", Version)
 
 	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", Version)
