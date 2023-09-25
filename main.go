@@ -2,23 +2,19 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/honeycombio/honeycomb-network-agent/assemblers"
 	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/honeycombio/honeycomb-network-agent/debug"
+	"github.com/honeycombio/honeycomb-network-agent/handlers"
 	"github.com/honeycombio/honeycomb-network-agent/utils"
-	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 const Version string = "0.0.17-alpha"
@@ -30,6 +26,7 @@ func main() {
 	}
 
 	// setup logging first
+	// TODO: move to utils package?
 	setupLogging(config)
 
 	log.Info().
@@ -48,115 +45,42 @@ func main() {
 		debug.Start()
 	}
 
-	// setup libhoney
-	closeLibhoney := setupLibhoney(config)
-	defer closeLibhoney()
+	// setup context and cancel func used to signal shutdown
+	ctx, done := context.WithCancel(context.Background())
 
 	// setup k8s
-	cachedK8sClient, closeK8s := setupK8s(config)
-	defer closeK8s()
+	// TODO: move setupK8s to utils package?
+	cachedK8sClient := setupK8s(ctx, config)
 
-	// setup packet capture and analysis
-	// TODO: Move event handling into the assembler
-	httpEvents := make(chan assemblers.HttpEvent, config.ChannelBufferSize)
-	assembler := assemblers.NewTcpAssembler(config, httpEvents)
-	go handleHttpEvents(httpEvents, cachedK8sClient)
-	go assembler.Start()
-	defer assembler.Stop()
+	// create events channel for assembler to send events to and event handler to receive events from
+	eventsChannel := make(chan assemblers.HttpEvent, config.ChannelBufferSize)
 
-	log.Info().Msg("Agent is ready!")
+	// create event handler that sends events to backend (eg Honeycomb)
+	// TODO: move version outside of main package so it can be used directly in the eventHandler
+	eventHandler := handlers.NewLibhoneyEventHandler(config, cachedK8sClient, eventsChannel, Version)
+	go eventHandler.Start(ctx)
 
+	// create assembler that does packet capture and analysis
+	assembler := assemblers.NewTcpAssembler(config, eventsChannel)
+	go assembler.Start(ctx)
+
+	// listen for shutdown and interrupt signals
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
-	<-signalChannel
+	shutdownChannel := make(chan bool, 1)
 
-	log.Info().Msg("Shutting down...")
-}
+	// cleanup func that waits for for shutdown signal and stops the assembler, event handler and k8s client
+	go func() {
+		<-signalChannel
+		log.Info().Msg("Agent is stopping. Cleaning up...")
+		// signal the k8sClient, event handler and assembler to stop via ctx.Done()
+		done()
+		<-shutdownChannel
+	}()
 
-func handleHttpEvents(events chan assemblers.HttpEvent, client *utils.CachedK8sClient) {
-	for {
-		event := <-events
-		sendHttpEventToHoneycomb(event, client)
-	}
-}
-
-func sendHttpEventToHoneycomb(event assemblers.HttpEvent, k8sClient *utils.CachedK8sClient) {
-	// create libhoney event
-	ev := libhoney.NewEvent()
-
-	// calculate event duration
-	// TODO: This is a hack to work around a bug that results in the response timestamp sometimes
-	// being zero which causes the event duration to be negative.
-	if event.RequestTimestamp.IsZero() {
-		log.Debug().
-			Str("stream_ident", event.StreamIdent).
-			Int64("request_id", event.RequestId).
-			Msg("Request timestamp is zero")
-		ev.AddField("http.request.timestamp_missing", true)
-		event.RequestTimestamp = time.Now()
-	}
-	if event.ResponseTimestamp.IsZero() {
-		log.Debug().
-			Str("stream_ident", event.StreamIdent).
-			Int64("request_id", event.RequestId).
-			Msg("Response timestamp is zero")
-		ev.AddField("http.response.timestamp_missing", true)
-		event.ResponseTimestamp = time.Now()
-	}
-	eventDuration := event.ResponseTimestamp.Sub(event.RequestTimestamp)
-
-	// common attributes
-	ev.Timestamp = event.RequestTimestamp
-	ev.AddField("meta.httpEvent_handled_at", time.Now())
-	ev.AddField("meta.httpEvent_request_handled_latency_ms", time.Since(event.RequestTimestamp).Milliseconds())
-	ev.AddField("meta.httpEvent_response_handled_latency_ms", time.Since(event.ResponseTimestamp).Milliseconds())
-	ev.AddField("meta.stream.ident", event.StreamIdent)
-	ev.AddField("duration_ms", eventDuration.Milliseconds())
-	ev.AddField("http.request.timestamp", event.RequestTimestamp)
-	ev.AddField("http.response.timestamp", event.ResponseTimestamp)
-
-	ev.AddField(string(semconv.ClientSocketAddressKey), event.SrcIp)
-	ev.AddField(string(semconv.ServerSocketAddressKey), event.DstIp)
-
-	var requestURI string
-
-	// request attributes
-	if event.Request != nil {
-		requestURI = event.Request.RequestURI
-		ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
-		ev.AddField(string(semconv.HTTPRequestMethodKey), event.Request.Method)
-		ev.AddField(string(semconv.URLPathKey), requestURI)
-		ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
-		ev.AddField(string(semconv.HTTPRequestBodySizeKey), event.Request.ContentLength)
-	} else {
-		ev.AddField("name", "HTTP")
-		ev.AddField("http.request.missing", "no request on this event")
-	}
-
-	// response attributes
-	if event.Response != nil {
-		ev.AddField(string(semconv.HTTPResponseStatusCodeKey), event.Response.StatusCode)
-		ev.AddField(string(semconv.HTTPResponseBodySizeKey), event.Response.ContentLength)
-
-	} else {
-		ev.AddField("http.response.missing", "no response on this event")
-	}
-
-	ev.Add(utils.GetK8sAttrsForSourceIp(k8sClient, event.SrcIp))
-	ev.Add(utils.GetK8sAttrsForDestinationIp(k8sClient, event.DstIp))
-
-	log.Debug().
-		Str("stream_ident", event.StreamIdent).
-		Int64("request_id", event.RequestId).
-		Time("event.timestamp", ev.Timestamp).
-		Str("http.url", requestURI).
-		Msg("Event sent")
-	err := ev.Send()
-	if err != nil {
-		log.Debug().
-			Err(err).
-			Msg("error sending event")
-	}
+	log.Info().Msg("Agent is ready!")
+	<-shutdownChannel
+	log.Info().Msg("Agent has stopped")
 }
 
 // setupLogging initializes zerolog
@@ -174,43 +98,9 @@ func setupLogging(c config.Config) {
 	}
 }
 
-// setupLibhoney initializes libhoney and sets global fields
-func setupLibhoney(config config.Config) func() {
-	// appends libhoney's user-agent, has to happen before libhoney.Init()
-	libhoney.UserAgentAddition = fmt.Sprintf("hny-network-agent/%s", Version)
-
-	libhoney.Init(libhoney.Config{
-		APIKey:  config.APIKey,
-		Dataset: config.Dataset,
-		APIHost: config.Endpoint,
-	})
-
-	// configure global fields that are set on all events
-	libhoney.AddField("honeycomb.agent_version", Version)
-
-	if config.AgentNodeIP != "" {
-		libhoney.AddField("meta.agent.node.ip", config.AgentNodeIP)
-	}
-	if config.AgentNodeName != "" {
-		libhoney.AddField("meta.agent.node.name", config.AgentNodeName)
-	}
-	if config.AgentServiceAccount != "" {
-		libhoney.AddField("meta.agent.serviceaccount.name", config.AgentServiceAccount)
-	}
-	// because we use hostnetwork in deployments, the pod IP and node IP are the same
-	if config.AgentPodIP != "" {
-		libhoney.AddField("meta.agent.pod.ip", config.AgentPodIP)
-	}
-	if config.AgentPodName != "" {
-		libhoney.AddField("meta.agent.pod.name", config.AgentPodName)
-	}
-
-	return libhoney.Close
-}
-
 // setupK8s gets the k8s cluster config, creates a k8s clientset then creates and starts
 // cached k8s client that caches k8s objects
-func setupK8s(config config.Config) (*utils.CachedK8sClient, func()) {
+func setupK8s(ctx context.Context, config config.Config) *utils.CachedK8sClient {
 	// get the k8s in-cluster config
 	k8sConfig, err := rest.InClusterConfig()
 	if err != nil {
@@ -224,8 +114,7 @@ func setupK8s(config config.Config) (*utils.CachedK8sClient, func()) {
 	}
 
 	// create k8s monitor that caches k8s objects
-	ctx, done := context.WithCancel(context.Background())
 	cachedK8sClient := utils.NewCachedK8sClient(k8sClient)
 	cachedK8sClient.Start(ctx)
-	return cachedK8sClient, done
+	return cachedK8sClient
 }

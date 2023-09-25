@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/honeycombio/honeycomb-network-agent/assemblers"
+	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/honeycombio/honeycomb-network-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/honeycombio/libhoney-go/transmission"
@@ -16,7 +17,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-func Test_sendHttpEventToHoneycomb(t *testing.T) {
+func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 	// TEST SETUP
 
 	// Test Data - an assembled HTTP Event
@@ -68,14 +69,20 @@ func Test_sendHttpEventToHoneycomb(t *testing.T) {
 	fakeCachedK8sClient.Start(cancelableCtx)
 	defer done()
 
+	// create event channel used to pass in events to the handler
+	eventsChannel := make(chan assemblers.HttpEvent, 1)
+
+	// create the event handler with default config, fake k8s client & event channel then start it
+	handler := NewLibhoneyEventHandler(config.Config{}, fakeCachedK8sClient, eventsChannel, "test")
+	go handler.Start(cancelableCtx)
+
 	// Setup libhoney for testing, use mock transmission to retrieve events "sent"
+	// must be done after the event handler is created
 	mockTransmission := setupTestLibhoney(t)
 
-	// TEST ACTION: convert the httpEvent and send to Honeycomb
-	sendHttpEventToHoneycomb(
-		httpEvent,
-		fakeCachedK8sClient,
-	)
+	// TEST ACTION: pass in httpEvent to handler
+	eventsChannel <- httpEvent
+	time.Sleep(10 * time.Millisecond)
 
 	// VALIDATE
 	events := mockTransmission.Events()
