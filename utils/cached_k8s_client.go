@@ -13,10 +13,9 @@ import (
 )
 
 const (
-	ResyncTime            = time.Minute * 5
-	podByIPIndexName      = "podIP"
-	serviceByPodNameIndex = "podName"
-	nodeByNameIndex       = "nodeName"
+	ResyncTime       = time.Minute * 5
+	podByIPIndexName = "podIP"
+	nodeByNameIndex  = "nodeName"
 )
 
 type CachedK8sClient struct {
