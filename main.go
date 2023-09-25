@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/honeycombio/honeycomb-network-agent/assemblers"
@@ -55,31 +56,40 @@ func main() {
 	// create events channel for assembler to send events to and event handler to receive events from
 	eventsChannel := make(chan assemblers.HttpEvent, config.ChannelBufferSize)
 
+	// track our internal services
+	wgServices := sync.WaitGroup{}
+
 	// create event handler that sends events to backend (eg Honeycomb)
 	// TODO: move version outside of main package so it can be used directly in the eventHandler
 	eventHandler := handlers.NewLibhoneyEventHandler(config, cachedK8sClient, eventsChannel, Version)
-	go eventHandler.Start(ctx)
+	wgServices.Add(1)
+	go eventHandler.Start(ctx, &wgServices)
 
 	// create assembler that does packet capture and analysis
 	assembler := assemblers.NewTcpAssembler(config, eventsChannel)
-	go assembler.Start(ctx)
+	wgServices.Add(1)
+	go assembler.Start(ctx, &wgServices)
 
-	// listen for shutdown and interrupt signals
-	signalChannel := make(chan os.Signal, 1)
-	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
-	shutdownChannel := make(chan bool, 1)
+	// channel to signal when agent process is ready to exit
+	shutdownNow := make(chan bool, 1)
 
-	// cleanup func that waits for for shutdown signal and stops the assembler, event handler and k8s client
+	// wait for shutdown signal then do the needful to prepare for process exit
 	go func() {
-		<-signalChannel
+		signals := make(chan os.Signal, 1)
+		// subscribe signals channel to interrupts: Interrupt (Ctrl+C), SIGINT (default kill), SIGTERM (k8s pod shutdown)
+		signal.Notify(signals, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+		<-signals // wait for shutdown signals
+
 		log.Info().Msg("Agent is stopping. Cleaning up...")
-		// signal the k8sClient, event handler and assembler to stop via ctx.Done()
-		done()
-		<-shutdownChannel
+
+		done()               // notify services to stop
+		wgServices.Wait()    // wait for all coordinated services to stop
+		eventHandler.Close() // flush events before exit
+		shutdownNow <- true  // signal main goroutine to exit
 	}()
 
 	log.Info().Msg("Agent is ready!")
-	<-shutdownChannel
+	<-shutdownNow
 	log.Info().Msg("Agent has stopped")
 }
 
