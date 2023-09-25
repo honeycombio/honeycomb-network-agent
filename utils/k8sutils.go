@@ -7,6 +7,18 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
+// GetK8sAttrsForSourceIp returns a map of kubernetes metadata attributes for
+// a given IP address. Attribute names will be prefixed with "source.".
+func GetK8sAttrsForSourceIp(client *CachedK8sClient, ip string) map[string]any {
+	return GetK8sAttrsForIp(client, ip, "source")
+}
+
+// GetK8sAttrsForDestinationIp returns a map of kubernetes metadata attributes for
+// a given IP address. Attribute names will be prefixed with "destination.".
+func GetK8sAttrsForDestinationIp(client *CachedK8sClient, ip string) map[string]any {
+	return GetK8sAttrsForIp(client, ip, "destination")
+}
+
 // GetK8sAttrsForIp returns a map of kubernetes metadata attributes for a given IP address.
 //
 // Provide a prefix to prepend to the attribute names, example: "source" or "destination".
