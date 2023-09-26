@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/honeycombio/honeycomb-network-agent/assemblers"
@@ -31,18 +32,24 @@ func NewLibhoneyEventHandler(config config.Config, k8sClient *utils.CachedK8sCli
 
 // Start starts the event handler and begins handling events from the events channel
 // When the context is cancelled, the event handler will stop handling events
-func (handler *libhoneyEventHandler) Start(ctx context.Context) {
+func (handler *libhoneyEventHandler) Start(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	var event assemblers.HttpEvent
+
 	for {
 		select {
 		case <-ctx.Done():
-			// close libhoney to ensure all events are sent
-			libhoney.Close()
 			return
 		case event = <-handler.eventsChan:
 			handler.handleEvent(event)
 		}
 	}
+}
+
+// Close closes the libhoney client, flushing any pending events.
+func (handler *libhoneyEventHandler) Close() {
+	libhoney.Close()
 }
 
 // initLibhoney initializes libhoney and sets global fields

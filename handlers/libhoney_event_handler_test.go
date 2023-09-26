@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -72,9 +73,12 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 	// create event channel used to pass in events to the handler
 	eventsChannel := make(chan assemblers.HttpEvent, 1)
 
+	wgTest := sync.WaitGroup{} // used to wait for the event handler to finish
+
 	// create the event handler with default config, fake k8s client & event channel then start it
 	handler := NewLibhoneyEventHandler(config.Config{}, fakeCachedK8sClient, eventsChannel, "test")
-	go handler.Start(cancelableCtx)
+	wgTest.Add(1)
+	go handler.Start(cancelableCtx, &wgTest)
 
 	// Setup libhoney for testing, use mock transmission to retrieve events "sent"
 	// must be done after the event handler is created
@@ -82,7 +86,10 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 
 	// TEST ACTION: pass in httpEvent to handler
 	eventsChannel <- httpEvent
-	time.Sleep(10 * time.Millisecond)
+
+	done()
+	wgTest.Wait()
+	handler.Close()
 
 	// VALIDATE
 	events := mockTransmission.Events()
