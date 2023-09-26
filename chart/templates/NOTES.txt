@@ -1,16 +1,18 @@
-{{- if and (not .Values.honeycomb.apiKey) (not .Values.honeycomb.existingSecret) }}
-{{ fail "[ERROR] You must either set the value for 'honeycomb.apiKey' to your API Key that you can find in your Honeycomb account profile: https://ui.honeycomb.io/account or set the value for 'honeycomb.existingSecret' with the name of an existing secret resource name which contains your API Key." }}
-{{- end }}
+===============================================================================================================
+   __ __   _  __ __  __        _  __       __                       __          ___                     __ 
+  / // /  / |/ / \ \/ /       / |/ / ___  / /_ _    __ ___   ____  / /__       / _ |  ___ _ ___   ___  / /_
+ / _  /  /    /   \  /       /    / / -_)/ __/| |/|/ // _ \ / __/ /  '_/      / __ | / _ `// -_) / _ \/ __/
+/_//_/  /_/|_/    /_/       /_/|_/  \__/ \__/ |__,__/ \___//_/   /_/\_\      /_/ |_| \_, / \__/ /_//_/\__/ 
+                                                                                    /___/                  
 
-{{- if and (.Values.honeycomb.apiKey) (.Values.honeycomb.existingSecret) }}
-{{ fail "[ERROR] You must only set either 'honeycomb.apiKey' with your Honeycomb API key or set 'honeycomb.existingSecret' with the name of an existing secret resource name which contains your API Key." }}
-{{- end }}
-
-{{- if and (.Values.honeycomb.existingSecret) (not .Values.honeycomb.existingSecretKey) }}
-##### WARNING:
-You must set 'honeycomb.existingSecretKey' when using an existing secret to provide the Honeycomb API key.
-#####
-{{- end }}
 
 Honeycomb Network Agent is setup and configured to collect events from your Kubernetes cluster.
 You should see data flowing within a few minutes at https://ui.honeycomb.io.
+
+{{ if .Values.honeycomb.apiKey }}
+##### WARNING:
+You used a Honeycomb API Key directly, which resulted in the key being visible in your daemonset definition.
+We recommend creating a secret and using existingSecret.
+See the README for how to create a secret with your Honeycomb API Key.
+#####
+{{ end }}
