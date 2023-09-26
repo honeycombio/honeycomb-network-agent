@@ -1,5 +1,32 @@
 # Honeycomb Network Agent changelog
 
+## [0.0.18-alpha] - 2023-09-26
+
+### Enhancements
+
+- feat: prefix k8s attributes with source and add more k8s destination attributes (#226) | [Jamie Danielson](https://github.com/JamieDanielson)
+- feat: Add agent k8s metadata to events (#227) | [Jamie Danielson](https://github.com/JamieDanielson)
+- feat: update to OTel semconv v1.21.0 (#225) | [Robb Kidd](https://github.com/robbkidd)
+- feat: Update http matcher to use sync.map (#157) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+
+### Fixes
+
+- fix: Give handler test time to process event (#242) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- fix: add a waitgroup to coordinate shutdown (#238) | [Robb Kidd](https://github.com/robbkidd)
+- fix: append agent info to user-agent (#232) | [Vera Reynolds](https://github.com/vreynolds)
+
+### Maintenance
+
+- maint: update target go version 1.20 -> 1.21 (#239) | [Robb Kidd](https://github.com/robbkidd)
+- maint: Remove unused stats and event fields (#199) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint: Update gitignore for direnv file names (#234) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint: Use indexes for looking up cached k8s resources (#231) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint: Refactor event processing into handlers package (#230) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint: Consolidate dockerfiles and update deps (#222) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint(deps): bump github.com/rs/zerolog from 1.30.0 to 1.31.0 (#236) | dependabot[bot]
+- docs: Replace namespace and secret files with kubectl cmds in README (#220) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+- maint: Refactor Stream and Reader IDs to use uint64/int64 (#210) | [Mike Goldsmith](https://github.com/MikeGoldsmith)
+
 ## [0.0.17-alpha] - 2023-09-20
 
 ### Maintenance
