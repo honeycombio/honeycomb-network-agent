@@ -20,7 +20,7 @@ We have an example Helm chart that can be used to configure and run the agent.
 Update [values.yaml](./chart/values.yaml) with your Honeycomb API key then run:
 
 ```sh
-helm install -f chart/values.yaml hny-network-agent ./chart
+helm install hny-network-agent ./chart
 ```
 
 When ready to uninstall, you can run:
