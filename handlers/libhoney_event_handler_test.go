@@ -68,7 +68,6 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 	fakeCachedK8sClient := utils.NewCachedK8sClient(fake.NewSimpleClientset(srcPod, destPod))
 	cancelableCtx, done := context.WithCancel(context.Background())
 	fakeCachedK8sClient.Start(cancelableCtx)
-	defer done()
 
 	// create event channel used to pass in events to the handler
 	eventsChannel := make(chan assemblers.HttpEvent, 1)
@@ -86,6 +85,7 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 
 	// TEST ACTION: pass in httpEvent to handler
 	eventsChannel <- httpEvent
+	time.Sleep(10 * time.Millisecond) // give the handler time to process the event
 
 	done()
 	wgTest.Wait()
