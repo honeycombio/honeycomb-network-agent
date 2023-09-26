@@ -1,6 +1,6 @@
 module github.com/honeycombio/honeycomb-network-agent
 
-go 1.20
+go 1.21
 
 require (
 	github.com/gopacket/gopacket v1.1.1
