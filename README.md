@@ -2,12 +2,22 @@
 
 [![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/honeycomb-network-agent)](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md)
 
-The agent is deployed to Kubernetes as a [`DaemonSet`](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/),
-which means that Kubernetes will try to have the agent run on every node in the cluster.
+The Honeycomb Network Agent is a low effort, no-code, language agnostic solution to getting telemetry of your applications running Kubernetes.
 
 Docker images are found in [`ghcr.io/honeycombio/network-agent:latest`](https://github.com/honeycombio/honeycomb-network-agent/pkgs/container/network-agent).
 
 See notes on local development in [`DEVELOPING.md`](./DEVELOPING.md)
+
+## How it Works
+
+The agent runs as a [`DaemonSet`](https://kubernetes.io/docs/admin/daemons/) on each node in a Kubernetes cluster.
+It captures raw network packets from the network interface that is shared by all resources on the node (Pods, Daemonsets, etc).
+Captured network packets are reassembled into whole payloads and then parsed into known application level formats (eg HTTP).
+Parsed payloads are converted into events and then sent to Honeycomb.
+
+Events include network level information such as source & destination IPs and port numbers, kubernetes information such as source and destination Pod names, and application level format specific information such as HTTP method and response status code.
+
+![design diagram](./agent_design.png)
 
 ## Getting Started (Quickstart)
 
