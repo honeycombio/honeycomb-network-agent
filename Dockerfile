@@ -1,4 +1,4 @@
-FROM golang:1.20 as base
+FROM golang:1.21 as base
 RUN apt update -yq && apt install -yq make libpcap-dev
 WORKDIR /src
 COPY go.* .
