@@ -1,12 +1,16 @@
 honeycomb:
-  # Honeycomb API key used to send events (required)
-  apikey: ""
+  # Honeycomb API key used to send events
+  apiKey: ""
+  # The name of an existing secret containing the Honeycomb API key
+  existingSecret: ""
+  # The name of the key in the existing secret containing the Honeycomb API key (defaults to 'apikey')
+  existingSecretKey: "apikey"
   # Honeycomb API endpoint events are sent to (defaults to 'https://api.honeycomb.io')
-  endpoint: ""
+  endpoint: "https://api.honeycomb.io"
   # Honeycomb destination dataset for events (defaults to 'hny-network-agent')
-  dataset: ""
+  dataset: "hny-network-agent"
   # Honeycomb destination dataset for agent performance stats (defaults to 'hny-network-agent-stats')
-  stats_dataset: ""
+  statsDataset: "hny-network-agent-stats"
 
 image:
   repository: ghcr.io/honeycombio/network-agent

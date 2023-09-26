@@ -1,0 +1,23 @@
+{{- if and (not .Values.honeycomb.apiKey) (not .Values.honeycomb.existingSecret) }}
+##### ERROR:
+You must either set the value for 'honeycomb.apiKey' to your API Key that you can find in your Honeycomb account
+profile: https://ui.honeycomb.io/account or set the value for 'honeycomb.existingSecret' with the name of an existing
+secret resource name which contains your API Key.
+#####
+{{- end }}
+
+{{- if and (.Values.honeycomb.apiKey) (.Values.honeycomb.existingSecret) }}
+##### ERROR:
+You must only set either 'honeycomb.apiKey' with your Honeycomb API key or set 'honeycomb.existingSecret' with the
+name of an existing secret resource name which contains your API Key.
+#####
+{{- end }}
+
+{{- if and (.Values.honeycomb.existingSecret) (not .Values.honeycomb.existingSecretKey) }}
+##### WARNING:
+You must set 'honeycomb.existingSecretKey' when using an existing secret to provide the Honeycomb API key.
+#####
+{{- end }}
+
+Honeycomb Network Agent is setup and configured to collect events from your Kubernetes cluster.
+You should see data flowing within a few minutes at https://ui.honeycomb.io.

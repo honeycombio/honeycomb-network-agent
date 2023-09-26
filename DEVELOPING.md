@@ -17,10 +17,12 @@ Recommended:
 ## Installing with Helm
 
 We have an example Helm chart that can be used to configure and run the agent.
-Update [values.yaml](./chart/values.yaml) with your Honeycomb API key then run:
+
+The following command installs the agent and sets the Honeycomb API key used to send
 
 ```sh
-helm install hny-network-agent ./chart
+export HONEYCOMB_API_KEY="<honeycomb-api-key>"
+helm install hny-network-agent --set honeycomb.apikey=$HONEYCOMB_API_KEY ./chart
 ```
 
 When ready to uninstall, you can run:
@@ -28,6 +30,8 @@ When ready to uninstall, you can run:
 ```sh
 helm uninstall hny-network-agent
 ```
+
+# TODO: Document k8s cluster RBAC requirements (cluster role)
 
 ## Local Development
 
