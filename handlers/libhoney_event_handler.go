@@ -142,6 +142,15 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 	// response attributes
 	if event.Response != nil {
 		ev.AddField(string(semconv.HTTPResponseStatusCodeKey), event.Response.StatusCode)
+		// We cannot quite follow the OTel spec for HTTP instrumentation and OK/Error Status.
+		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.25.0/specification/trace/semantic_conventions/http.md#status
+		// We don't (yet?) have a way to determine the client-or-server perspective of the event,
+		// so we'll set the "error" field to the general category of the error status codes.
+		if event.Response.StatusCode >= 500 {
+			ev.AddField("error", "HTTP server error")
+		} else if event.Response.StatusCode >= 400 {
+			ev.AddField("error", "HTTP client error")
+		}
 		ev.AddField(string(semconv.HTTPResponseBodySizeKey), event.Response.ContentLength)
 
 	} else {
