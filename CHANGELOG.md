@@ -1,5 +1,11 @@
 # Honeycomb Network Agent changelog
 
+## [0.0.19-alpha] - 2023-09-27
+
+### Fixes
+
+- fix: Default Dockerfile build to the runnable agent stage (#246) | [Robb Kidd](https://github.com/robbkidd)
+
 ## [0.0.18-alpha] - 2023-09-26
 
 ### Enhancements
