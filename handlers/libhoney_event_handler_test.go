@@ -113,6 +113,7 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 		"http.response.timestamp":        testReqTime.Add(3 * time.Millisecond),
 		"http.response.status_code":      418,
 		"http.response.body.size":        int64(84),
+		"error":                          "HTTP client error",
 		"duration_ms":                    int64(3),
 		"user_agent.original":            "teapot-checker/1.0",
 		"source.k8s.namespace.name":      "unit-tests",
