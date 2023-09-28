@@ -48,10 +48,10 @@ For example, to get a local docker image called `hny/network-agent-go:custom`:
 Set environment variables like `HONEYCOMB_API_KEY` in a file called `.env`.
 These environment variables get passed in the make command.
 
-`make apply-network-agent`
+`make apply-agent`
 
 ```sh
-$ make apply-network-agent
+$ make apply-agent
 namespace/honeycomb created
 secret/honeycomb created
 daemonset.apps/hny-network-agent created
@@ -69,7 +69,7 @@ hny-network-agent-bqcvl   1/1     Running   0          94s
 
 To remove the agent:
 
-`make unapply-network-agent` or `kubectl delete -f smoke-tests/deployment.yaml`
+`make unapply-agent` or `kubectl delete -f smoke-tests/deployment.yaml`
 
 ## Optionally install the "greetings" example app
 
