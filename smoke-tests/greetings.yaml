@@ -205,3 +205,17 @@ spec:
           ports:
           - containerPort: 6001
             name: http
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: alpine
+  namespace: default
+spec:
+  containers:
+  - image: alpine:latest
+    command: ["/bin/sh"]
+    args: ["-c", "apk add curl; sleep 60m"]
+    imagePullPolicy: IfNotPresent
+    name: alpine
+  restartPolicy: Always
