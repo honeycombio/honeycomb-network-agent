@@ -25,7 +25,7 @@ spec:
   - name: http
     port: 7777
     targetPort: 7777
-  type: LoadBalancer
+  type: ClusterIP
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -78,7 +78,7 @@ spec:
   - name: http
     port: 9000
     targetPort: 9000
-  type: LoadBalancer
+  type: ClusterIP
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -126,7 +126,7 @@ spec:
   - name: http
     port: 8000
     targetPort: 8000
-  type: LoadBalancer
+  type: ClusterIP
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -177,7 +177,7 @@ spec:
   - name: http
     port: 6001
     targetPort: 6001
-  type: LoadBalancer
+  type: ClusterIP
 ---
 apiVersion: apps/v1
 kind: Deployment
