@@ -13,7 +13,7 @@ See notes on local development in [`DEVELOPING.md`](./DEVELOPING.md)
 
 ### Requirements
 
-- A running Kubernetes cluster (see [Supported Versions](#supported-versions))
+- A running Kubernetes cluster (see [Supported Platforms](#supported-platforms))
 - A Honeycomb API Key
 
 ### Setup
@@ -55,7 +55,16 @@ Events should show up in Honeycomb in the `hny-network-agent` dataset.
 
 Alternative options for configuration and running can be found in [Deploying the agent to a Kubernetes cluster](./DEVELOPING.md#deploying-the-agent-to-a-kubernetes-cluster):
 
-## Supported Versions
+## Supported Platforms
+
+| Platform                                                             | Supported                             |
+| ---------------------------------------------------------------------| ------------------------------------- |
+| [AKS](https://azure.microsoft.com/en-gb/products/kubernetes-service) | Supported ✅                          | 
+| [EKS](https://aws.amazon.com/eks/)                                   | Self-managed hosts ✅ <br> Fargate ❌  |
+| [GKE](https://cloud.google.com/kubernetes-engine)                    | Standard cluster ✅ <br> AutoPilot ❌  |
+| Self-hosted                                                          | Ubuntu ✅                             |
+
+### Requirements
 
 - Kubernetes version 1.24+
 - Linux Kernel 5.10+ with NET_RAW capabilities
