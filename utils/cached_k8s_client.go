@@ -14,7 +14,7 @@ import (
 
 const (
 	ResyncTime      = time.Minute * 5
-	byIPIndex       = "podIP"
+	byIPIndex       = "ipAddr"
 	nodeByNameIndex = "nodeName"
 )
 
