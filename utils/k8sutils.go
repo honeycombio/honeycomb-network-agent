@@ -7,6 +7,14 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
+const (
+	k8sResourceType        = "k8s.resource.type"
+	k8sResourceTypePod     = "pod"
+	k8sResourceTypeService = "service"
+	k8sServiceName         = "k8s.service.name"
+	k8sServiceUID          = "k8s.service.uid"
+)
+
 // GetK8sAttrsForSourceIp returns a map of kubernetes metadata attributes for
 // a given IP address. Attribute names will be prefixed with "source.".
 func GetK8sAttrsForSourceIp(client *CachedK8sClient, ip string) map[string]any {
@@ -36,6 +44,7 @@ func GetK8sAttrsForIp(client *CachedK8sClient, ip string, prefix string) map[str
 	}
 
 	if pod := client.GetPodByIPAddr(ip); pod != nil {
+		k8sAttrs[prefix+k8sResourceType] = k8sResourceTypePod
 		k8sAttrs[prefix+string(semconv.K8SPodNameKey)] = pod.Name
 		k8sAttrs[prefix+string(semconv.K8SPodUIDKey)] = pod.UID
 		k8sAttrs[prefix+string(semconv.K8SNamespaceNameKey)] = pod.Namespace
@@ -55,9 +64,15 @@ func GetK8sAttrsForIp(client *CachedK8sClient, ip string, prefix string) map[str
 
 		if service := client.GetServiceForPod(pod); service != nil {
 			// no semconv for service yet
-			k8sAttrs[prefix+"k8s.service.name"] = service.Name
-			k8sAttrs[prefix+"k8s.service.uid"] = service.UID
+			k8sAttrs[prefix+k8sServiceName] = service.Name
+			k8sAttrs[prefix+k8sServiceUID] = service.UID
 		}
+	} else if service := client.GetServiceByIPAddr(ip); service != nil {
+		k8sAttrs[prefix+k8sResourceType] = k8sResourceTypeService
+		k8sAttrs[prefix+string(semconv.K8SNamespaceNameKey)] = service.Namespace
+		// no semconv for service yet
+		k8sAttrs[prefix+k8sServiceName] = service.Name
+		k8sAttrs[prefix+k8sServiceUID] = service.UID
 	}
 
 	return k8sAttrs
