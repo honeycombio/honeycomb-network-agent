@@ -86,6 +86,26 @@ func initLibhoney(config config.Config, version string) func() {
 	return libhoney.Close
 }
 
+// computeDuration calculates the duration of the request/response cycle and adds
+// the field to the emitted telemetry, but only if both timestamps are present.
+//
+// If either timestamp is missing (timestamp will be 0), we note the that the
+// timestamp is missing in the telemetry. Duration is NOT added to the telemetry
+// because anything we make up would be wrong and skew the data.
+func computeDuration(libhoneyEvent *libhoney.Event, httpEvent assemblers.HttpEvent) {
+	if httpEvent.RequestTimestamp.IsZero() {
+		libhoneyEvent.AddField("http.request.timestamp_missing", true)
+		return
+	}
+
+	if httpEvent.ResponseTimestamp.IsZero() {
+		libhoneyEvent.AddField("http.response.timestamp_missing", true)
+		return
+	}
+
+	libhoneyEvent.AddField("duration_ms", httpEvent.ResponseTimestamp.Sub(httpEvent.RequestTimestamp).Milliseconds())
+}
+
 func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 	// create libhoney event
 	ev := libhoney.NewEvent()
@@ -142,6 +162,7 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 	// response attributes
 	if event.Response != nil {
 		ev.AddField(string(semconv.HTTPResponseStatusCodeKey), event.Response.StatusCode)
+		// ev.AddField(string(semconv.HTTPStatusCodeKey), event.Response.StatusCode)
 		// We cannot quite follow the OTel spec for HTTP instrumentation and OK/Error Status.
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.25.0/specification/trace/semantic_conventions/http.md#status
 		// We don't (yet?) have a way to determine the client-or-server perspective of the event,

@@ -127,6 +127,64 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 	assert.Equal(t, expectedAttrs, attrs)
 }
 
+func Test_missingRequestTimeStamp(t *testing.T) {
+	testCases := []struct {
+		desc                     string
+		reqTime                  time.Time
+		respTime                 time.Time
+		expectToSetDuration      bool
+		expectedWarningFieldName string // empty if duration is expected, name of missing field if not
+		expectedDuration         int64
+	}{
+		{
+			desc:                "happy path!",
+			reqTime:             time.Now(),
+			respTime:            time.Now().Add(3 * time.Millisecond),
+			expectToSetDuration: true,
+			expectedDuration:    3,
+		},
+		{
+			desc:                     "missing request timestamp",
+			reqTime:                  time.Time{},
+			respTime:                 time.Now(),
+			expectToSetDuration:      false,
+			expectedWarningFieldName: "http.request.timestamp_missing",
+		},
+		{
+			desc:                     "missing response timestamp",
+			reqTime:                  time.Now(),
+			respTime:                 time.Time{},
+			expectToSetDuration:      false,
+			expectedWarningFieldName: "http.response.timestamp_missing",
+		},
+		{
+			desc:                     "missing both timestamps",
+			reqTime:                  time.Time{},
+			respTime:                 time.Time{},
+			expectToSetDuration:      false,
+			expectedWarningFieldName: "http.request.timestamp_missing",
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			ev := libhoney.NewEvent()
+			httpEvent := assemblers.HttpEvent{
+				RequestTimestamp:  tC.reqTime,
+				ResponseTimestamp: tC.respTime,
+			}
+
+			computeDuration(ev, httpEvent)
+
+			if tC.expectToSetDuration {
+				assert.Equal(t, ev.Fields()["duration_ms"], tC.expectedDuration)
+			} else {
+				assert.Equal(t, ev.Fields()[tC.expectedWarningFieldName], true)
+				assert.Nil(t, ev.Fields()["duration_ms"])
+			}
+		})
+	}
+}
+
 // setupTestLibhoney configures a Libhoney with a mock transmission for testing.
 //
 // Events sent can be found on the mock transmission:
