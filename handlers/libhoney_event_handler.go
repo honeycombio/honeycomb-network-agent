@@ -99,6 +99,7 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 			Int64("request_id", event.RequestId).
 			Msg("Request timestamp is zero")
 		ev.AddField("http.request.timestamp_missing", true)
+		log.Info().Int64("request_request_id", event.RequestId)
 		event.RequestTimestamp = time.Now()
 	}
 	if event.ResponseTimestamp.IsZero() {
@@ -107,9 +108,11 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 			Int64("request_id", event.RequestId).
 			Msg("Response timestamp is zero")
 		ev.AddField("http.response.timestamp_missing", true)
+		log.Info().Int64("response_request_id", event.RequestId)
 		event.ResponseTimestamp = time.Now()
 	}
 	eventDuration := event.ResponseTimestamp.Sub(event.RequestTimestamp)
+	log.Info().Int64("request_id", event.RequestId)
 
 	// common attributes
 	ev.Timestamp = event.RequestTimestamp
@@ -117,6 +120,7 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 	ev.AddField("meta.httpEvent_request_handled_latency_ms", time.Since(event.RequestTimestamp).Milliseconds())
 	ev.AddField("meta.httpEvent_response_handled_latency_ms", time.Since(event.ResponseTimestamp).Milliseconds())
 	ev.AddField("meta.stream.ident", event.StreamIdent)
+	ev.AddField("meta.seqack", event.RequestId)
 	ev.AddField("duration_ms", eventDuration.Milliseconds())
 	ev.AddField("http.request.timestamp", event.RequestTimestamp)
 	ev.AddField("http.response.timestamp", event.ResponseTimestamp)
