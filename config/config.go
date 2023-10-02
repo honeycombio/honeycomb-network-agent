@@ -87,6 +87,9 @@ type Config struct {
 	// Maximum number of TCP reassembly pages per connection.
 	MaxBufferedPagesPerConnection int
 
+	// The name of the cluster the agent is running on.
+	ClusterName string
+
 	// The IP address of the node the agent is running on.
 	AgentNodeIP string
 
@@ -130,6 +133,7 @@ func NewConfig() Config {
 		ChannelBufferSize:             1000,
 		MaxBufferedPagesTotal:         150_000,
 		MaxBufferedPagesPerConnection: 4000,
+		ClusterName:                   utils.LookupEnvOrString("CLUSTER_NAME", ""),
 		AgentNodeIP:                   utils.LookupEnvOrString("AGENT_NODE_IP", ""),
 		AgentNodeName:                 utils.LookupEnvOrString("AGENT_NODE_NAME", ""),
 		AgentServiceAccount:           utils.LookupEnvOrString("AGENT_SERVICE_ACCOUNT_NAME", ""),
