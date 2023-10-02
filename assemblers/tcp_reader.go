@@ -70,6 +70,8 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 				Msg("Error reading HTTP request")
 			return
 		}
+		// We only care about a few headers, so recreate the header with just the ones we need
+		req.Header = extractHeaders(req.Header)
 		// We don't need the body, so just close it if set
 		if req.Body != nil {
 			req.Body.Close()
@@ -99,6 +101,8 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 				Msg("Error reading HTTP response")
 			return
 		}
+		// We only care about a few headers, so recreate the header with just the ones we need
+		res.Header = extractHeaders(res.Header)
 		// We don't need the body, so just close it if set
 		if res.Body != nil {
 			res.Body.Close()
@@ -124,4 +128,24 @@ func (reader *tcpReader) processEvent(requestId int64, entry *entry) {
 		SrcIp:               reader.srcIp,
 		DstIp:               reader.dstIp,
 	}
+}
+
+var headersToExtract = []string{
+	"User-Agent",
+}
+
+// extractHeaders returns a new http.Header object with only specified headers from the original.
+// The original request/response header contains a lot of stuff we don't really care about
+// and stays in memory until the request/response pair is processed
+func extractHeaders(header http.Header) http.Header {
+	cleanHeader := http.Header{}
+	if header == nil {
+		return cleanHeader
+	}
+	for _, headerName := range headersToExtract {
+		if headerValue := header.Get(headerName); headerValue != "" {
+			cleanHeader.Set(headerName, headerValue)
+		}
+	}
+	return cleanHeader
 }
