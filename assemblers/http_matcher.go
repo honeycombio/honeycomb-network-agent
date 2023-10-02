@@ -25,7 +25,7 @@ func newRequestResponseMatcher() *httpMatcher {
 	}
 }
 
-// GetOrStoreRequest receives a tcpStream ident, a timestamp, and a request.
+// GetOrStoreRequest receives a tcpStream ident, a timestamp, a request, and a packet count.
 //
 // If the response that matches the stream ident has been seen before,
 // returns a match entry containing both Request and Response and matchFound will be true.
@@ -50,7 +50,7 @@ func (m *httpMatcher) GetOrStoreRequest(key int64, timestamp time.Time, request 
 	return nil, false
 }
 
-// GetOrStoreResponse receives a tcpStream ident, a timestamp, and a response.
+// GetOrStoreResponse receives a tcpStream ident, a timestamp, a response, and a packet count.
 //
 // If the request that matches the stream ident has been seen before,
 // returns a match entry containing both Request and Response and matchFound will be true.
