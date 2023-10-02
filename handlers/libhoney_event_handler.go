@@ -17,6 +17,7 @@ import (
 
 // libhoneyEventHandler is an event handler that sends events using libhoney
 type libhoneyEventHandler struct {
+	config     config.Config
 	k8sClient  *utils.CachedK8sClient
 	eventsChan chan assemblers.HttpEvent
 }
@@ -25,6 +26,7 @@ type libhoneyEventHandler struct {
 func NewLibhoneyEventHandler(config config.Config, k8sClient *utils.CachedK8sClient, eventsChan chan assemblers.HttpEvent, version string) EventHandler {
 	initLibhoney(config, version)
 	return &libhoneyEventHandler{
+		config:     config,
 		k8sClient:  k8sClient,
 		eventsChan: eventsChan,
 	}
@@ -157,8 +159,8 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 		ev.AddField("http.response.missing", "no response on this event")
 	}
 
-	ev.Add(utils.GetK8sAttrsForIp(handler.k8sClient, event.SrcIp, "source"))
-	ev.Add(utils.GetK8sAttrsForIp(handler.k8sClient, event.DstIp, "destination"))
+	ev.Add(handler.k8sClient.GetK8sAttrsForSourceIP(handler.config.AgentPodIP, event.SrcIp))
+	ev.Add(handler.k8sClient.GetK8sAttrsForDestinationIP(handler.config.AgentPodIP, event.DstIp))
 
 	log.Debug().
 		Str("stream_ident", event.StreamIdent).
