@@ -112,6 +112,12 @@ spec:
             ## uncomment this to set the destination dataset for agent performance stats
             # - name: HONEYCOMB_STATS_DATASET
             #   value: $HONEYCOMB_STATS_DATASET
+            ## uncomment this to set a different endpoint (uncommon)
+            # - name: HONEYCOMB_API_ENDPOINT
+            #   value: $HONEYCOMB_API_ENDPOINT
+            ## uncomment this to skip options validation (uncommon)
+            # - name: HONEYCOMB_SKIP_OPTIONS_VALIDATION
+            #   value: "$HONEYCOMB_SKIP_OPTIONS_VALIDATION"
             ## uncomment this to set the listen address for debug service
             # - name: DEBUG_ADDRESS
             #   value: $DEBUG_ADDRESS
