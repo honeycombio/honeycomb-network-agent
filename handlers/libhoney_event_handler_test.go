@@ -188,7 +188,7 @@ func Test_reportingTimesAndDurations(t *testing.T) {
 				ResponseTimestamp: tC.respTime,
 			}
 
-			wibblyWobblyTimeyWimeyStuff(ev, httpEvent)
+			setTimestampsAndDurationIfValid(ev, httpEvent)
 
 			if tC.expectedTelemetryTime != nowish {
 				assert.Equal(t, tC.expectedTelemetryTime, ev.Timestamp)

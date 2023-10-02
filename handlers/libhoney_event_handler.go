@@ -86,12 +86,12 @@ func initLibhoney(config config.Config, version string) func() {
 	return libhoney.Close
 }
 
-// wibblyWobblyTimeyWimeyStuff sets time-related fields in the emitted telemetry
+// setTimestampsAndDurationIfValid sets time-related fields in the emitted telemetry
 // about the request/response cycle.
 //
 // It only sets timestamps if they are present in the captured event, and only
 // computes and includes durations for which there are correct timestamps to based them upon.
-func wibblyWobblyTimeyWimeyStuff(honeyEvent *libhoney.Event, httpEvent assemblers.HttpEvent) {
+func setTimestampsAndDurationIfValid(honeyEvent *libhoney.Event, httpEvent assemblers.HttpEvent) {
 	honeyEvent.AddField("meta.httpEvent_handled_at", time.Now())
 	switch true {
 	case httpEvent.RequestTimestamp.IsZero() && httpEvent.ResponseTimestamp.IsZero():
@@ -130,7 +130,7 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 	// the telemetry event to send
 	var ev *libhoney.Event = libhoney.NewEvent()
 
-	wibblyWobblyTimeyWimeyStuff(ev, event)
+	setTimestampsAndDurationIfValid(ev, event)
 
 	ev.AddField("meta.stream.ident", event.StreamIdent)
 
