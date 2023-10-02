@@ -10,7 +10,7 @@ See notes on local development in [`DEVELOPING.md`](./DEVELOPING.md)
 
 ## How it Works
 
-The agent runs as a [`DaemonSet`](https://kubernetes.io/docs/admin/daemons/) on each node in a Kubernetes cluster.
+The agent runs as a [`DaemonSet`](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/) on each node in a Kubernetes cluster.
 It captures raw network packets from the network interface that is shared by all resources on the node (Pods, Daemonsets, etc).
 Captured network packets are reassembled into whole payloads and then parsed into known application level formats (eg HTTP).
 Parsed payloads are converted into events and then sent to Honeycomb.
