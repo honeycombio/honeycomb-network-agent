@@ -37,6 +37,9 @@ func main() {
 		Str("dataset", config.Dataset).
 		Str("stats_dataset", config.StatsDataset).
 		Msg("Starting Honeycomb Network Agent")
+	if config.SkipOptionsValidation {
+		log.Info().Msg("Skipping options validation")
+	}
 	if config.Debug {
 		log.Info().
 			Str("debug_address", config.DebugAddress).

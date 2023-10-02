@@ -27,6 +27,11 @@ type Config struct {
 	// Set via HONEYCOMB_STATS_DATASET environment variable.
 	StatsDataset string
 
+	// Skip options validation warnings (eg no API key configured).
+	// This is mostly useful for testing or if telemetry is proxied before sending to Honeycomb.
+	// Set via HONEYCOMB_SKIP_OPTIONS_VALIDATION environment variable.
+	SkipOptionsValidation bool
+
 	// Log level used by the agent.
 	// Set via LOG_LEVEL environment variable
 	LogLevel string
@@ -111,6 +116,7 @@ func NewConfig() Config {
 		Endpoint:                      utils.LookupEnvOrString("HONEYCOMB_API_ENDPOINT", "https://api.honeycomb.io"),
 		Dataset:                       utils.LookupEnvOrString("HONEYCOMB_DATASET", "hny-network-agent"),
 		StatsDataset:                  utils.LookupEnvOrString("HONEYCOMB_STATS_DATASET", "hny-network-agent-stats"),
+		SkipOptionsValidation:         utils.LookupEnvOrBool("HONEYCOMB_SKIP_OPTIONS_VALIDATION", false),
 		LogLevel:                      utils.LookupEnvOrString("LOG_LEVEL", "INFO"),
 		Debug:                         utils.LookupEnvOrBool("DEBUG", false),
 		DebugAddress:                  utils.LookupEnvOrString("DEBUG_ADDRESS", "0.0.0.0:6060"),
@@ -183,6 +189,10 @@ func (e *InvalidAPIKeyError) Error() string {
 
 // Validate checks that the config is valid
 func (c *Config) Validate() error {
+	// Skip validation if the user has explicitly set the option
+	if c.SkipOptionsValidation {
+		return nil
+	}
 	e := []error{}
 	if c.APIKey == "" {
 		e = append(e, &MissingAPIKeyError{})
