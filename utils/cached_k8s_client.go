@@ -127,6 +127,13 @@ func (client *CachedK8sClient) getK8sAttrsForIp(agentIP string, ip string, prefi
 		return k8sAttrs
 	}
 
+	// Try add k8s attributes for source and destination when they are not the agent pod IP.
+	// Because we use hostnetwork in deployments, the agent pod IP and node IP are the same and we
+	// can't distinguish between the two, or any other pods that is also running with hostnetwork.
+	if ip == agentIP {
+		return k8sAttrs
+	}
+
 	if prefix != "" {
 		prefix = fmt.Sprintf("%s.", prefix)
 	}
