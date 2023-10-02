@@ -22,9 +22,6 @@ const Version string = "0.0.19-alpha"
 
 func main() {
 	config := config.NewConfig()
-	if err := config.Validate(); err != nil {
-		log.Fatal().Err(err).Msg("Config validation failed")
-	}
 
 	// setup logging first
 	// TODO: move to utils package?
@@ -38,7 +35,12 @@ func main() {
 		Str("stats_dataset", config.StatsDataset).
 		Msg("Starting Honeycomb Network Agent")
 	if config.SkipOptionsValidation {
-		log.Info().Msg("Skipping options validation")
+		log.Info().Msg("Skipping options validation. To re-enable, set HONEYCOMB_SKIP_OPTIONS_VALIDATION=false")
+	}
+	// validate config after logging existing config values
+	// to make it easier to troubleshoot
+	if err := config.Validate(); err != nil {
+		log.Fatal().Err(err).Msg("Config validation failed")
 	}
 	if config.Debug {
 		log.Info().
