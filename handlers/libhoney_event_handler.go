@@ -121,6 +121,8 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 	ev.AddField("meta.httpEvent_response_handled_latency_ms", time.Since(event.ResponseTimestamp).Milliseconds())
 	ev.AddField("meta.stream.ident", event.StreamIdent)
 	ev.AddField("meta.seqack", event.RequestId)
+	ev.AddField("meta.request.packet_count", event.RequestPacketCount)
+	ev.AddField("meta.response.packet_count", event.ResponsePacketCount)
 	ev.AddField("duration_ms", eventDuration.Milliseconds())
 	ev.AddField("http.request.timestamp", event.RequestTimestamp)
 	ev.AddField("http.response.timestamp", event.ResponseTimestamp)

@@ -75,7 +75,7 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 			req.Body.Close()
 		}
 
-		if entry, matchFound := reader.matcher.GetOrStoreRequest(requestId, ctx.CaptureInfo.Timestamp, req); matchFound {
+		if entry, matchFound := reader.matcher.GetOrStoreRequest(requestId, ctx.CaptureInfo.Timestamp, req, sg.Stats().Packets); matchFound {
 			// we have a match, process complete request/response pair
 			reader.processEvent(requestId, entry)
 		}
@@ -104,7 +104,7 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 			res.Body.Close()
 		}
 
-		if entry, matchFound := reader.matcher.GetOrStoreResponse(requestId, ctx.CaptureInfo.Timestamp, res); matchFound {
+		if entry, matchFound := reader.matcher.GetOrStoreResponse(requestId, ctx.CaptureInfo.Timestamp, res, sg.Stats().Packets); matchFound {
 			// we have a match, process complete request/response pair
 			reader.processEvent(requestId, entry)
 		}
@@ -113,13 +113,15 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 
 func (reader *tcpReader) processEvent(requestId int64, entry *entry) {
 	reader.events <- HttpEvent{
-		StreamIdent:       reader.streamIdent,
-		RequestId:         requestId,
-		Request:           entry.request,
-		Response:          entry.response,
-		RequestTimestamp:  entry.requestTimestamp,
-		ResponseTimestamp: entry.responseTimestamp,
-		SrcIp:             reader.srcIp,
-		DstIp:             reader.dstIp,
+		StreamIdent:         reader.streamIdent,
+		RequestId:           requestId,
+		Request:             entry.request,
+		Response:            entry.response,
+		RequestTimestamp:    entry.requestTimestamp,
+		ResponseTimestamp:   entry.responseTimestamp,
+		RequestPacketCount:  entry.requestPacketCount,
+		ResponsePacketCount: entry.responsePacketCount,
+		SrcIp:               reader.srcIp,
+		DstIp:               reader.dstIp,
 	}
 }
