@@ -23,6 +23,8 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 
 	// Test Data - an assembled HTTP Event
 	testReqTime := time.Now()
+	testReqPacketCount := 2
+	testRespPacketCount := 3
 	testRespTime := testReqTime.Add(3 * time.Millisecond)
 
 	httpEvent := assemblers.HttpEvent{
@@ -37,10 +39,12 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 			StatusCode:    418,
 			ContentLength: 84,
 		},
-		RequestTimestamp:  testReqTime,
-		ResponseTimestamp: testRespTime,
-		SrcIp:             "1.2.3.4",
-		DstIp:             "5.6.7.8",
+		RequestTimestamp:    testReqTime,
+		ResponseTimestamp:   testRespTime,
+		RequestPacketCount:  testReqPacketCount,
+		ResponsePacketCount: testRespPacketCount,
+		SrcIp:               "1.2.3.4",
+		DstIp:               "5.6.7.8",
 	}
 
 	// Test Data - k8s metadata
@@ -108,6 +112,9 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 		"client.socket.address":          "1.2.3.4",
 		"server.socket.address":          "5.6.7.8",
 		"meta.stream.ident":              "c->s:1->2",
+		"meta.seqack":                    int64(0),
+		"meta.request.packet_count":      int(2),
+		"meta.response.packet_count":     int(3),
 		"http.request.method":            "GET",
 		"url.path":                       "/check?teapot=true",
 		"http.request.body.size":         int64(42),
@@ -136,6 +143,8 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 
 	// Test Data - an assembled HTTP Event
 	testReqTime := time.Now()
+	testReqPacketCount := 2
+	testRespPacketCount := 3
 	httpEvent := assemblers.HttpEvent{
 		StreamIdent: "c->s:1->2",
 		Request: &http.Request{
@@ -148,10 +157,12 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 			StatusCode:    418,
 			ContentLength: 84,
 		},
-		RequestTimestamp:  testReqTime,
-		ResponseTimestamp: testReqTime.Add(3 * time.Millisecond),
-		SrcIp:             "1.2.3.4",
-		DstIp:             "5.6.7.8",
+		RequestTimestamp:    testReqTime,
+		ResponseTimestamp:   testReqTime.Add(3 * time.Millisecond),
+		RequestPacketCount:  testReqPacketCount,
+		ResponsePacketCount: testRespPacketCount,
+		SrcIp:               "1.2.3.4",
+		DstIp:               "5.6.7.8",
 	}
 
 	// Test Data - k8s metadata
@@ -219,6 +230,9 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 		"client.socket.address":          "1.2.3.4",
 		"server.socket.address":          "5.6.7.8",
 		"meta.stream.ident":              "c->s:1->2",
+		"meta.seqack":                    int64(0),
+		"meta.request.packet_count":      int(2),
+		"meta.response.packet_count":     int(3),
 		"http.request.method":            "GET",
 		"url.path":                       "/check?teapot=true",
 		"http.request.body.size":         int64(42),

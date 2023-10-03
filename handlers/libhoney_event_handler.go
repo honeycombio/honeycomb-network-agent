@@ -133,6 +133,9 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 	setTimestampsAndDurationIfValid(ev, event)
 
 	ev.AddField("meta.stream.ident", event.StreamIdent)
+	ev.AddField("meta.seqack", event.RequestId)
+	ev.AddField("meta.request.packet_count", event.RequestPacketCount)
+	ev.AddField("meta.response.packet_count", event.ResponsePacketCount)
 
 	ev.AddField(string(semconv.ClientSocketAddressKey), event.SrcIp)
 	ev.AddField(string(semconv.ServerSocketAddressKey), event.DstIp)

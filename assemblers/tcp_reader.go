@@ -76,8 +76,9 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 		if req.Body != nil {
 			req.Body.Close()
 		}
-
-		if entry, matchFound := reader.matcher.GetOrStoreRequest(requestId, ctx.CaptureInfo.Timestamp, req); matchFound {
+		// get the number of packets that made up this request
+		packetCount := sg.Stats().Packets
+		if entry, matchFound := reader.matcher.GetOrStoreRequest(requestId, ctx.CaptureInfo.Timestamp, req, packetCount); matchFound {
 			// we have a match, process complete request/response pair
 			reader.processEvent(requestId, entry)
 		}
@@ -107,8 +108,9 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 		if res.Body != nil {
 			res.Body.Close()
 		}
-
-		if entry, matchFound := reader.matcher.GetOrStoreResponse(requestId, ctx.CaptureInfo.Timestamp, res); matchFound {
+		// get the number of packets that made up this request
+		packetCount := sg.Stats().Packets
+		if entry, matchFound := reader.matcher.GetOrStoreResponse(requestId, ctx.CaptureInfo.Timestamp, res, packetCount); matchFound {
 			// we have a match, process complete request/response pair
 			reader.processEvent(requestId, entry)
 		}
@@ -117,14 +119,16 @@ func (reader *tcpReader) reassembledSG(sg reassembly.ScatterGather, ac reassembl
 
 func (reader *tcpReader) processEvent(requestId int64, entry *entry) {
 	reader.events <- HttpEvent{
-		StreamIdent:       reader.streamIdent,
-		RequestId:         requestId,
-		Request:           entry.request,
-		Response:          entry.response,
-		RequestTimestamp:  entry.requestTimestamp,
-		ResponseTimestamp: entry.responseTimestamp,
-		SrcIp:             reader.srcIp,
-		DstIp:             reader.dstIp,
+		StreamIdent:         reader.streamIdent,
+		RequestId:           requestId,
+		Request:             entry.request,
+		Response:            entry.response,
+		RequestTimestamp:    entry.requestTimestamp,
+		ResponseTimestamp:   entry.responseTimestamp,
+		RequestPacketCount:  entry.requestPacketCount,
+		ResponsePacketCount: entry.responsePacketCount,
+		SrcIp:               reader.srcIp,
+		DstIp:               reader.dstIp,
 	}
 }
 
