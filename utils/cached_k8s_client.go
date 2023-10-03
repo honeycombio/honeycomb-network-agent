@@ -17,8 +17,14 @@ import (
 
 const (
 	ResyncTime      = time.Minute * 5
-	podByIPIndex    = "podIP"
+	byIPIndex       = "ipAddr"
 	nodeByNameIndex = "nodeName"
+
+	k8sResourceType        = "k8s.resource.type"
+	k8sResourceTypePod     = "pod"
+	k8sResourceTypeService = "service"
+	k8sServiceName         = "k8s.service.name"
+	k8sServiceUID          = "k8s.service.uid"
 )
 
 type CachedK8sClient struct {
@@ -35,9 +41,15 @@ func NewCachedK8sClient(clientset kubernetes.Interface) *CachedK8sClient {
 	nodeInformer := factory.Core().V1().Nodes().Informer()
 
 	podInformer.AddIndexers(map[string]cache.IndexFunc{
-		podByIPIndex: func(obj interface{}) ([]string, error) {
+		byIPIndex: func(obj interface{}) ([]string, error) {
 			pod := obj.(*v1.Pod)
 			return []string{pod.Status.PodIP}, nil
+		},
+	})
+	serviceInformer.AddIndexers(map[string]cache.IndexFunc{
+		byIPIndex: func(obj interface{}) ([]string, error) {
+			service := obj.(*v1.Service)
+			return []string{service.Spec.ClusterIP}, nil
 		},
 	})
 	nodeInformer.AddIndexers(map[string]cache.IndexFunc{
@@ -62,7 +74,7 @@ func (c *CachedK8sClient) Start(ctx context.Context) {
 
 // GetPodByIPAddr returns the pod with the given IP address
 func (c *CachedK8sClient) GetPodByIPAddr(ipAddr string) *v1.Pod {
-	val, err := c.podInformer.GetIndexer().ByIndex(podByIPIndex, ipAddr)
+	val, err := c.podInformer.GetIndexer().ByIndex(byIPIndex, ipAddr)
 	if err != nil {
 		log.Err(err).Msg("Error getting pod by IP")
 		return nil
@@ -71,6 +83,19 @@ func (c *CachedK8sClient) GetPodByIPAddr(ipAddr string) *v1.Pod {
 		return nil
 	}
 	return val[0].(*v1.Pod)
+}
+
+// GetServiceByIPAddr returns the service with the given IP address
+func (c *CachedK8sClient) GetServiceByIPAddr(ipAddr string) *v1.Service {
+	val, err := c.serviceInformer.GetIndexer().ByIndex(byIPIndex, ipAddr)
+	if err != nil {
+		log.Err(err).Msg("Error getting service by IP")
+		return nil
+	}
+	if len(val) == 0 {
+		return nil
+	}
+	return val[0].(*v1.Service)
 }
 
 // GetServiceForPod returns the service that the given pod is associated with
@@ -139,6 +164,7 @@ func (client *CachedK8sClient) getK8sAttrsForIp(agentIP string, ip string, prefi
 	}
 
 	if pod := client.GetPodByIPAddr(ip); pod != nil {
+		k8sAttrs[prefix+k8sResourceType] = k8sResourceTypePod
 		k8sAttrs[prefix+string(semconv.K8SPodNameKey)] = pod.Name
 		k8sAttrs[prefix+string(semconv.K8SPodUIDKey)] = pod.UID
 		k8sAttrs[prefix+string(semconv.K8SNamespaceNameKey)] = pod.Namespace
@@ -158,10 +184,15 @@ func (client *CachedK8sClient) getK8sAttrsForIp(agentIP string, ip string, prefi
 
 		if service := client.GetServiceForPod(pod); service != nil {
 			// no semconv for service yet
-			k8sAttrs[prefix+"k8s.service.name"] = service.Name
-			k8sAttrs[prefix+"k8s.service.uid"] = service.UID
+			k8sAttrs[prefix+k8sServiceName] = service.Name
+			k8sAttrs[prefix+k8sServiceUID] = service.UID
 		}
+	} else if service := client.GetServiceByIPAddr(ip); service != nil {
+		k8sAttrs[prefix+k8sResourceType] = k8sResourceTypeService
+		k8sAttrs[prefix+string(semconv.K8SNamespaceNameKey)] = service.Namespace
+		// no semconv for service yet
+		k8sAttrs[prefix+k8sServiceName] = service.Name
+		k8sAttrs[prefix+k8sServiceUID] = service.UID
 	}
-
 	return k8sAttrs
 }
