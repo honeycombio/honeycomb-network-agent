@@ -66,9 +66,6 @@ func initLibhoney(config config.Config, version string) func() {
 	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", version)
 
-	if config.ClusterName != "" {
-		libhoney.AddField("meta.cluster.name", config.ClusterName)
-	}
 	if config.AgentNodeIP != "" {
 		libhoney.AddField("meta.agent.node.ip", config.AgentNodeIP)
 	}
@@ -84,6 +81,9 @@ func initLibhoney(config config.Config, version string) func() {
 	}
 	if config.AgentPodName != "" {
 		libhoney.AddField("meta.agent.pod.name", config.AgentPodName)
+	}
+	for k, v := range config.AgentAttributes {
+		libhoney.AddField(k, v)
 	}
 
 	return libhoney.Close
