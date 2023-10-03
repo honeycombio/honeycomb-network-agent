@@ -99,9 +99,9 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 
 	attrs := events[0].Data
 	// remove dynamic time-based data before comparing
-	delete(attrs, "meta.httpEvent_handled_at")
-	delete(attrs, "meta.httpEvent_request_handled_latency_ms")
-	delete(attrs, "meta.httpEvent_response_handled_latency_ms")
+	delete(attrs, "meta.event_handled_at")
+	delete(attrs, "meta.request.capture_to_handle.latency_ms")
+	delete(attrs, "meta.response.capture_to_handle.latency_ms")
 
 	expectedAttrs := map[string]interface{}{
 		"name":                           "HTTP GET",

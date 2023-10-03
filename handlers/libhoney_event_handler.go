@@ -92,7 +92,7 @@ func initLibhoney(config config.Config, version string) func() {
 // It only sets timestamps if they are present in the captured event, and only
 // computes and includes durations for which there are correct timestamps to based them upon.
 func setTimestampsAndDurationIfValid(honeyEvent *libhoney.Event, httpEvent assemblers.HttpEvent) {
-	honeyEvent.AddField("meta.httpEvent_handled_at", time.Now())
+	honeyEvent.AddField("meta.event_handled_at", time.Now())
 	switch {
 	case httpEvent.RequestTimestamp.IsZero() && httpEvent.ResponseTimestamp.IsZero():
 		// no request or response, which is weird, but let's send what we do know
@@ -105,7 +105,7 @@ func setTimestampsAndDurationIfValid(honeyEvent *libhoney.Event, httpEvent assem
 		// but we have a response
 		honeyEvent.Timestamp = httpEvent.ResponseTimestamp
 		honeyEvent.AddField("http.response.timestamp", httpEvent.ResponseTimestamp)
-		honeyEvent.AddField("meta.httpEvent_response_handled_latency_ms", time.Since(httpEvent.ResponseTimestamp).Milliseconds())
+		honeyEvent.AddField("meta.response.capture_to_handle.latency_ms", time.Since(httpEvent.ResponseTimestamp).Milliseconds())
 
 	case httpEvent.ResponseTimestamp.IsZero(): // have request, no response
 		// no response
@@ -113,14 +113,14 @@ func setTimestampsAndDurationIfValid(honeyEvent *libhoney.Event, httpEvent assem
 		// but we have a request
 		honeyEvent.Timestamp = httpEvent.RequestTimestamp
 		honeyEvent.AddField("http.request.timestamp", httpEvent.RequestTimestamp)
-		honeyEvent.AddField("meta.httpEvent_request_handled_latency_ms", time.Since(httpEvent.RequestTimestamp).Milliseconds())
+		honeyEvent.AddField("meta.request.capture_to_handle.latency_ms", time.Since(httpEvent.RequestTimestamp).Milliseconds())
 
 	default: // the happiest of paths, we have both request and response
 		honeyEvent.Timestamp = httpEvent.RequestTimestamp
 		honeyEvent.AddField("http.request.timestamp", httpEvent.RequestTimestamp)
 		honeyEvent.AddField("http.response.timestamp", httpEvent.ResponseTimestamp)
-		honeyEvent.AddField("meta.httpEvent_request_handled_latency_ms", time.Since(httpEvent.RequestTimestamp).Milliseconds())
-		honeyEvent.AddField("meta.httpEvent_response_handled_latency_ms", time.Since(httpEvent.ResponseTimestamp).Milliseconds())
+		honeyEvent.AddField("meta.request.capture_to_handle.latency_ms", time.Since(httpEvent.RequestTimestamp).Milliseconds())
+		honeyEvent.AddField("meta.response.capture_to_handle.latency_ms", time.Since(httpEvent.ResponseTimestamp).Milliseconds())
 		honeyEvent.AddField("duration_ms", httpEvent.ResponseTimestamp.Sub(httpEvent.RequestTimestamp).Milliseconds())
 	}
 }
