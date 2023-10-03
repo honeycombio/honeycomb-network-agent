@@ -41,6 +41,14 @@ func Test_GetAttrs(t *testing.T) {
 		},
 		Spec: v1.PodSpec{
 			NodeName: node.Name,
+			Containers: []v1.Container{
+				{
+					Name: "src-pod-container-1",
+				},
+				{
+					Name: "src-pod-container-2",
+				},
+			},
 		},
 	}
 	destPod := &v1.Pod{
@@ -55,6 +63,14 @@ func Test_GetAttrs(t *testing.T) {
 		},
 		Spec: v1.PodSpec{
 			NodeName: node.Name,
+			Containers: []v1.Container{
+				{
+					Name: "dest-pod-container-1",
+				},
+				{
+					Name: "dest-pod-container-2",
+				},
+			},
 		},
 	}
 	client := NewCachedK8sClient(fake.NewSimpleClientset(node, service, srcPod, destPod))
@@ -77,6 +93,7 @@ func Test_GetAttrs(t *testing.T) {
 				"source.k8s.namespace.name": srcPod.Namespace,
 				"source.k8s.pod.name":       srcPod.Name,
 				"source.k8s.pod.uid":        srcPod.UID,
+				"source.k8s.container.name": "src-pod-container-1,src-pod-container-2",
 				"source.k8s.node.name":      node.Name,
 				"source.k8s.node.uid":       node.UID,
 				"source.k8s.service.name":   service.Name,
@@ -88,6 +105,7 @@ func Test_GetAttrs(t *testing.T) {
 				"destination.k8s.namespace.name": destPod.Namespace,
 				"destination.k8s.pod.name":       destPod.Name,
 				"destination.k8s.pod.uid":        destPod.UID,
+				"destination.k8s.container.name": "dest-pod-container-1,dest-pod-container-2",
 				"destination.k8s.node.name":      node.Name,
 				"destination.k8s.node.uid":       node.UID,
 				"destination.k8s.service.name":   service.Name,
@@ -105,6 +123,7 @@ func Test_GetAttrs(t *testing.T) {
 				"destination.k8s.namespace.name": destPod.Namespace,
 				"destination.k8s.pod.name":       destPod.Name,
 				"destination.k8s.pod.uid":        destPod.UID,
+				"destination.k8s.container.name": "dest-pod-container-1,dest-pod-container-2",
 				"destination.k8s.node.name":      node.Name,
 				"destination.k8s.node.uid":       node.UID,
 				"destination.k8s.service.name":   service.Name,
@@ -120,6 +139,7 @@ func Test_GetAttrs(t *testing.T) {
 				"source.k8s.namespace.name": srcPod.Namespace,
 				"source.k8s.pod.name":       srcPod.Name,
 				"source.k8s.pod.uid":        srcPod.UID,
+				"source.k8s.container.name": "src-pod-container-1,src-pod-container-2",
 				"source.k8s.node.name":      node.Name,
 				"source.k8s.node.uid":       node.UID,
 				"source.k8s.service.name":   service.Name,
