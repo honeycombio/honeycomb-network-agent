@@ -2,18 +2,28 @@
 
 [![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/honeycomb-network-agent)](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md)
 
-The agent is deployed to Kubernetes as a [`DaemonSet`](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/),
-which means that Kubernetes will try to have the agent run on every node in the cluster.
+The Honeycomb Network Agent is a low effort, no-code, language agnostic solution to getting telemetry of your applications running in Kubernetes.
 
 Docker images are found in [`ghcr.io/honeycombio/network-agent:latest`](https://github.com/honeycombio/honeycomb-network-agent/pkgs/container/network-agent).
 
 See notes on local development in [`DEVELOPING.md`](./DEVELOPING.md)
 
+## How it Works
+
+The agent runs as a [`DaemonSet`](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/) on each node in a Kubernetes cluster.
+It captures raw network packets from the network interface that is shared by all resources on the node (Pods, Daemonsets, etc).
+Captured network packets are reassembled into whole payloads and then parsed into known application level formats (eg HTTP).
+Parsed payloads are converted into events and then sent to Honeycomb.
+
+Events include network level information such as source & destination IPs and port numbers, kubernetes information such as source and destination Pod names, and application level format specific information such as HTTP method and response status code.
+
+![design diagram](./agent_design.png)
+
 ## Getting Started (Quickstart)
 
 ### Requirements
 
-- A running Kubernetes cluster (see [Supported Versions](#supported-versions))
+- A running Kubernetes cluster (see [Supported Platforms](#supported-platforms))
 - A Honeycomb API Key
 
 ### Setup
@@ -55,7 +65,16 @@ Events should show up in Honeycomb in the `hny-network-agent` dataset.
 
 Alternative options for configuration and running can be found in [Deploying the agent to a Kubernetes cluster](./DEVELOPING.md#deploying-the-agent-to-a-kubernetes-cluster):
 
-## Supported Versions
+## Supported Platforms
+
+| Platform                                                             | Supported                             |
+| ---------------------------------------------------------------------| ------------------------------------- |
+| [AKS](https://azure.microsoft.com/en-gb/products/kubernetes-service) | Supported ✅                          | 
+| [EKS](https://aws.amazon.com/eks/)                                   | Self-managed hosts ✅ <br> Fargate ❌  |
+| [GKE](https://cloud.google.com/kubernetes-engine)                    | Standard cluster ✅ <br> AutoPilot ❌  |
+| Self-hosted                                                          | Ubuntu ✅                             |
+
+### Requirements
 
 - Kubernetes version 1.24+
 - Linux Kernel 5.10+ with NET_RAW capabilities
