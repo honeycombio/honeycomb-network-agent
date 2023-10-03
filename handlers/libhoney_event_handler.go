@@ -93,7 +93,7 @@ func initLibhoney(config config.Config, version string) func() {
 // computes and includes durations for which there are correct timestamps to based them upon.
 func setTimestampsAndDurationIfValid(honeyEvent *libhoney.Event, httpEvent assemblers.HttpEvent) {
 	honeyEvent.AddField("meta.httpEvent_handled_at", time.Now())
-	switch true {
+	switch {
 	case httpEvent.RequestTimestamp.IsZero() && httpEvent.ResponseTimestamp.IsZero():
 		// no request or response, which is weird, but let's send what we do know
 		honeyEvent.AddField("meta.timestamps_missing", "request, response")
