@@ -99,7 +99,6 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 			Int64("request_id", event.RequestId).
 			Msg("Request timestamp is zero")
 		ev.AddField("http.request.timestamp_missing", true)
-		log.Info().Int64("request_request_id", event.RequestId)
 		event.RequestTimestamp = time.Now()
 	}
 	if event.ResponseTimestamp.IsZero() {
@@ -108,11 +107,9 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 			Int64("request_id", event.RequestId).
 			Msg("Response timestamp is zero")
 		ev.AddField("http.response.timestamp_missing", true)
-		log.Info().Int64("response_request_id", event.RequestId)
 		event.ResponseTimestamp = time.Now()
 	}
 	eventDuration := event.ResponseTimestamp.Sub(event.RequestTimestamp)
-	log.Info().Int64("request_id", event.RequestId)
 
 	// common attributes
 	ev.Timestamp = event.RequestTimestamp
