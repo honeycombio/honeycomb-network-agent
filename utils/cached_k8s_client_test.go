@@ -11,6 +11,12 @@ import (
 )
 
 func Test_GetAttrs(t *testing.T) {
+	node := &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "node-1",
+			UID:  "node-1-uid",
+		},
+	}
 	srcPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "src-pod",
@@ -19,6 +25,9 @@ func Test_GetAttrs(t *testing.T) {
 		},
 		Status: v1.PodStatus{
 			PodIP: "1.2.3.4",
+		},
+		Spec: v1.PodSpec{
+			NodeName: node.Name,
 		},
 	}
 	destPod := &v1.Pod{
@@ -30,8 +39,11 @@ func Test_GetAttrs(t *testing.T) {
 		Status: v1.PodStatus{
 			PodIP: "4.3.2.1",
 		},
+		Spec: v1.PodSpec{
+			NodeName: node.Name,
+		},
 	}
-	client := NewCachedK8sClient(fake.NewSimpleClientset(srcPod, destPod))
+	client := NewCachedK8sClient(fake.NewSimpleClientset(node, srcPod, destPod))
 	client.Start(context.Background())
 
 	testCases := []struct {
@@ -47,15 +59,21 @@ func Test_GetAttrs(t *testing.T) {
 			agentIP: "1.1.1.1",
 			srcIP:   srcPod.Status.PodIP,
 			expectedSrcAttrs: map[string]interface{}{
+				"source.k8s.resource.type":  "pod",
 				"source.k8s.namespace.name": srcPod.Namespace,
 				"source.k8s.pod.name":       srcPod.Name,
 				"source.k8s.pod.uid":        srcPod.UID,
+				"source.k8s.node.name":      node.Name,
+				"source.k8s.node.uid":       node.UID,
 			},
 			destIP: destPod.Status.PodIP,
 			expectedDestAttrs: map[string]interface{}{
+				"destination.k8s.resource.type":  "pod",
 				"destination.k8s.namespace.name": destPod.Namespace,
 				"destination.k8s.pod.name":       destPod.Name,
 				"destination.k8s.pod.uid":        destPod.UID,
+				"destination.k8s.node.name":      node.Name,
+				"destination.k8s.node.uid":       node.UID,
 			},
 		},
 		{
@@ -65,9 +83,12 @@ func Test_GetAttrs(t *testing.T) {
 			expectedSrcAttrs: map[string]interface{}{},
 			destIP:           destPod.Status.PodIP,
 			expectedDestAttrs: map[string]interface{}{
+				"destination.k8s.resource.type":  "pod",
 				"destination.k8s.namespace.name": destPod.Namespace,
 				"destination.k8s.pod.name":       destPod.Name,
 				"destination.k8s.pod.uid":        destPod.UID,
+				"destination.k8s.node.name":      node.Name,
+				"destination.k8s.node.uid":       node.UID,
 			},
 		},
 		{
@@ -75,9 +96,12 @@ func Test_GetAttrs(t *testing.T) {
 			agentIP: destPod.Status.PodIP,
 			srcIP:   srcPod.Status.PodIP,
 			expectedSrcAttrs: map[string]interface{}{
+				"source.k8s.resource.type":  "pod",
 				"source.k8s.namespace.name": srcPod.Namespace,
 				"source.k8s.pod.name":       srcPod.Name,
 				"source.k8s.pod.uid":        srcPod.UID,
+				"source.k8s.node.name":      node.Name,
+				"source.k8s.node.uid":       node.UID,
 			},
 			destIP:            destPod.Status.PodIP,
 			expectedDestAttrs: map[string]interface{}{},
