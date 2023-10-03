@@ -121,6 +121,9 @@ spec:
             ## uncomment this to enable profiling
             # - name: DEBUG
             #   value: "$DEBUG"
+            ## uncomment this to add extra attributes to all events
+            # - name: AGENT_ATTRIBUTES
+            #   value: "key1=value1,key2=value2"
           securityContext:
             capabilities:
               add:
