@@ -17,11 +17,24 @@ func Test_GetAttrs(t *testing.T) {
 			UID:  "node-1-uid",
 		},
 	}
+	service := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "service-1",
+			Namespace: "unit-tests",
+			UID:       "service-1-uid",
+		},
+		Spec: v1.ServiceSpec{
+			Selector: map[string]string{
+				"app": "test",
+			},
+		},
+	}
 	srcPod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "src-pod",
 			Namespace: "unit-tests",
 			UID:       "src-pod-uid",
+			Labels:    service.Spec.Selector,
 		},
 		Status: v1.PodStatus{
 			PodIP: "1.2.3.4",
@@ -35,6 +48,7 @@ func Test_GetAttrs(t *testing.T) {
 			Name:      "dest-pod",
 			Namespace: "unit-tests",
 			UID:       "dest-pod-uid",
+			Labels:    service.Spec.Selector,
 		},
 		Status: v1.PodStatus{
 			PodIP: "4.3.2.1",
@@ -43,7 +57,7 @@ func Test_GetAttrs(t *testing.T) {
 			NodeName: node.Name,
 		},
 	}
-	client := NewCachedK8sClient(fake.NewSimpleClientset(node, srcPod, destPod))
+	client := NewCachedK8sClient(fake.NewSimpleClientset(node, service, srcPod, destPod))
 	client.Start(context.Background())
 
 	testCases := []struct {
@@ -65,6 +79,8 @@ func Test_GetAttrs(t *testing.T) {
 				"source.k8s.pod.uid":        srcPod.UID,
 				"source.k8s.node.name":      node.Name,
 				"source.k8s.node.uid":       node.UID,
+				"source.k8s.service.name":   service.Name,
+				"source.k8s.service.uid":    service.UID,
 			},
 			destIP: destPod.Status.PodIP,
 			expectedDestAttrs: map[string]interface{}{
@@ -74,6 +90,8 @@ func Test_GetAttrs(t *testing.T) {
 				"destination.k8s.pod.uid":        destPod.UID,
 				"destination.k8s.node.name":      node.Name,
 				"destination.k8s.node.uid":       node.UID,
+				"destination.k8s.service.name":   service.Name,
+				"destination.k8s.service.uid":    service.UID,
 			},
 		},
 		{
@@ -89,6 +107,8 @@ func Test_GetAttrs(t *testing.T) {
 				"destination.k8s.pod.uid":        destPod.UID,
 				"destination.k8s.node.name":      node.Name,
 				"destination.k8s.node.uid":       node.UID,
+				"destination.k8s.service.name":   service.Name,
+				"destination.k8s.service.uid":    service.UID,
 			},
 		},
 		{
@@ -102,6 +122,8 @@ func Test_GetAttrs(t *testing.T) {
 				"source.k8s.pod.uid":        srcPod.UID,
 				"source.k8s.node.name":      node.Name,
 				"source.k8s.node.uid":       node.UID,
+				"source.k8s.service.name":   service.Name,
+				"source.k8s.service.uid":    service.UID,
 			},
 			destIP:            destPod.Status.PodIP,
 			expectedDestAttrs: map[string]interface{}{},
