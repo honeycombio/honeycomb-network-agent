@@ -25,6 +25,8 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 	testReqTime := time.Now()
 	testReqPacketCount := 2
 	testRespPacketCount := 3
+	testRespTime := testReqTime.Add(3 * time.Millisecond)
+
 	httpEvent := assemblers.HttpEvent{
 		StreamIdent: "c->s:1->2",
 		Request: &http.Request{
@@ -38,7 +40,7 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 			ContentLength: 84,
 		},
 		RequestTimestamp:    testReqTime,
-		ResponseTimestamp:   testReqTime.Add(3 * time.Millisecond),
+		ResponseTimestamp:   testRespTime,
 		RequestPacketCount:  testReqPacketCount,
 		ResponsePacketCount: testRespPacketCount,
 		SrcIp:               "1.2.3.4",
@@ -101,9 +103,9 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 
 	attrs := events[0].Data
 	// remove dynamic time-based data before comparing
-	delete(attrs, "meta.httpEvent_handled_at")
-	delete(attrs, "meta.httpEvent_request_handled_latency_ms")
-	delete(attrs, "meta.httpEvent_response_handled_latency_ms")
+	delete(attrs, "meta.event_handled_at")
+	delete(attrs, "meta.request.capture_to_handle.latency_ms")
+	delete(attrs, "meta.response.capture_to_handle.latency_ms")
 
 	expectedAttrs := map[string]interface{}{
 		"name":                           "HTTP GET",
@@ -117,7 +119,7 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 		"url.path":                       "/check?teapot=true",
 		"http.request.body.size":         int64(42),
 		"http.request.timestamp":         testReqTime,
-		"http.response.timestamp":        testReqTime.Add(3 * time.Millisecond),
+		"http.response.timestamp":        testRespTime,
 		"http.response.status_code":      418,
 		"http.response.body.size":        int64(84),
 		"error":                          "HTTP client error",
@@ -219,9 +221,9 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 
 	attrs := events[0].Data
 	// remove dynamic time-based data before comparing
-	delete(attrs, "meta.httpEvent_handled_at")
-	delete(attrs, "meta.httpEvent_request_handled_latency_ms")
-	delete(attrs, "meta.httpEvent_response_handled_latency_ms")
+	delete(attrs, "meta.event_handled_at")
+	delete(attrs, "meta.request.capture_to_handle.latency_ms")
+	delete(attrs, "meta.response.capture_to_handle.latency_ms")
 
 	expectedAttrs := map[string]interface{}{
 		"name":                           "HTTP GET",
@@ -252,6 +254,86 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 	}
 
 	assert.Equal(t, expectedAttrs, attrs)
+}
+
+func Test_reportingTimesAndDurations(t *testing.T) {
+	// Do you remember the 21st night of September?
+	var aRealRequestTime time.Time = time.Date(1978, time.September, 21, 11, 30, 0, 0, time.UTC)
+	// ... a response little bit later ...
+	var aRealResponseTime time.Time = aRealRequestTime.Add(3 * time.Millisecond)
+	// an expectation of 'nowish' for scenarios where the code under test defaults to time.Now()
+	var nowish time.Time = time.Now()
+
+	testCases := []struct {
+		desc                string
+		reqTime             time.Time
+		respTime            time.Time
+		expectToSetDuration bool
+		// empty if duration is expected, list of missing timestamps otherwise
+		expectedTimestampsMissing string
+		expectedDuration          int64
+		expectedTelemetryTime     time.Time
+	}{
+		{
+			desc:                  "happy path!",
+			reqTime:               aRealRequestTime,
+			respTime:              aRealResponseTime,
+			expectToSetDuration:   true,
+			expectedDuration:      3,
+			expectedTelemetryTime: aRealRequestTime,
+		},
+		{
+			desc:                      "missing request timestamp",
+			reqTime:                   time.Time{},
+			respTime:                  aRealResponseTime,
+			expectToSetDuration:       false,
+			expectedTimestampsMissing: "request",
+			expectedTelemetryTime:     aRealResponseTime,
+		},
+		{
+			desc:                      "missing response timestamp",
+			reqTime:                   aRealRequestTime,
+			respTime:                  time.Time{},
+			expectToSetDuration:       false,
+			expectedTimestampsMissing: "response",
+			expectedTelemetryTime:     aRealRequestTime,
+		},
+		{
+			desc:                      "missing both timestamps",
+			reqTime:                   time.Time{},
+			respTime:                  time.Time{},
+			expectToSetDuration:       false,
+			expectedTimestampsMissing: "request, response",
+			expectedTelemetryTime:     nowish,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			ev := libhoney.NewEvent()
+			httpEvent := assemblers.HttpEvent{
+				RequestTimestamp:  tC.reqTime,
+				ResponseTimestamp: tC.respTime,
+			}
+
+			setTimestampsAndDurationIfValid(ev, httpEvent)
+
+			if tC.expectedTelemetryTime != nowish {
+				assert.Equal(t, tC.expectedTelemetryTime, ev.Timestamp)
+			} else {
+				assert.WithinDuration(
+					t, tC.expectedTelemetryTime, ev.Timestamp, 10*time.Millisecond,
+					"a real failure should be wildly wrong, close failures might be a slow test suite and this assertion could use a rethink",
+				)
+			}
+
+			if tC.expectToSetDuration {
+				assert.Equal(t, ev.Fields()["duration_ms"], tC.expectedDuration)
+			} else {
+				assert.Equal(t, ev.Fields()["meta.timestamps_missing"], tC.expectedTimestampsMissing)
+				assert.Nil(t, ev.Fields()["duration_ms"])
+			}
+		})
+	}
 }
 
 // setupTestLibhoney configures a Libhoney with a mock transmission for testing.
