@@ -129,7 +129,7 @@ spec:
             #   value: "key1=value1,key2=value2"
             ## uncomment this to enable including the request URL in events
             # - name: INCLUDE_REQUEST_URL
-            #   value: true
+            #   value: "true"
           securityContext:
             capabilities:
               add:
