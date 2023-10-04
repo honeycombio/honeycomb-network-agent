@@ -1,5 +1,30 @@
 # Honeycomb Network Agent changelog
 
+## [0.0.20-alpha] - 2023-10-04
+
+### Enhancements
+
+- feat: Set error field if HTTP status >= 400 (#248) | @robbkidd
+- feat: Only keep HTTP headers we want to keep (#254) | @MikeGoldsmith
+- feat: Add service k8s metadata to events (#257) | @MikeGoldsmith
+- feat: Don't add k8s attributes when source/destination IP matches agent IP (#260) | @MikeGoldsmith
+- feat: Add config option to set additional additional on all events (#259) | @MikeGoldsmith
+
+### Fixes
+
+- fix: Skip key validation if endpoint is different (#265) | @JamieDanielson
+- fix: Don't send durations when they are not from actual capture times (#258) | @robbkidd
+
+### Maintenance
+
+- maint: Add RequestId and Packet Count to metatelemetry (#262) | @JamieDanielson
+- maint: Bump go.opentelemetry.io/otel from 1.18.0 to 1.19.0 (#261) | @Dependabot
+- maint: Reduce docker image size (#266) | @MikeGoldsmith
+- docs: Update greetings example service for easier testing (#252) | @JamieDanielson
+- docs: Add design section to readme (#243) | @MikeGoldsmith
+- docs: Add supported k8s platforms to README (#256) | @MikeGoldsmith
+- docs: Fix make targets in developing instructions (#250) | @MikeGoldsmith
+
 ## [0.0.19-alpha] - 2023-09-27
 
 ### Fixes
