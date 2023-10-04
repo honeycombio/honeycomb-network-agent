@@ -82,7 +82,7 @@ func initLibhoney(config config.Config, version string) func() {
 	if config.AgentPodName != "" {
 		libhoney.AddField("meta.agent.pod.name", config.AgentPodName)
 	}
-	for k, v := range config.AgentAttributes {
+	for k, v := range config.AdditionalAttributes {
 		libhoney.AddField(k, v)
 	}
 

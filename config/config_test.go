@@ -60,7 +60,7 @@ func TestEnvVars(t *testing.T) {
 	t.Setenv("AGENT_SERVICE_ACCOUNT_NAME", "service_account_name")
 	t.Setenv("AGENT_POD_IP", "pod_ip")
 	t.Setenv("AGENT_POD_NAME", "pod_name")
-	t.Setenv("AGENT_ATTRIBUTES", "key1=value1,key2=value2")
+	t.Setenv("ADDITIONAL_ATTRIBUTES", "key1=value1,key2=value2")
 
 	config := config.NewConfig()
 	assert.Equal(t, "1234567890123456789012", config.APIKey)
@@ -75,5 +75,5 @@ func TestEnvVars(t *testing.T) {
 	assert.Equal(t, "service_account_name", config.AgentServiceAccount)
 	assert.Equal(t, "pod_ip", config.AgentPodIP)
 	assert.Equal(t, "pod_name", config.AgentPodName)
-	assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, config.AgentAttributes)
+	assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, config.AdditionalAttributes)
 }

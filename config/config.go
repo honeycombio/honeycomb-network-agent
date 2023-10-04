@@ -103,7 +103,7 @@ type Config struct {
 	AgentPodName string
 
 	// Additional attributes to add to all events.
-	AgentAttributes map[string]string
+	AdditionalAttributes map[string]string
 }
 
 // NewConfig returns a new Config struct.
@@ -138,7 +138,7 @@ func NewConfig() Config {
 		AgentServiceAccount:           utils.LookupEnvOrString("AGENT_SERVICE_ACCOUNT_NAME", ""),
 		AgentPodIP:                    utils.LookupEnvOrString("AGENT_POD_IP", ""),
 		AgentPodName:                  utils.LookupEnvOrString("AGENT_POD_NAME", ""),
-		AgentAttributes:               utils.LookupEnvAsStringMap("AGENT_ATTRIBUTES"),
+		AdditionalAttributes:          utils.LookupEnvAsStringMap("ADDITIONAL_ATTRIBUTES"),
 	}
 }
 
