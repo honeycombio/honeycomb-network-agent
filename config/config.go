@@ -104,6 +104,9 @@ type Config struct {
 
 	// Additional attributes to add to all events.
 	AdditionalAttributes map[string]string
+
+	// Include the request URL in the event.
+	IncludeRequestURL bool
 }
 
 // NewConfig returns a new Config struct.
@@ -139,6 +142,7 @@ func NewConfig() Config {
 		AgentPodIP:                    utils.LookupEnvOrString("AGENT_POD_IP", ""),
 		AgentPodName:                  utils.LookupEnvOrString("AGENT_POD_NAME", ""),
 		AdditionalAttributes:          utils.LookupEnvAsStringMap("ADDITIONAL_ATTRIBUTES"),
+		IncludeRequestURL:             utils.LookupEnvOrBool("INCLUDE_REQUEST_URL", false),
 	}
 }
 

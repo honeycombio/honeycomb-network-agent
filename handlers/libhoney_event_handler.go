@@ -149,12 +149,14 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 
 	// request attributes
 	if event.Request != nil {
-		requestURI = event.Request.RequestURI
 		ev.AddField("name", fmt.Sprintf("HTTP %s", event.Request.Method))
 		ev.AddField(string(semconv.HTTPRequestMethodKey), event.Request.Method)
-		ev.AddField(string(semconv.URLPathKey), requestURI)
 		ev.AddField(string(semconv.UserAgentOriginalKey), event.Request.Header.Get("User-Agent"))
 		ev.AddField(string(semconv.HTTPRequestBodySizeKey), event.Request.ContentLength)
+		if handler.config.IncludeRequestURL {
+			requestURI = event.Request.RequestURI
+			ev.AddField(string(semconv.URLPathKey), requestURI)
+		}
 	} else {
 		ev.AddField("name", "HTTP")
 		ev.AddField("http.request.missing", "no request on this event")
