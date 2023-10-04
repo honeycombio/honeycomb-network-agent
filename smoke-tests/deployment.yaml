@@ -106,6 +106,9 @@ spec:
                 secretKeyRef:
                   name: honeycomb
                   key: api-key
+            ## uncomment this to change the endpoint for events (uncommon)
+            # - name: HONEYCOMB_API_ENDPOINT
+            #   value: $HONEYCOMB_API_ENDPOINT
             ## uncomment this to set the destination dataset for events
             # - name: HONEYCOMB_DATASET
             #   value: $HONEYCOMB_DATASET
