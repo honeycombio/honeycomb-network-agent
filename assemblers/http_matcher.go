@@ -11,10 +11,12 @@ type httpMatcher struct {
 }
 
 type entry struct {
-	request           *http.Request
-	requestTimestamp  time.Time
-	response          *http.Response
-	responseTimestamp time.Time
+	request             *http.Request
+	requestTimestamp    time.Time
+	response            *http.Response
+	responseTimestamp   time.Time
+	requestPacketCount  int
+	responsePacketCount int
 }
 
 func newRequestResponseMatcher() *httpMatcher {
@@ -23,17 +25,18 @@ func newRequestResponseMatcher() *httpMatcher {
 	}
 }
 
-// GetOrStoreRequest receives a tcpStream ident, a timestamp, and a request.
+// GetOrStoreRequest receives a tcpStream ident, a timestamp, a request, and a packet count.
 //
 // If the response that matches the stream ident has been seen before,
 // returns a match entry containing both Request and Response and matchFound will be true.
 //
 // If the response hasn't been seen yet,
 // stores the Request for later lookup and returns match as nil and matchFound will be false.
-func (m *httpMatcher) GetOrStoreRequest(key int64, timestamp time.Time, request *http.Request) (match *entry, matchFound bool) {
+func (m *httpMatcher) GetOrStoreRequest(key int64, timestamp time.Time, request *http.Request, packetCount int) (match *entry, matchFound bool) {
 	e := &entry{
-		request:          request,
-		requestTimestamp: timestamp,
+		request:            request,
+		requestTimestamp:   timestamp,
+		requestPacketCount: packetCount,
 	}
 
 	if v, matchFound := m.entries.LoadOrStore(key, e); matchFound {
@@ -47,17 +50,18 @@ func (m *httpMatcher) GetOrStoreRequest(key int64, timestamp time.Time, request 
 	return nil, false
 }
 
-// GetOrStoreResponse receives a tcpStream ident, a timestamp, and a response.
+// GetOrStoreResponse receives a tcpStream ident, a timestamp, a response, and a packet count.
 //
 // If the request that matches the stream ident has been seen before,
 // returns a match entry containing both Request and Response and matchFound will be true.
 //
 // If the request hasn't been seen yet,
 // stores the Response for later lookup and returns match as nil and matchFound will be false.
-func (m *httpMatcher) GetOrStoreResponse(key int64, timestamp time.Time, response *http.Response) (match *entry, matchFound bool) {
+func (m *httpMatcher) GetOrStoreResponse(key int64, timestamp time.Time, response *http.Response, packetCount int) (match *entry, matchFound bool) {
 	e := &entry{
-		response:          response,
-		responseTimestamp: timestamp,
+		response:            response,
+		responseTimestamp:   timestamp,
+		responsePacketCount: packetCount,
 	}
 
 	if v, matchFound := m.entries.LoadOrStore(key, e); matchFound {

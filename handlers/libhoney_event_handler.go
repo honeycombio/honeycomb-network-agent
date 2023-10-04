@@ -17,6 +17,7 @@ import (
 
 // libhoneyEventHandler is an event handler that sends events using libhoney
 type libhoneyEventHandler struct {
+	config     config.Config
 	k8sClient  *utils.CachedK8sClient
 	eventsChan chan assemblers.HttpEvent
 }
@@ -25,6 +26,7 @@ type libhoneyEventHandler struct {
 func NewLibhoneyEventHandler(config config.Config, k8sClient *utils.CachedK8sClient, eventsChan chan assemblers.HttpEvent, version string) EventHandler {
 	initLibhoney(config, version)
 	return &libhoneyEventHandler{
+		config:     config,
 		k8sClient:  k8sClient,
 		eventsChan: eventsChan,
 	}
@@ -86,40 +88,56 @@ func initLibhoney(config config.Config, version string) func() {
 	return libhoney.Close
 }
 
+// setTimestampsAndDurationIfValid sets time-related fields in the emitted telemetry
+// about the request/response cycle.
+//
+// It only sets timestamps if they are present in the captured event, and only
+// computes and includes durations for which there are correct timestamps to based them upon.
+func setTimestampsAndDurationIfValid(honeyEvent *libhoney.Event, httpEvent assemblers.HttpEvent) {
+	honeyEvent.AddField("meta.event_handled_at", time.Now())
+	switch {
+	case httpEvent.RequestTimestamp.IsZero() && httpEvent.ResponseTimestamp.IsZero():
+		// no request or response, which is weird, but let's send what we do know
+		honeyEvent.AddField("meta.timestamps_missing", "request, response")
+		honeyEvent.Timestamp = time.Now()
+
+	case httpEvent.RequestTimestamp.IsZero():
+		// no request
+		honeyEvent.AddField("meta.timestamps_missing", "request")
+		// but we have a response
+		honeyEvent.Timestamp = httpEvent.ResponseTimestamp
+		honeyEvent.AddField("http.response.timestamp", httpEvent.ResponseTimestamp)
+		honeyEvent.AddField("meta.response.capture_to_handle.latency_ms", time.Since(httpEvent.ResponseTimestamp).Milliseconds())
+
+	case httpEvent.ResponseTimestamp.IsZero(): // have request, no response
+		// no response
+		honeyEvent.AddField("meta.timestamps_missing", "response")
+		// but we have a request
+		honeyEvent.Timestamp = httpEvent.RequestTimestamp
+		honeyEvent.AddField("http.request.timestamp", httpEvent.RequestTimestamp)
+		honeyEvent.AddField("meta.request.capture_to_handle.latency_ms", time.Since(httpEvent.RequestTimestamp).Milliseconds())
+
+	default: // the happiest of paths, we have both request and response
+		honeyEvent.Timestamp = httpEvent.RequestTimestamp
+		honeyEvent.AddField("http.request.timestamp", httpEvent.RequestTimestamp)
+		honeyEvent.AddField("http.response.timestamp", httpEvent.ResponseTimestamp)
+		honeyEvent.AddField("meta.request.capture_to_handle.latency_ms", time.Since(httpEvent.RequestTimestamp).Milliseconds())
+		honeyEvent.AddField("meta.response.capture_to_handle.latency_ms", time.Since(httpEvent.ResponseTimestamp).Milliseconds())
+		honeyEvent.AddField("duration_ms", httpEvent.ResponseTimestamp.Sub(httpEvent.RequestTimestamp).Milliseconds())
+	}
+}
+
+// handleEvent transforms a captured httpEvent into a libhoney event and sends it
 func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
-	// create libhoney event
-	ev := libhoney.NewEvent()
+	// the telemetry event to send
+	var ev *libhoney.Event = libhoney.NewEvent()
 
-	// calculate event duration
-	// TODO: This is a hack to work around a bug that results in the response timestamp sometimes
-	// being zero which causes the event duration to be negative.
-	if event.RequestTimestamp.IsZero() {
-		log.Debug().
-			Str("stream_ident", event.StreamIdent).
-			Int64("request_id", event.RequestId).
-			Msg("Request timestamp is zero")
-		ev.AddField("http.request.timestamp_missing", true)
-		event.RequestTimestamp = time.Now()
-	}
-	if event.ResponseTimestamp.IsZero() {
-		log.Debug().
-			Str("stream_ident", event.StreamIdent).
-			Int64("request_id", event.RequestId).
-			Msg("Response timestamp is zero")
-		ev.AddField("http.response.timestamp_missing", true)
-		event.ResponseTimestamp = time.Now()
-	}
-	eventDuration := event.ResponseTimestamp.Sub(event.RequestTimestamp)
+	setTimestampsAndDurationIfValid(ev, event)
 
-	// common attributes
-	ev.Timestamp = event.RequestTimestamp
-	ev.AddField("meta.httpEvent_handled_at", time.Now())
-	ev.AddField("meta.httpEvent_request_handled_latency_ms", time.Since(event.RequestTimestamp).Milliseconds())
-	ev.AddField("meta.httpEvent_response_handled_latency_ms", time.Since(event.ResponseTimestamp).Milliseconds())
 	ev.AddField("meta.stream.ident", event.StreamIdent)
-	ev.AddField("duration_ms", eventDuration.Milliseconds())
-	ev.AddField("http.request.timestamp", event.RequestTimestamp)
-	ev.AddField("http.response.timestamp", event.ResponseTimestamp)
+	ev.AddField("meta.seqack", event.RequestId)
+	ev.AddField("meta.request.packet_count", event.RequestPacketCount)
+	ev.AddField("meta.response.packet_count", event.ResponsePacketCount)
 
 	ev.AddField(string(semconv.ClientSocketAddressKey), event.SrcIp)
 	ev.AddField(string(semconv.ServerSocketAddressKey), event.DstIp)
@@ -157,8 +175,8 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 		ev.AddField("http.response.missing", "no response on this event")
 	}
 
-	ev.Add(utils.GetK8sAttrsForIp(handler.k8sClient, event.SrcIp, "source"))
-	ev.Add(utils.GetK8sAttrsForIp(handler.k8sClient, event.DstIp, "destination"))
+	ev.Add(handler.k8sClient.GetK8sAttrsForSourceIP(handler.config.AgentPodIP, event.SrcIp))
+	ev.Add(handler.k8sClient.GetK8sAttrsForDestinationIP(handler.config.AgentPodIP, event.DstIp))
 
 	log.Debug().
 		Str("stream_ident", event.StreamIdent).
