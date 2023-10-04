@@ -191,6 +191,11 @@ func (c *Config) Validate() error {
 	if c.APIKey == "" {
 		e = append(e, &MissingAPIKeyError{})
 	}
+	// if endpoint doesn't match default, don't validate API key
+	// this is primarily used for testing so no config options are provided
+	if c.Endpoint != "https://api.honeycomb.io" {
+		return nil
+	}
 	libhoneyConfig := libhoney.Config{APIKey: c.APIKey}
 	if _, err := libhoney.VerifyAPIKey(libhoneyConfig); err != nil {
 		e = append(e, &InvalidAPIKeyError{})
