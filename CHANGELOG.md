@@ -19,6 +19,7 @@
 
 - maint: Add RequestId and Packet Count to metatelemetry (#262) | @JamieDanielson
 - maint: Bump go.opentelemetry.io/otel from 1.18.0 to 1.19.0 (#261) | @Dependabot
+- maint: Reduce docker image size (#266) | @MikeGoldsmith
 - docs: Update greetings example service for easier testing (#252) | @JamieDanielson
 - docs: Add design section to readme (#243) | @MikeGoldsmith
 - docs: Add supported k8s platforms to README (#256) | @MikeGoldsmith
