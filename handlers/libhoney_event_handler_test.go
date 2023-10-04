@@ -80,8 +80,12 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 
 	wgTest := sync.WaitGroup{} // used to wait for the event handler to finish
 
+	testConfig := config.Config{
+		IncludeRequestURL: true,
+	}
+
 	// create the event handler with default config, fake k8s client & event channel then start it
-	handler := NewLibhoneyEventHandler(config.Config{}, fakeCachedK8sClient, eventsChannel, "test")
+	handler := NewLibhoneyEventHandler(testConfig, fakeCachedK8sClient, eventsChannel, "test")
 	wgTest.Add(1)
 	go handler.Start(cancelableCtx, &wgTest)
 
@@ -136,6 +140,63 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 	}
 
 	assert.Equal(t, expectedAttrs, attrs)
+}
+
+func Test_libhoneyEventHandler_handleEvent_doesNotSetUrlPath(t *testing.T) {
+	// Test Data - an assembled HTTP Event
+	httpEvent := assemblers.HttpEvent{
+		StreamIdent: "c->s:1->2",
+		Request: &http.Request{
+			Method:        "GET",
+			RequestURI:    "/check?teapot=true",
+			ContentLength: 42,
+			Header:        http.Header{"User-Agent": []string{"teapot-checker/1.0"}},
+		},
+		Response: &http.Response{
+			StatusCode:    418,
+			ContentLength: 84,
+		},
+		SrcIp: "1.2.3.4",
+		DstIp: "5.6.7.8",
+	}
+
+	// create a fake k8s clientset with the test pod metadata and start the cached client with it
+	fakeCachedK8sClient := utils.NewCachedK8sClient(fake.NewSimpleClientset())
+	cancelableCtx, done := context.WithCancel(context.Background())
+	fakeCachedK8sClient.Start(cancelableCtx)
+
+	// create event channel used to pass in events to the handler
+	eventsChannel := make(chan assemblers.HttpEvent, 1)
+
+	wgTest := sync.WaitGroup{} // used to wait for the event handler to finish
+
+	defaultConfig := config.Config{
+		IncludeRequestURL: false,
+	}
+	// create the event handler with default config, fake k8s client & event channel then start it
+	handler := NewLibhoneyEventHandler(defaultConfig, fakeCachedK8sClient, eventsChannel, "test")
+	wgTest.Add(1)
+	go handler.Start(cancelableCtx, &wgTest)
+
+	// Setup libhoney for testing, use mock transmission to retrieve events "sent"
+	// must be done after the event handler is created
+	mockTransmission := setupTestLibhoney(t)
+
+	// TEST ACTION: pass in httpEvent to handler
+	eventsChannel <- httpEvent
+	time.Sleep(10 * time.Millisecond) // give the handler time to process the event
+
+	done()
+	wgTest.Wait()
+	handler.Close()
+
+	// VALIDATE
+	events := mockTransmission.Events()
+	assert.Equal(t, 1, len(events), "Expected 1 and only 1 event to be sent")
+
+	attrs := events[0].Data
+
+	assert.NotContains(t, attrs, "url.path")
 }
 
 func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
@@ -198,8 +259,11 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 
 	wgTest := sync.WaitGroup{} // used to wait for the event handler to finish
 
+	testConfig := config.Config{
+		IncludeRequestURL: true,
+	}
 	// create the event handler with default config, fake k8s client & event channel then start it
-	handler := NewLibhoneyEventHandler(config.Config{}, fakeCachedK8sClient, eventsChannel, "test")
+	handler := NewLibhoneyEventHandler(testConfig, fakeCachedK8sClient, eventsChannel, "test")
 	wgTest.Add(1)
 	go handler.Start(cancelableCtx, &wgTest)
 
