@@ -5,17 +5,32 @@ import (
 )
 
 type Event interface {
+	// StreamIdent returns a string that uniquely identifies the stream that captured this event
 	StreamIdent() string
+
+	// RequestId returns a unique identifier for the request/response cycle
 	RequestId() int64
+
+	// RequestTimestamp returns the timestamp of the request
 	RequestTimestamp() time.Time
+
+	// ResponseTimestamp returns the timestamp of the response
 	ResponseTimestamp() time.Time
+
+	// RequestPacketCount returns the number of packets in the request
 	RequestPacketCount() int
+
+	// ResponsePacketCount returns the number of packets in the response
 	ResponsePacketCount() int
+
+	// SrcIp returns the source IP address
 	SrcIp() string
+
+	// DstIp returns the destination IP address
 	DstIp() string
 }
 
-type EventBase struct {
+type eventBase struct {
 	streamIdent         string
 	requestId           int64
 	requestTimestamp    time.Time
@@ -26,34 +41,34 @@ type EventBase struct {
 	dstIp               string
 }
 
-func (event *EventBase) StreamIdent() string {
+func (event *eventBase) StreamIdent() string {
 	return event.streamIdent
 }
 
-func (event *EventBase) RequestId() int64 {
+func (event *eventBase) RequestId() int64 {
 	return event.requestId
 }
 
-func (event *EventBase) RequestTimestamp() time.Time {
+func (event *eventBase) RequestTimestamp() time.Time {
 	return event.requestTimestamp
 }
 
-func (event *EventBase) ResponseTimestamp() time.Time {
+func (event *eventBase) ResponseTimestamp() time.Time {
 	return event.responseTimestamp
 }
 
-func (event *EventBase) RequestPacketCount() int {
+func (event *eventBase) RequestPacketCount() int {
 	return event.requestPacketCount
 }
 
-func (event *EventBase) ResponsePacketCount() int {
+func (event *eventBase) ResponsePacketCount() int {
 	return event.responsePacketCount
 }
 
-func (event *EventBase) SrcIp() string {
+func (event *eventBase) SrcIp() string {
 	return event.srcIp
 }
 
-func (event *EventBase) DstIp() string {
+func (event *eventBase) DstIp() string {
 	return event.dstIp
 }
