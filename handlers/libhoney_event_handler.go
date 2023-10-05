@@ -10,7 +10,6 @@ import (
 	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/honeycombio/honeycomb-network-agent/utils"
 	"github.com/honeycombio/libhoney-go"
-	"github.com/honeycombio/urlshaper"
 	"github.com/rs/zerolog/log"
 
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
@@ -21,7 +20,6 @@ type libhoneyEventHandler struct {
 	config     config.Config
 	k8sClient  *utils.CachedK8sClient
 	eventsChan chan assemblers.HttpEvent
-	urlParser  *urlshaper.Parser
 }
 
 // NewLibhoneyEventHandler creates a new event handler that sends events using libhoney
@@ -31,7 +29,6 @@ func NewLibhoneyEventHandler(config config.Config, k8sClient *utils.CachedK8sCli
 		config:     config,
 		k8sClient:  k8sClient,
 		eventsChan: eventsChan,
-		urlParser:  &urlshaper.Parser{},
 	}
 }
 
@@ -158,10 +155,7 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 		ev.AddField(string(semconv.HTTPRequestBodySizeKey), event.Request.ContentLength)
 		if handler.config.IncludeRequestURL {
 			requestURI = event.Request.RequestURI
-			urlShape, err := handler.urlParser.Parse(requestURI)
-			if err == nil {
-				ev.AddField(string(semconv.URLPathKey), urlShape.Path)
-			}
+			ev.AddField(string(semconv.URLPathKey), requestURI)
 		}
 	} else {
 		ev.AddField("name", "HTTP")

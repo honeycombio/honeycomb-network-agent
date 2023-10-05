@@ -55,8 +55,6 @@ github.com/honeycombio/gopacket v1.1.1 h1:J7hvYGbDc0OvCRSmONOby6voqz7TeI93MnhOC1
 github.com/honeycombio/gopacket v1.1.1/go.mod h1:HavMeONEl7W9036of9LbSWoonqhH7HA1+ZRO+rMIvFs=
 github.com/honeycombio/libhoney-go v1.20.0 h1:PL54R0P9vxIyb28H3twbLb+DCqQlJdMQM55VZg1abKA=
 github.com/honeycombio/libhoney-go v1.20.0/go.mod h1:RIaurCpfg5NDWSEV8t3QLcda9dUAiVNyWeHRAaSpN90=
-github.com/honeycombio/urlshaper v0.0.0-20230118181908-519e36e73b20 h1:aqwhw3NLUoTR4biNZFGz8a1i04YJFzVDpIhzM8H1HL0=
-github.com/honeycombio/urlshaper v0.0.0-20230118181908-519e36e73b20/go.mod h1:2CQJZ3RJ2uC2Mp3zJbSkVbFw9iZdCpWwymuADPZYFu4=
 github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8HmY=
 github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=

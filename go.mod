@@ -5,7 +5,6 @@ go 1.21
 require (
 	github.com/gopacket/gopacket v1.1.1
 	github.com/honeycombio/libhoney-go v1.20.0
-	github.com/honeycombio/urlshaper v0.0.0-20230118181908-519e36e73b20
 	github.com/rs/zerolog v1.31.0
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/otel v1.19.0
