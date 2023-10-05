@@ -13,7 +13,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// tcpStream has two unidirectional tcpReaders, one for client and one for server
+// tcpStream represents a TCP stream and receives TCP packets from the gopacket assembler
+// and attempts to parses them into requests and responses
+//
+// It implements the reassembly.Stream interface
 type tcpStream struct {
 	id         uint64
 	ident      string
@@ -53,6 +56,7 @@ func NewTcpStream(net gopacket.Flow, transport gopacket.Flow, config config.Conf
 	}
 }
 
+// Accept is an implementation of the reassembly.Stream interface
 func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassembly.TCPFlowDirection, nextSeq reassembly.Sequence, start *bool, ac reassembly.AssemblerContext) bool {
 	// FSM
 	if !stream.tcpstate.CheckState(tcp, dir) {
@@ -99,6 +103,7 @@ func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir re
 	return accept
 }
 
+// Reassembled is an implementation of the reassembly.Stream interface
 func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.AssemblerContext) {
 	// Get the direction of the packet (client to server or server to client)
 	dir, _, _, _ := sg.Info()
@@ -158,7 +163,7 @@ func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembl
 	}
 }
 
-// ReassemblyComplete is called when the TCP assembler believes a stream has completed.
+// ReassemblyComplete is an implementation of the reassembly.Stream interface
 func (stream *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
 	log.Debug().
 		Str("stream_ident", stream.ident).

@@ -6,16 +6,20 @@ import (
 	"time"
 )
 
+// HttpParser parses HTTP requests and responses
 type HttpParser struct {
 	matcher *httpMatcher
 }
 
+// NewHttpParser creates a new HttpParser
 func NewHttpParser() *HttpParser {
 	return &HttpParser{
 		matcher: newRequestResponseMatcher(),
 	}
 }
 
+// Parse parses a HTTP request or response and stores it in the matcher
+// If a match is found, it sends a HttpEvent to the tcpStream's events channel
 func (parser *HttpParser) parse(stream *tcpStream, requestId int64, timestamp time.Time, isClient bool, buffer *bufio.Reader, packetCount int) (bool, error) {
 	if isClient {
 		req, err := http.ReadRequest(buffer)
@@ -30,7 +34,18 @@ func (parser *HttpParser) parse(stream *tcpStream, requestId int64, timestamp ti
 		}
 		if entry, matchFound := parser.matcher.GetOrStoreRequest(requestId, timestamp, req, packetCount); matchFound {
 			// we have a match, process complete request/response pair
-			parser.processEvent(stream, requestId, entry)
+			stream.eventsChan <- NewHttpEvent(
+				stream.ident,
+				requestId,
+				entry.requestTimestamp,
+				entry.responseTimestamp,
+				entry.requestPacketCount,
+				entry.responsePacketCount,
+				stream.srcIP,
+				stream.dstIP,
+				entry.request,
+				entry.response,
+			)
 		}
 	} else {
 		res, err := http.ReadResponse(buffer, nil)
@@ -45,26 +60,21 @@ func (parser *HttpParser) parse(stream *tcpStream, requestId int64, timestamp ti
 		}
 		if entry, matchFound := parser.matcher.GetOrStoreResponse(requestId, timestamp, res, packetCount); matchFound {
 			// we have a match, process complete request/response pair
-			parser.processEvent(stream, requestId, entry)
+			stream.eventsChan <- NewHttpEvent(
+				stream.ident,
+				requestId,
+				entry.requestTimestamp,
+				entry.responseTimestamp,
+				entry.requestPacketCount,
+				entry.responsePacketCount,
+				stream.srcIP,
+				stream.dstIP,
+				entry.request,
+				entry.response,
+			)
 		}
 	}
-
 	return true, nil
-}
-
-func (parser *HttpParser) processEvent(stream *tcpStream, requestId int64, entry *entry) {
-	stream.eventsChan <- NewHttpEvent(
-		stream.ident,
-		requestId,
-		entry.requestTimestamp,
-		entry.responseTimestamp,
-		entry.requestPacketCount,
-		entry.responsePacketCount,
-		stream.srcIP,
-		stream.dstIP,
-		entry.request,
-		entry.response,
-	)
 }
 
 var headersToExtract = []string{
