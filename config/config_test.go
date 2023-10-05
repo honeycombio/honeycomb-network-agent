@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/honeycombio/honeycomb-network-agent/config"
@@ -60,6 +61,8 @@ func TestEnvVars(t *testing.T) {
 	t.Setenv("AGENT_SERVICE_ACCOUNT_NAME", "service_account_name")
 	t.Setenv("AGENT_POD_IP", "pod_ip")
 	t.Setenv("AGENT_POD_NAME", "pod_name")
+	t.Setenv("ADDITIONAL_ATTRIBUTES", "key1=value1,key2=value2")
+	t.Setenv("INCLUDE_REQUEST_URL", "true")
 
 	config := config.NewConfig()
 	assert.Equal(t, "1234567890123456789012", config.APIKey)
@@ -74,4 +77,30 @@ func TestEnvVars(t *testing.T) {
 	assert.Equal(t, "service_account_name", config.AgentServiceAccount)
 	assert.Equal(t, "pod_ip", config.AgentPodIP)
 	assert.Equal(t, "pod_name", config.AgentPodName)
+	assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, config.AdditionalAttributes)
+	assert.Equal(t, true, config.IncludeRequestURL)
+}
+
+func TestEnvVarsDefault(t *testing.T) {
+	// clear all env vars
+	// this doesn't reset the env vars for the test suite
+	// we could change to use os.Unsetenv() but that would require us to know and maontain
+	// all the env vars in an array
+	os.Clearenv()
+
+	config := config.NewConfig()
+	assert.Equal(t, "", config.APIKey)
+	assert.Equal(t, "https://api.honeycomb.io", config.Endpoint)
+	assert.Equal(t, "hny-network-agent", config.Dataset)
+	assert.Equal(t, "hny-network-agent-stats", config.StatsDataset)
+	assert.Equal(t, "INFO", config.LogLevel)
+	assert.Equal(t, false, config.Debug)
+	assert.Equal(t, "0.0.0.0:6060", config.DebugAddress)
+	assert.Equal(t, "", config.AgentNodeIP)
+	assert.Equal(t, "", config.AgentNodeName)
+	assert.Equal(t, "", config.AgentServiceAccount)
+	assert.Equal(t, "", config.AgentPodIP)
+	assert.Equal(t, "", config.AgentPodName)
+	assert.Equal(t, map[string]string{}, config.AdditionalAttributes)
+	assert.Equal(t, false, config.IncludeRequestURL)
 }
