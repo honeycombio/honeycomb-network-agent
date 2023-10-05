@@ -20,6 +20,7 @@ RUN make test
 FROM ubuntu:22.04
 RUN apt-get update -yq && \
     apt-get install -yq --no-install-recommends ca-certificates libpcap-dev && \
-    apt-get clean
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 COPY --from=base /src/hny-network-agent /bin/hny-network-agent
 ENTRYPOINT [ "/bin/hny-network-agent" ]
