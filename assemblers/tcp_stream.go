@@ -120,6 +120,8 @@ func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembl
 	// bufio.NewReader creates a new 16 byte buffer on each call which we want to avoid
 	// https://github.com/golang/go/blob/master/src/bufio/bufio.go#L57
 	stream.buffer.Reset(bytes.NewReader(data))
+
+	// loop through the parsers until we find one that can parse the request/response
 	for _, parser := range stream.parsers {
 		success, err := parser.parse(stream, ctx, isClient, stream.buffer, packetCount)
 		if err != nil {
