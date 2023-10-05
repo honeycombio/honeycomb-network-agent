@@ -90,7 +90,7 @@ func initLibhoney(config config.Config, version string) func() {
 	return libhoney.Close
 }
 
-// handleEvent transforms a captured httpEvent into a libhoney event and sends it
+// handleEvent transforms a captured event into a libhoney event and sends it
 func (handler *libhoneyEventHandler) handleEvent(event assemblers.Event) {
 	// the telemetry event to send
 	var ev *libhoney.Event = libhoney.NewEvent()
