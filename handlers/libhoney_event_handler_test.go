@@ -22,30 +22,9 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 	// TEST SETUP
 
 	// Test Data - an assembled HTTP Event
-	testReqTime := time.Now()
-	testReqPacketCount := 2
-	testRespPacketCount := 3
-	testRespTime := testReqTime.Add(3 * time.Millisecond)
-
-	httpEvent := assemblers.HttpEvent{
-		StreamIdent: "c->s:1->2",
-		Request: &http.Request{
-			Method:        "GET",
-			RequestURI:    "/check?teapot=true",
-			ContentLength: 42,
-			Header:        http.Header{"User-Agent": []string{"teapot-checker/1.0"}},
-		},
-		Response: &http.Response{
-			StatusCode:    418,
-			ContentLength: 84,
-		},
-		RequestTimestamp:    testReqTime,
-		ResponseTimestamp:   testRespTime,
-		RequestPacketCount:  testReqPacketCount,
-		ResponsePacketCount: testRespPacketCount,
-		SrcIp:               "1.2.3.4",
-		DstIp:               "5.6.7.8",
-	}
+	requestTimestamp := time.Now()
+	responseTimestamp := requestTimestamp.Add(3 * time.Millisecond)
+	event := createTestEvent(requestTimestamp, responseTimestamp)
 
 	// Test Data - k8s metadata
 	srcPod := &v1.Pod{
@@ -55,7 +34,7 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 			UID:       "src-pod-uid",
 		},
 		Status: v1.PodStatus{
-			PodIP: httpEvent.SrcIp,
+			PodIP: event.SrcIp(),
 		},
 	}
 
@@ -66,7 +45,7 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 			UID:       "dest-pod-uid",
 		},
 		Status: v1.PodStatus{
-			PodIP: httpEvent.DstIp,
+			PodIP: event.DstIp(),
 		},
 	}
 
@@ -76,7 +55,7 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 	fakeCachedK8sClient.Start(cancelableCtx)
 
 	// create event channel used to pass in events to the handler
-	eventsChannel := make(chan assemblers.HttpEvent, 1)
+	eventsChannel := make(chan assemblers.Event, 1)
 
 	wgTest := sync.WaitGroup{} // used to wait for the event handler to finish
 
@@ -94,7 +73,7 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 	mockTransmission := setupTestLibhoney(t)
 
 	// TEST ACTION: pass in httpEvent to handler
-	eventsChannel <- httpEvent
+	eventsChannel <- event
 	time.Sleep(10 * time.Millisecond) // give the handler time to process the event
 
 	done()
@@ -122,8 +101,8 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 		"http.request.method":            "GET",
 		"url.path":                       "/check?teapot=true",
 		"http.request.body.size":         int64(42),
-		"http.request.timestamp":         testReqTime,
-		"http.response.timestamp":        testRespTime,
+		"http.request.timestamp":         requestTimestamp,
+		"http.response.timestamp":        responseTimestamp,
 		"http.response.status_code":      418,
 		"http.response.body.size":        int64(84),
 		"error":                          "HTTP client error",
@@ -144,21 +123,9 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 
 func Test_libhoneyEventHandler_handleEvent_doesNotSetUrlPath(t *testing.T) {
 	// Test Data - an assembled HTTP Event
-	httpEvent := assemblers.HttpEvent{
-		StreamIdent: "c->s:1->2",
-		Request: &http.Request{
-			Method:        "GET",
-			RequestURI:    "/check?teapot=true",
-			ContentLength: 42,
-			Header:        http.Header{"User-Agent": []string{"teapot-checker/1.0"}},
-		},
-		Response: &http.Response{
-			StatusCode:    418,
-			ContentLength: 84,
-		},
-		SrcIp: "1.2.3.4",
-		DstIp: "5.6.7.8",
-	}
+	requestTimestamp := time.Now()
+	responseTimestamp := requestTimestamp.Add(3 * time.Millisecond)
+	event := createTestEvent(requestTimestamp, responseTimestamp)
 
 	// create a fake k8s clientset with the test pod metadata and start the cached client with it
 	fakeCachedK8sClient := utils.NewCachedK8sClient(fake.NewSimpleClientset())
@@ -166,7 +133,7 @@ func Test_libhoneyEventHandler_handleEvent_doesNotSetUrlPath(t *testing.T) {
 	fakeCachedK8sClient.Start(cancelableCtx)
 
 	// create event channel used to pass in events to the handler
-	eventsChannel := make(chan assemblers.HttpEvent, 1)
+	eventsChannel := make(chan assemblers.Event, 1)
 
 	wgTest := sync.WaitGroup{} // used to wait for the event handler to finish
 
@@ -183,7 +150,7 @@ func Test_libhoneyEventHandler_handleEvent_doesNotSetUrlPath(t *testing.T) {
 	mockTransmission := setupTestLibhoney(t)
 
 	// TEST ACTION: pass in httpEvent to handler
-	eventsChannel <- httpEvent
+	eventsChannel <- event
 	time.Sleep(10 * time.Millisecond) // give the handler time to process the event
 
 	done()
@@ -203,28 +170,9 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 	// TEST SETUP
 
 	// Test Data - an assembled HTTP Event
-	testReqTime := time.Now()
-	testReqPacketCount := 2
-	testRespPacketCount := 3
-	httpEvent := assemblers.HttpEvent{
-		StreamIdent: "c->s:1->2",
-		Request: &http.Request{
-			Method:        "GET",
-			RequestURI:    "/check?teapot=true",
-			ContentLength: 42,
-			Header:        http.Header{"User-Agent": []string{"teapot-checker/1.0"}},
-		},
-		Response: &http.Response{
-			StatusCode:    418,
-			ContentLength: 84,
-		},
-		RequestTimestamp:    testReqTime,
-		ResponseTimestamp:   testReqTime.Add(3 * time.Millisecond),
-		RequestPacketCount:  testReqPacketCount,
-		ResponsePacketCount: testRespPacketCount,
-		SrcIp:               "1.2.3.4",
-		DstIp:               "5.6.7.8",
-	}
+	requestTimestamp := time.Now()
+	responseTimestamp := requestTimestamp.Add(3 * time.Millisecond)
+	event := createTestEvent(requestTimestamp, responseTimestamp)
 
 	// Test Data - k8s metadata
 	srcPod := &v1.Pod{
@@ -234,7 +182,7 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 			UID:       "src-pod-uid",
 		},
 		Status: v1.PodStatus{
-			PodIP: httpEvent.SrcIp,
+			PodIP: event.SrcIp(),
 		},
 	}
 
@@ -245,7 +193,7 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 			UID:       "dest-service-uid",
 		},
 		Spec: v1.ServiceSpec{
-			ClusterIP: httpEvent.DstIp,
+			ClusterIP: event.DstIp(),
 		},
 	}
 
@@ -255,7 +203,7 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 	fakeCachedK8sClient.Start(cancelableCtx)
 
 	// create event channel used to pass in events to the handler
-	eventsChannel := make(chan assemblers.HttpEvent, 1)
+	eventsChannel := make(chan assemblers.Event, 1)
 
 	wgTest := sync.WaitGroup{} // used to wait for the event handler to finish
 
@@ -272,7 +220,7 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 	mockTransmission := setupTestLibhoney(t)
 
 	// TEST ACTION: pass in httpEvent to handler
-	eventsChannel <- httpEvent
+	eventsChannel <- event
 	time.Sleep(10 * time.Millisecond) // give the handler time to process the event
 
 	done()
@@ -300,8 +248,8 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 		"http.request.method":            "GET",
 		"url.path":                       "/check?teapot=true",
 		"http.request.body.size":         int64(42),
-		"http.request.timestamp":         testReqTime,
-		"http.response.timestamp":        testReqTime.Add(3 * time.Millisecond),
+		"http.request.timestamp":         requestTimestamp,
+		"http.response.timestamp":        responseTimestamp,
 		"http.response.status_code":      418,
 		"http.response.body.size":        int64(84),
 		"error":                          "HTTP client error",
@@ -374,12 +322,9 @@ func Test_reportingTimesAndDurations(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			ev := libhoney.NewEvent()
-			httpEvent := assemblers.HttpEvent{
-				RequestTimestamp:  tC.reqTime,
-				ResponseTimestamp: tC.respTime,
-			}
+			event := createTestEvent(tC.reqTime, tC.respTime)
 
-			setTimestampsAndDurationIfValid(ev, httpEvent)
+			setTimestampsAndDurationIfValid(ev, event)
 
 			if tC.expectedTelemetryTime != nowish {
 				assert.Equal(t, tC.expectedTelemetryTime, ev.Timestamp)
@@ -418,4 +363,27 @@ func setupTestLibhoney(t testing.TB) *transmission.MockSender {
 	assert.NoError(t, err, "Failed to setup libhoney for testing")
 
 	return mockTransmission
+}
+
+func createTestEvent(requestTimestamp, responseTimestamp time.Time) *assemblers.HttpEvent {
+	return assemblers.NewHttpEvent(
+		"c->s:1->2",
+		0,
+		requestTimestamp,
+		responseTimestamp,
+		2,
+		3,
+		"1.2.3.4",
+		"5.6.7.8",
+		&http.Request{
+			Method:        "GET",
+			RequestURI:    "/check?teapot=true",
+			ContentLength: 42,
+			Header:        http.Header{"User-Agent": []string{"teapot-checker/1.0"}},
+		},
+		&http.Response{
+			StatusCode:    418,
+			ContentLength: 84,
+		},
+	)
 }

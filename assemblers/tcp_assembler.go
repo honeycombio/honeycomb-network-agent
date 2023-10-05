@@ -59,10 +59,10 @@ type tcpAssembler struct {
 	streamFactory *tcpStreamFactory
 	streamPool    *reassembly.StreamPool
 	assembler     *reassembly.Assembler
-	httpEvents    chan HttpEvent
+	eventsChan    chan Event
 }
 
-func NewTcpAssembler(config config.Config, httpEvents chan HttpEvent) tcpAssembler {
+func NewTcpAssembler(config config.Config, eventsChan chan Event) tcpAssembler {
 	var packetSource *gopacket.PacketSource
 	var err error
 
@@ -80,7 +80,7 @@ func NewTcpAssembler(config config.Config, httpEvents chan HttpEvent) tcpAssembl
 	packetSource.Lazy = config.Lazy
 	packetSource.NoCopy = true
 
-	streamFactory := NewTcpStreamFactory(config, httpEvents)
+	streamFactory := NewTcpStreamFactory(config, eventsChan)
 	streamPool := reassembly.NewStreamPool(&streamFactory)
 	assembler := reassembly.NewAssembler(streamPool)
 
@@ -94,7 +94,7 @@ func NewTcpAssembler(config config.Config, httpEvents chan HttpEvent) tcpAssembl
 		streamFactory: &streamFactory,
 		streamPool:    streamPool,
 		assembler:     assembler,
-		httpEvents:    httpEvents,
+		eventsChan:    eventsChan,
 	}
 }
 
@@ -206,7 +206,7 @@ func (a *tcpAssembler) logAssemblerStats() {
 		"source_received":    stats.source_received,
 		"source_dropped":     stats.source_dropped,
 		"source_if_dropped":  stats.source_if_dropped,
-		"event_queue_length": len(a.httpEvents),
+		"event_queue_length": len(a.eventsChan),
 		"goroutines":         runtime.NumGoroutine(),
 		"total_streams":      stats.total_streams,
 		"active_streams":     stats.active_streams,

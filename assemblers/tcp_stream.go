@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
@@ -20,7 +21,7 @@ type tcpStream struct {
 	tcpstate   *reassembly.TCPSimpleFSM
 	fsmerr     bool
 	optchecker reassembly.TCPOptionCheck
-	httpEvents chan HttpEvent
+	eventsChan chan Event
 	srcIP      string
 	dstIP      string
 	srcPort    string
@@ -29,7 +30,8 @@ type tcpStream struct {
 	parsers    []Parser
 }
 
-func NewTcpStream(streamId uint64, net gopacket.Flow, transport gopacket.Flow, config config.Config, httpEvents chan HttpEvent) *tcpStream {
+func NewTcpStream(net gopacket.Flow, transport gopacket.Flow, config config.Config, evntsChan chan Event) *tcpStream {
+	streamId := IncrementStreamCount()
 	return &tcpStream{
 		id:     streamId,
 		ident:  fmt.Sprintf("%s:%s:%d", net, transport, streamId),
@@ -39,7 +41,7 @@ func NewTcpStream(streamId uint64, net gopacket.Flow, transport gopacket.Flow, c
 		}),
 		fsmerr:     false, // TODO: verify whether we need this
 		optchecker: reassembly.NewTCPOptionCheck(),
-		httpEvents: httpEvents,
+		eventsChan: evntsChan,
 		srcIP:      net.Src().String(),
 		dstIP:      net.Dst().String(),
 		srcPort:    transport.Src().String(),
@@ -102,19 +104,29 @@ func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembl
 	dir, _, _, _ := sg.Info()
 	isClient := dir == reassembly.TCPDirClientToServer
 
-	// get the data from the packet
-	len, _ := sg.Lengths()
-	data := sg.Fetch(len)
-
-	// gwt our custom context that includes the TCP seq/ack numbers
+	// get our custom context that includes the TCP seq/ack numbers
 	ctx, ok := ac.(*Context)
 	if !ok {
 		log.Warn().
 			Msg("Failed to cast ScatterGather to ContextWithSeq")
 	}
 
+	// We use TCP SEQ & ACK numbers to identify request/response pairs
+	// A request's ACK corresponds to the SEQ of it's matching response
+	// https://madpackets.com/2018/04/25/tcp-sequence-and-acknowledgement-numbers-explained/
+	var requestId int64
+	if isClient {
+		requestId = int64(ctx.ack)
+	} else {
+		requestId = int64(ctx.seq)
+	}
+
 	// get the number of packets that made up this request
 	packetCount := sg.Stats().Packets
+
+	// get the data from the packet
+	len, _ := sg.Lengths()
+	data := sg.Fetch(len)
 
 	// reset the buffer reader to use the new packet data
 	// bufio.NewReader creates a new 16 byte buffer on each call which we want to avoid
@@ -123,11 +135,22 @@ func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembl
 
 	// loop through the parsers until we find one that can parse the request/response
 	for _, parser := range stream.parsers {
-		success, err := parser.parse(stream, ctx, isClient, stream.buffer, packetCount)
+		success, err := parser.parse(stream, requestId, ctx.CaptureInfo.Timestamp, isClient, stream.buffer, packetCount)
 		if err != nil {
+			// if we hit the end of the stream, stop trying to parse
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				break
+			}
 			log.Debug().
 				Err(err).
-				Msg("Error parsing request/response")
+				Int64("request_id", requestId).
+				Str("stream_ident", stream.ident).
+				Str("src_ip", stream.srcIP).
+				Str("src_port", stream.srcPort).
+				Str("dst_ip", stream.dstIP).
+				Str("dst_port", stream.dstPort).
+				Msg("Error parsing packet")
+			continue
 		}
 		if success {
 			break
@@ -140,8 +163,6 @@ func (stream *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool
 	log.Debug().
 		Str("stream_ident", stream.ident).
 		Msg("Connection closed")
-
-	// decrement the number of active streams
 	DecrementActiveStreamCount()
 	return true // remove the connection, heck with the last ACK
 }

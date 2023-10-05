@@ -2,10 +2,8 @@ package assemblers
 
 import (
 	"bufio"
-	"io"
 	"net/http"
-
-	"github.com/rs/zerolog/log"
+	"time"
 )
 
 type HttpParser struct {
@@ -18,25 +16,10 @@ func NewHttpParser() *HttpParser {
 	}
 }
 
-func (parser *HttpParser) parse(stream *tcpStream, ctx *Context, isClient bool, buffer *bufio.Reader, packetCount int) (bool, error) {
+func (parser *HttpParser) parse(stream *tcpStream, requestId int64, timestamp time.Time, isClient bool, buffer *bufio.Reader, packetCount int) (bool, error) {
 	if isClient {
-		// We use TCP SEQ & ACK numbers to identify request/response pairs
-		// ACK corresponds to SEQ of the HTTP response
-		// https://madpackets.com/2018/04/25/tcp-sequence-and-acknowledgement-numbers-explained/
-		requestId := int64(ctx.ack)
 		req, err := http.ReadRequest(buffer)
-		if err == io.EOF || err == io.ErrUnexpectedEOF {
-			return false, nil
-		} else if err != nil {
-			log.Debug().
-				Err(err).
-				Int64("request_id", requestId).
-				Str("stream_ident", stream.ident).
-				Str("src_ip", stream.srcIP).
-				Str("src_port", stream.srcPort).
-				Str("dst_ip", stream.dstIP).
-				Str("dst_port", stream.dstPort).
-				Msg("Error reading HTTP request")
+		if err != nil {
 			return false, err
 		}
 		// We only care about a few headers, so recreate the header with just the ones we need
@@ -45,29 +28,13 @@ func (parser *HttpParser) parse(stream *tcpStream, ctx *Context, isClient bool, 
 		if req.Body != nil {
 			req.Body.Close()
 		}
-		// get the number of packets that made up this request
-		if entry, matchFound := parser.matcher.GetOrStoreRequest(requestId, ctx.CaptureInfo.Timestamp, req, packetCount); matchFound {
+		if entry, matchFound := parser.matcher.GetOrStoreRequest(requestId, timestamp, req, packetCount); matchFound {
 			// we have a match, process complete request/response pair
 			parser.processEvent(stream, requestId, entry)
 		}
 	} else {
-		// We use TCP SEQ & ACK numbers to identify request/response pairs
-		// SEQ corresponds to ACK of the HTTP request
-		// https://madpackets.com/2018/04/25/tcp-sequence-and-acknowledgement-numbers-explained/
-		requestId := int64(ctx.seq)
 		res, err := http.ReadResponse(buffer, nil)
-		if err == io.EOF || err == io.ErrUnexpectedEOF {
-			return false, nil
-		} else if err != nil {
-			log.Debug().
-				Err(err).
-				Int64("request_id", requestId).
-				Str("stream_ident", stream.ident).
-				Str("src_ip", stream.srcIP).
-				Str("src_port", stream.srcPort).
-				Str("dst_ip", stream.dstIP).
-				Str("dst_port", stream.dstPort).
-				Msg("Error reading HTTP response")
+		if err != nil {
 			return false, err
 		}
 		// We only care about a few headers, so recreate the header with just the ones we need
@@ -76,7 +43,7 @@ func (parser *HttpParser) parse(stream *tcpStream, ctx *Context, isClient bool, 
 		if res.Body != nil {
 			res.Body.Close()
 		}
-		if entry, matchFound := parser.matcher.GetOrStoreResponse(requestId, ctx.CaptureInfo.Timestamp, res, packetCount); matchFound {
+		if entry, matchFound := parser.matcher.GetOrStoreResponse(requestId, timestamp, res, packetCount); matchFound {
 			// we have a match, process complete request/response pair
 			parser.processEvent(stream, requestId, entry)
 		}
@@ -85,19 +52,19 @@ func (parser *HttpParser) parse(stream *tcpStream, ctx *Context, isClient bool, 
 	return true, nil
 }
 
-func (parser *HttpParser) processEvent(strean *tcpStream, requestId int64, entry *entry) {
-	strean.httpEvents <- HttpEvent{
-		StreamIdent:         strean.ident,
-		RequestId:           requestId,
-		Request:             entry.request,
-		Response:            entry.response,
-		RequestTimestamp:    entry.requestTimestamp,
-		ResponseTimestamp:   entry.responseTimestamp,
-		RequestPacketCount:  entry.requestPacketCount,
-		ResponsePacketCount: entry.responsePacketCount,
-		SrcIp:               strean.srcIP,
-		DstIp:               strean.dstIP,
-	}
+func (parser *HttpParser) processEvent(stream *tcpStream, requestId int64, entry *entry) {
+	stream.eventsChan <- NewHttpEvent(
+		stream.ident,
+		requestId,
+		entry.requestTimestamp,
+		entry.responseTimestamp,
+		entry.requestPacketCount,
+		entry.responsePacketCount,
+		stream.srcIP,
+		stream.dstIP,
+		entry.request,
+		entry.response,
+	)
 }
 
 var headersToExtract = []string{
