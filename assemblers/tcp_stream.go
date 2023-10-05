@@ -1,6 +1,8 @@
 package assemblers
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 
 	"github.com/gopacket/gopacket"
@@ -18,24 +20,34 @@ type tcpStream struct {
 	tcpstate   *reassembly.TCPSimpleFSM
 	fsmerr     bool
 	optchecker reassembly.TCPOptionCheck
-	client     *tcpReader
-	server     *tcpReader
+	httpEvents chan HttpEvent
+	srcIP      string
+	dstIP      string
+	srcPort    string
+	dstPort    string
+	buffer     *bufio.Reader
+	parsers    []Parser
 }
 
 func NewTcpStream(streamId uint64, net gopacket.Flow, transport gopacket.Flow, config config.Config, httpEvents chan HttpEvent) *tcpStream {
-	ident := fmt.Sprintf("%s:%s:%d", net, transport, streamId)
-	matcher := newRequestResponseMatcher()
 	return &tcpStream{
 		id:     streamId,
-		ident:  ident,
+		ident:  fmt.Sprintf("%s:%s:%d", net, transport, streamId),
 		config: config,
 		tcpstate: reassembly.NewTCPSimpleFSM(reassembly.TCPSimpleFSMOptions{
 			SupportMissingEstablishment: true,
 		}),
 		fsmerr:     false, // TODO: verify whether we need this
 		optchecker: reassembly.NewTCPOptionCheck(),
-		client:     NewTcpReader(ident, true, net, transport, matcher, httpEvents),
-		server:     NewTcpReader(ident, false, net.Reverse(), transport.Reverse(), matcher, httpEvents),
+		httpEvents: httpEvents,
+		srcIP:      net.Src().String(),
+		dstIP:      net.Dst().String(),
+		srcPort:    transport.Src().String(),
+		dstPort:    transport.Dst().String(),
+		buffer:     bufio.NewReader(bytes.NewReader(nil)),
+		parsers: []Parser{
+			NewHttpParser(),
+		},
 	}
 }
 
@@ -86,11 +98,38 @@ func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir re
 }
 
 func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.AssemblerContext) {
+	// Get the direction of the packet (client to server or server to client)
 	dir, _, _, _ := sg.Info()
-	if dir == reassembly.TCPDirClientToServer {
-		stream.client.reassembledSG(sg, ac)
-	} else {
-		stream.server.reassembledSG(sg, ac)
+	isClient := dir == reassembly.TCPDirClientToServer
+
+	// get the data from the packet
+	len, _ := sg.Lengths()
+	data := sg.Fetch(len)
+
+	// gwt our custom context that includes the TCP seq/ack numbers
+	ctx, ok := ac.(*Context)
+	if !ok {
+		log.Warn().
+			Msg("Failed to cast ScatterGather to ContextWithSeq")
+	}
+
+	// get the number of packets that made up this request
+	packetCount := sg.Stats().Packets
+
+	// reset the buffer reader to use the new packet data
+	// bufio.NewReader creates a new 16 byte buffer on each call which we want to avoid
+	// https://github.com/golang/go/blob/master/src/bufio/bufio.go#L57
+	stream.buffer.Reset(bytes.NewReader(data))
+	for _, parser := range stream.parsers {
+		success, err := parser.parse(stream, ctx, isClient, stream.buffer, packetCount)
+		if err != nil {
+			log.Debug().
+				Err(err).
+				Msg("Error parsing request/response")
+		}
+		if success {
+			break
+		}
 	}
 }
 
