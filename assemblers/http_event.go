@@ -12,10 +12,9 @@ type HttpEvent struct {
 	response *http.Response
 }
 
-// Make sure HttpEvent implements Event
+// Make sure HttpEvent implements Event interface
 var _ Event = (*HttpEvent)(nil)
 
-// NewHttpEvent creates a new HttpEvent
 func NewHttpEvent(
 	streamIdent string,
 	requestId int64,

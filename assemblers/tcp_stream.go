@@ -30,7 +30,7 @@ type tcpStream struct {
 	srcPort    string
 	dstPort    string
 	buffer     *bufio.Reader
-	parsers    []Parser
+	parsers    []parser
 }
 
 func NewTcpStream(net gopacket.Flow, transport gopacket.Flow, config config.Config, evntsChan chan Event) *tcpStream {
@@ -50,8 +50,8 @@ func NewTcpStream(net gopacket.Flow, transport gopacket.Flow, config config.Conf
 		srcPort:    transport.Src().String(),
 		dstPort:    transport.Dst().String(),
 		buffer:     bufio.NewReader(bytes.NewReader(nil)),
-		parsers: []Parser{
-			NewHttpParser(),
+		parsers: []parser{
+			newHttpParser(),
 		},
 	}
 }

@@ -6,21 +6,20 @@ import (
 	"time"
 )
 
-// HttpParser parses HTTP requests and responses
-type HttpParser struct {
+// httpParser parses HTTP requests and responses
+type httpParser struct {
 	matcher *httpMatcher
 }
 
-// NewHttpParser creates a new HttpParser
-func NewHttpParser() *HttpParser {
-	return &HttpParser{
+func newHttpParser() *httpParser {
+	return &httpParser{
 		matcher: newRequestResponseMatcher(),
 	}
 }
 
 // Parse parses a HTTP request or response and stores it in the matcher
 // If a match is found, it sends a HttpEvent to the tcpStream's events channel
-func (parser *HttpParser) parse(stream *tcpStream, requestId int64, timestamp time.Time, isClient bool, buffer *bufio.Reader, packetCount int) (bool, error) {
+func (parser *httpParser) parse(stream *tcpStream, requestId int64, timestamp time.Time, isClient bool, buffer *bufio.Reader, packetCount int) (bool, error) {
 	if isClient {
 		req, err := http.ReadRequest(buffer)
 		if err != nil {
