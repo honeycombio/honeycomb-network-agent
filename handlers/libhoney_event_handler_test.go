@@ -24,7 +24,7 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 	// Test Data - an assembled HTTP Event
 	requestTimestamp := time.Now()
 	responseTimestamp := requestTimestamp.Add(3 * time.Millisecond)
-	event := createTestEvent(requestTimestamp, responseTimestamp)
+	event := createTestHttpEvent(requestTimestamp, responseTimestamp)
 
 	// Test Data - k8s metadata
 	srcPod := &v1.Pod{
@@ -125,7 +125,7 @@ func Test_libhoneyEventHandler_handleEvent_doesNotSetUrlPath(t *testing.T) {
 	// Test Data - an assembled HTTP Event
 	requestTimestamp := time.Now()
 	responseTimestamp := requestTimestamp.Add(3 * time.Millisecond)
-	event := createTestEvent(requestTimestamp, responseTimestamp)
+	event := createTestHttpEvent(requestTimestamp, responseTimestamp)
 
 	// create a fake k8s clientset with the test pod metadata and start the cached client with it
 	fakeCachedK8sClient := utils.NewCachedK8sClient(fake.NewSimpleClientset())
@@ -172,7 +172,7 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 	// Test Data - an assembled HTTP Event
 	requestTimestamp := time.Now()
 	responseTimestamp := requestTimestamp.Add(3 * time.Millisecond)
-	event := createTestEvent(requestTimestamp, responseTimestamp)
+	event := createTestHttpEvent(requestTimestamp, responseTimestamp)
 
 	// Test Data - k8s metadata
 	srcPod := &v1.Pod{
@@ -322,7 +322,7 @@ func Test_reportingTimesAndDurations(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			ev := libhoney.NewEvent()
-			event := createTestEvent(tC.reqTime, tC.respTime)
+			event := createTestHttpEvent(tC.reqTime, tC.respTime)
 
 			setTimestampsAndDurationIfValid(ev, event)
 
@@ -365,7 +365,7 @@ func setupTestLibhoney(t testing.TB) *transmission.MockSender {
 	return mockTransmission
 }
 
-func createTestEvent(requestTimestamp, responseTimestamp time.Time) *assemblers.HttpEvent {
+func createTestHttpEvent(requestTimestamp, responseTimestamp time.Time) *assemblers.HttpEvent {
 	return assemblers.NewHttpEvent(
 		"c->s:1->2",
 		0,
