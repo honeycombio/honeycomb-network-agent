@@ -49,7 +49,10 @@ spec:
         - name: hny-network-agent
           image: ghcr.io/honeycombio/network-agent:latest
           imagePullPolicy: IfNotPresent
-          env:
+          resources:
+            limits:
+              cpu: 750m
+              memory: 2Gi
             - name: HONEYCOMB_API_KEY
               valueFrom:
                 secretKeyRef:

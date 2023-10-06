@@ -79,6 +79,11 @@ spec:
           # uncomment this to enable profiling listener on port 6060
           # ports:
           #   - containerPort: 6060
+          # uncomment this to set resource limits for a container
+          # resources:
+          #   limits:
+          #     cpu: 750m
+          #     memory: 2Gi
           env:
           # https://kubernetes.io/docs/concepts/workloads/pods/downward-api/
             - name: AGENT_NODE_IP
