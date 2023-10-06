@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sync"
 	"time"
 
@@ -155,7 +156,10 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.HttpEvent) {
 		ev.AddField(string(semconv.HTTPRequestBodySizeKey), event.Request.ContentLength)
 		if handler.config.IncludeRequestURL {
 			requestURI = event.Request.RequestURI
-			ev.AddField(string(semconv.URLPathKey), requestURI)
+			url, err := url.ParseRequestURI(requestURI)
+			if err == nil {
+				ev.AddField(string(semconv.URLPathKey), url.Path)
+			}
 		}
 	} else {
 		ev.AddField("name", "HTTP")
