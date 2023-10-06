@@ -49,10 +49,6 @@ spec:
         - name: hny-network-agent
           image: ghcr.io/honeycombio/network-agent:latest
           imagePullPolicy: IfNotPresent
-          resources:
-            limits:
-              cpu: 750m
-              memory: 2Gi
           env:
           # https://kubernetes.io/docs/concepts/workloads/pods/downward-api/
           # these are used to get kubernetes metadata attached to events
