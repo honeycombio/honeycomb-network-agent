@@ -86,6 +86,7 @@ spec:
           #     memory: 2Gi
           env:
           # https://kubernetes.io/docs/concepts/workloads/pods/downward-api/
+          # these are used to get kubernetes metadata attached to events
             - name: AGENT_NODE_IP
               valueFrom:
                 fieldRef:
