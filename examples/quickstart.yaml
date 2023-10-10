@@ -50,6 +50,28 @@ spec:
           image: ghcr.io/honeycombio/network-agent:latest
           imagePullPolicy: IfNotPresent
           env:
+          # https://kubernetes.io/docs/concepts/workloads/pods/downward-api/
+          # these are used to get kubernetes metadata attached to events
+            - name: AGENT_NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: AGENT_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: AGENT_SERVICE_ACCOUNT_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.serviceAccountName
+            - name: AGENT_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: AGENT_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: HONEYCOMB_API_KEY
               valueFrom:
                 secretKeyRef:

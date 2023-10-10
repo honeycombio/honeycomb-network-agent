@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sync"
 	"time"
 
@@ -174,7 +175,10 @@ func (handler *libhoneyEventHandler) addHttpFields(ev *libhoney.Event, event *as
 		ev.AddField(string(semconv.UserAgentOriginalKey), event.Request().Header.Get("User-Agent"))
 		ev.AddField(string(semconv.HTTPRequestBodySizeKey), event.Request().ContentLength)
 		if handler.config.IncludeRequestURL {
-			ev.AddField(string(semconv.URLPathKey), event.Request().RequestURI)
+			url, err := url.ParseRequestURI(event.Request().RequestURI)
+			if err == nil {
+				ev.AddField(string(semconv.URLPathKey), url.Path)
+			}
 		}
 	} else {
 		ev.AddField("name", "HTTP")
