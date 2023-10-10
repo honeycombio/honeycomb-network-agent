@@ -33,7 +33,7 @@ type tcpStream struct {
 	parsers    []parser
 }
 
-func NewTcpStream(net gopacket.Flow, transport gopacket.Flow, config config.Config, evntsChan chan Event) *tcpStream {
+func NewTcpStream(net gopacket.Flow, transport gopacket.Flow, config config.Config, eventsChan chan Event) *tcpStream {
 	streamId := IncrementStreamCount()
 	return &tcpStream{
 		id:     streamId,
@@ -44,7 +44,7 @@ func NewTcpStream(net gopacket.Flow, transport gopacket.Flow, config config.Conf
 		}),
 		fsmerr:     false, // TODO: verify whether we need this
 		optchecker: reassembly.NewTCPOptionCheck(),
-		eventsChan: evntsChan,
+		eventsChan: eventsChan,
 		srcIP:      net.Src().String(),
 		dstIP:      net.Dst().String(),
 		srcPort:    transport.Src().String(),
