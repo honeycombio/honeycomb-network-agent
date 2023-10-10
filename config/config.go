@@ -171,6 +171,11 @@ func buildBpfFilter() string {
 		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x504F5354", // 'POST'
 		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x50555420", // 'PUT '
 		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x44454C45", // 'DELE'TE
+		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x48454144", // 'HEAD'
+		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x4F505449", // 'OPTI'ONS
+		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x50415443", // 'PATC'H
+		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x54524143", // 'TRAC'E
+		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x434F4E4E", // 'CONN'ECT
 		// HTTP 1.1 is the response start string
 		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x48545450", // 'HTTP' 1.1
 	}
