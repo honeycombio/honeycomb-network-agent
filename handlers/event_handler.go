@@ -11,5 +11,5 @@ import (
 type EventHandler interface {
 	Start(ctx context.Context, wg *sync.WaitGroup)
 	Close()
-	handleEvent(event assemblers.HttpEvent)
+	handleEvent(event assemblers.Event)
 }

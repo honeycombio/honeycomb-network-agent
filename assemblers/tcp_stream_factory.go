@@ -13,13 +13,13 @@ import (
 type tcpStreamFactory struct {
 	config     config.Config
 	wg         sync.WaitGroup
-	httpEvents chan HttpEvent
+	eventsChan chan Event
 }
 
-func NewTcpStreamFactory(config config.Config, httpEvents chan HttpEvent) tcpStreamFactory {
+func NewTcpStreamFactory(config config.Config, eventsChan chan Event) tcpStreamFactory {
 	return tcpStreamFactory{
 		config:     config,
-		httpEvents: httpEvents,
+		eventsChan: eventsChan,
 	}
 }
 
@@ -28,12 +28,8 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 		Str("net", net.String()).
 		Str("transport", transport.String()).
 		Msg("NEW tcp stream")
-	streamId := IncrementStreamCount()
-	stream := NewTcpStream(streamId, net, transport, factory.config, factory.httpEvents)
-
-	// increment the number of active streams
 	IncrementActiveStreamCount()
-	return stream
+	return NewTcpStream(net, transport, factory.config, factory.eventsChan)
 }
 
 func (factory *tcpStreamFactory) WaitGoRoutines() {

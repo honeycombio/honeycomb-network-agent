@@ -58,7 +58,7 @@ func main() {
 	cachedK8sClient := setupK8s(ctx, config)
 
 	// create events channel for assembler to send events to and event handler to receive events from
-	eventsChannel := make(chan assemblers.HttpEvent, config.ChannelBufferSize)
+	eventsChannel := make(chan assemblers.Event, config.ChannelBufferSize)
 
 	// track our internal services
 	wgServices := sync.WaitGroup{}
