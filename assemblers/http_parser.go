@@ -18,7 +18,9 @@ func newHttpParser() *httpParser {
 }
 
 // Parse parses a HTTP request or response and stores it in the matcher
-// If a match is found, it sends a HttpEvent to the tcpStream's events channel
+// If a match is found, it sends a HttpEvent to the tcpStream's events channel.
+//
+// Returns (true, nil) for successful parse; (false, Error) when parsing fails
 func (parser *httpParser) parse(stream *tcpStream, requestId int64, timestamp time.Time, isClient bool, buffer *bufio.Reader, packetCount int) (bool, error) {
 	if isClient {
 		req, err := http.ReadRequest(buffer)

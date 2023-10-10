@@ -16,7 +16,7 @@ import (
 // tcpStream represents a TCP stream and receives TCP packets from the gopacket assembler
 // and attempts to parses them into requests and responses
 //
-// It implements the reassembly.Stream interface
+// It implements gopacket's reassembly.Stream interface
 type tcpStream struct {
 	id         uint64
 	ident      string
@@ -56,7 +56,7 @@ func NewTcpStream(net gopacket.Flow, transport gopacket.Flow, config config.Conf
 	}
 }
 
-// Accept is an implementation of the reassembly.Stream interface
+// Accept implements gopacket's [reassembly.Stream.Accept] interface.
 func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassembly.TCPFlowDirection, nextSeq reassembly.Sequence, start *bool, ac reassembly.AssemblerContext) bool {
 	// FSM
 	if !stream.tcpstate.CheckState(tcp, dir) {
@@ -103,7 +103,10 @@ func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir re
 	return accept
 }
 
-// Reassembled is an implementation of the reassembly.Stream interface
+// ReassembledSG implements gopacket's [reassembly.Stream.ReassembledSG] interface.
+// This is where most of the work happens.
+//
+// Note: the reassembly.ScatterGather param (sg) is reused after each ReassembledSG call, so copy what's needed out of it before return.
 func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.AssemblerContext) {
 	// Get the direction of the packet (client to server or server to client)
 	dir, _, _, _ := sg.Info()
@@ -113,7 +116,7 @@ func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembl
 	ctx, ok := ac.(*Context)
 	if !ok {
 		log.Warn().
-			Msg("Failed to cast ScatterGather to ContextWithSeq")
+			Msg("Failed to cast given AssemblerContext to ContextWithSeq")
 	}
 
 	// We use TCP SEQ & ACK numbers to identify request/response pairs
@@ -134,7 +137,9 @@ func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembl
 	data := sg.Fetch(len)
 
 	// reset the buffer reader to use the new packet data
-	// bufio.NewReader creates a new 16 byte buffer on each call which we want to avoid
+	// bufio.NewReader creates a new 16 byte buffer on each call,
+	// so we reset the existing buffer with those bytes instead of
+	// allocating new memory
 	// https://github.com/golang/go/blob/master/src/bufio/bufio.go#L57
 	stream.buffer.Reset(bytes.NewReader(data))
 
@@ -163,7 +168,12 @@ func (stream *tcpStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembl
 	}
 }
 
-// ReassemblyComplete is an implementation of the reassembly.Stream interface
+// ReassemblyComplete implements gopacket's [reassembly.Stream.ReassemblyComplete] interface.
+// Called when gopacket's assembly internals has decided that there is no more data for this Stream
+// (e.g. FIN or RST packet, timed out without new data).
+//
+// Our implementation always returns true to remove the connection from the gopacket-managed pool.
+// We don't return false, because we aren't interested in the last FIN-ACK.
 func (stream *tcpStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
 	log.Debug().
 		Str("stream_ident", stream.ident).
