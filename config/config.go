@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/hex"
 	"errors"
 	"strings"
 	"time"
@@ -163,21 +164,23 @@ func buildBpfFilter() string {
 	// reference links:
 	// https://www.middlewareinventory.com/blog/tcpdump-capture-http-get-post-requests-apache-weblogic-websphere/
 	// https://www.middlewareinventory.com/ascii-table/
+	// tcp[((tcp[12:1] & 0xf0) >> 2):<num> means skip the ip & tcp headers, then get the next <num> bytes and match hex
+	// bpf insists that we must use 1, 2, or 4 bytes
+	matchFirstFourBytesTo := "tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x"
+
 	filters := []string{
-		// tcp[((tcp[12:1] & 0xf0) >> 2):<num> means skip the ip & tcp headers, then get the next <num> bytes and match hex
-		// bpf insists that we must use 1, 2, or 4 bytes
 		// HTTP Methods are request start strings
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x47455420", // 'GET '
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x504F5354", // 'POST'
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x50555420", // 'PUT '
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x44454C45", // 'DELE'TE
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x48454144", // 'HEAD'
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x4F505449", // 'OPTI'ONS
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x50415443", // 'PATC'H
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x54524143", // 'TRAC'E
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x434F4E4E", // 'CONN'ECT
+		matchFirstFourBytesTo + hex.EncodeToString([]byte("GET ")),
+		matchFirstFourBytesTo + hex.EncodeToString([]byte("POST")),
+		matchFirstFourBytesTo + hex.EncodeToString([]byte("PUT ")),
+		matchFirstFourBytesTo + hex.EncodeToString([]byte("DELE")),
+		matchFirstFourBytesTo + hex.EncodeToString([]byte("HEAD")),
+		matchFirstFourBytesTo + hex.EncodeToString([]byte("OPTI")),
+		matchFirstFourBytesTo + hex.EncodeToString([]byte("PATC")),
+		matchFirstFourBytesTo + hex.EncodeToString([]byte("TRAC")),
+		matchFirstFourBytesTo + hex.EncodeToString([]byte("CONN")),
 		// HTTP 1.1 is the response start string
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x48545450", // 'HTTP' 1.1
+		matchFirstFourBytesTo + hex.EncodeToString([]byte("HTTP")),
 	}
 	return strings.Join(filters, " or ")
 }
