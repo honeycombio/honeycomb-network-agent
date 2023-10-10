@@ -1,5 +1,18 @@
 # Honeycomb Network Agent changelog
 
+## [0.0.21-alpha] - 2023-10-10
+
+### Enhancements
+
+- feat: Add opt-in config option for HTTP URL (#268) | @MikeGoldsmith
+- feat: remove request URI query params from emitted url.path (#269) | @robbkidd
+
+### Maintenance
+
+- maint: Refactor packet processing to allow different event types (#271) | @MikeGoldsmith
+- maint: include k8s vars in quickstart and add resource limits to test manifest (#274) | @JamieDanielson
+- maint: even smaller image size with no cached APT repo lists (#270) | @robbkidd
+
 ## [0.0.20-alpha] - 2023-10-04
 
 ### Enhancements
