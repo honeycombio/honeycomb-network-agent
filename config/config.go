@@ -107,6 +107,9 @@ type Config struct {
 
 	// Include the request URL in the event.
 	IncludeRequestURL bool
+
+	// The list of HTTP headers to extract from a HTTP request/response.
+	HTTPHeadersToExtract []string
 }
 
 // NewConfig returns a new Config struct.
@@ -143,6 +146,7 @@ func NewConfig() Config {
 		AgentPodName:                  utils.LookupEnvOrString("AGENT_POD_NAME", ""),
 		AdditionalAttributes:          utils.LookupEnvAsStringMap("ADDITIONAL_ATTRIBUTES"),
 		IncludeRequestURL:             utils.LookupEnvOrBool("INCLUDE_REQUEST_URL", false),
+		HTTPHeadersToExtract:          getHTTPHeadersToExtract(),
 	}
 }
 
@@ -206,4 +210,17 @@ func (c *Config) Validate() error {
 	}
 	// returns nil if no errors in slice
 	return errors.Join(e...)
+}
+
+var defaultHeadersToExtract = []string{
+	"User-Agent",
+}
+
+// getHTTPHeadersToExtract returns the list of HTTP headers to extract from a HTTP request/response
+func getHTTPHeadersToExtract() []string {
+	additionalHTTPHeaders := utils.LookupEnvAsStringSlice("ADDITIONAL_HTTP_HEADERS")
+	if len(additionalHTTPHeaders) == 0 {
+		return defaultHeadersToExtract
+	}
+	return append(defaultHeadersToExtract, additionalHTTPHeaders...)
 }
