@@ -54,6 +54,7 @@ The network agent can be configured using the following environment variables.
 | `LOG_LEVEL`               | The log level to use when printing logs to console                                       | `INFO`                     | No        |
 | `DEBUG`                   | Runs the agent in debug mode including enabling a profiling endpoint using Debug Address | `false`                    | No        |
 | `DEBUG_ADDRESS`           | The endpoint to listen to when running the profile endpoint                              | `localhost:6060`           | No        |
+| `ADDITIONAL_HTTP_HEADERS` | Additional HTTP headers to be recorded for request/responses                             | ``                         | No        |
 
 ### Run
 
