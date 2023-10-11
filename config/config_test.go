@@ -1,10 +1,9 @@
-package config_test
+package config
 
 import (
 	"os"
 	"testing"
 
-	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,7 +37,7 @@ func TestAPIMask(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			config := config.Config{
+			config := Config{
 				APIKey: tc.apiKey,
 			}
 
@@ -64,7 +63,7 @@ func TestEnvVars(t *testing.T) {
 	t.Setenv("ADDITIONAL_ATTRIBUTES", "key1=value1,key2=value2")
 	t.Setenv("INCLUDE_REQUEST_URL", "true")
 
-	config := config.NewConfig()
+	config := NewConfig()
 	assert.Equal(t, "1234567890123456789012", config.APIKey)
 	assert.Equal(t, "https://api.example.com", config.Endpoint)
 	assert.Equal(t, "test-dataset", config.Dataset)
@@ -88,7 +87,7 @@ func TestEnvVarsDefault(t *testing.T) {
 	// all the env vars in an array
 	os.Clearenv()
 
-	config := config.NewConfig()
+	config := NewConfig()
 	assert.Equal(t, "", config.APIKey)
 	assert.Equal(t, "https://api.honeycomb.io", config.Endpoint)
 	assert.Equal(t, "hny-network-agent", config.Dataset)
