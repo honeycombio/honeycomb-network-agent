@@ -1,10 +1,14 @@
 package config
 
 import (
+	"encoding/hex"
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAPIMask(t *testing.T) {
@@ -102,4 +106,62 @@ func TestEnvVarsDefault(t *testing.T) {
 	assert.Equal(t, "", config.AgentPodName)
 	assert.Equal(t, map[string]string{}, config.AdditionalAttributes)
 	assert.Equal(t, false, config.IncludeRequestURL)
+}
+
+func Test_Config_buildBpfFilter(t *testing.T) {
+	captureFilter := buildBpfFilter()
+
+	assert.Equal(t,
+		len(httpPayloadsStartWith)-1,
+		strings.Count(captureFilter, " or "),
+		"complete filter joins all defined HTTP-matching filters with 'or'",
+	)
+
+	for _, httpStart := range httpPayloadsStartWith {
+		httpStartHex := hex.EncodeToString([]byte(httpStart))
+		description := fmt.Sprintf("includes %s (%s)", httpStartHex, httpStart)
+		t.Run(description, func(t *testing.T) {
+			filter, err := pcapTcpPayloadStartsWith(httpStart)
+			require.NoError(t, err)
+			assert.Contains(t, captureFilter, filter)
+		})
+	}
+}
+
+func Test_Config_pcapTcpPayloadStartsWith(t *testing.T) {
+	testCases := []struct {
+		startsWith     string
+		expectSuccess  bool
+		expectedFilter string
+	}{
+		{
+			startsWith:     "GET",
+			expectSuccess:  false,
+			expectedFilter: "",
+		},
+		{
+			startsWith:     "GET ",
+			expectSuccess:  true,
+			expectedFilter: "tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x47455420",
+		},
+		{
+			startsWith:     "HEAD",
+			expectSuccess:  true,
+			expectedFilter: "tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x48454144",
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.startsWith, func(t *testing.T) {
+			filter, err := pcapTcpPayloadStartsWith(tC.startsWith)
+
+			if tC.expectSuccess {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "string must be 4 characters long")
+			}
+
+			assert.Equal(t, tC.expectedFilter, filter)
+		})
+	}
 }
