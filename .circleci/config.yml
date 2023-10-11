@@ -27,7 +27,22 @@ jobs:
       - store_test_results:
           path: /tmp/test-reports
 
+# run job for all branches and on tag creation (tag create is ignored by default)
+filters_always: &filters_always
+  filters:
+    tags:
+      only: /.*/
+
+# run a job only when a version tag (vNNNN) is created
+filters_publish: &filters_publish
+  filters:
+    tags:
+      only: /^v[0-9].*/
+    branches:
+      ignore: /.*/
+
 workflows:
   build:
     jobs:
       - test
+          <<: *filters_always
