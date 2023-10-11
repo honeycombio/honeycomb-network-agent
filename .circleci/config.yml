@@ -1,0 +1,33 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/go:1.21
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - go-mod-v1-{{ checksum "go.sum" }}
+      - run:
+          name: Install Go Dependencies
+          command: go mod download
+      - save_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
+      - run:
+          name: Install package dependencies
+          command: sudo apt-get update && sudo apt-get install --assume-yes libpcap-dev
+      - run:
+          name: Run tests
+          command: |
+            mkdir -p /tmp/test-reports
+            gotestsum --junitfile /tmp/test-reports/unit-tests.xml
+      - store_test_results:
+          path: /tmp/test-reports
+
+workflows:
+  build:
+    jobs:
+      - test
