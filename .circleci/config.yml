@@ -44,5 +44,5 @@ filters_publish: &filters_publish
 workflows:
   build:
     jobs:
-      - test
+      - test:
           <<: *filters_always
