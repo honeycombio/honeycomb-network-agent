@@ -196,3 +196,15 @@ func (client *CachedK8sClient) getK8sAttrsForIp(agentIP string, ip string, prefi
 	}
 	return k8sAttrs
 }
+
+// GetNamespaceForIP returns the namespace for the given IP address by looking up the pod and service.
+// If the IP address is not found in the kubernetes cache, an empty string is returned.
+func (client *CachedK8sClient) GetNamespaceForIP(ip string) string {
+	if pod := client.GetPodByIPAddr(ip); pod != nil {
+		return pod.Namespace
+	}
+	if service := client.GetServiceByIPAddr(ip); service != nil {
+		return service.Namespace
+	}
+	return ""
+}

@@ -107,6 +107,9 @@ type Config struct {
 
 	// Include the request URL in the event.
 	IncludeRequestURL bool
+
+	// Map of namespaces to filter on.
+	NamespaceFilter map[string]struct{}
 }
 
 // NewConfig returns a new Config struct.
@@ -143,6 +146,7 @@ func NewConfig() Config {
 		AgentPodName:                  utils.LookupEnvOrString("AGENT_POD_NAME", ""),
 		AdditionalAttributes:          utils.LookupEnvAsStringMap("ADDITIONAL_ATTRIBUTES"),
 		IncludeRequestURL:             utils.LookupEnvOrBool("INCLUDE_REQUEST_URL", false),
+		NamespaceFilter:               getNamespaceFilterAsMap(),
 	}
 }
 
@@ -206,4 +210,15 @@ func (c *Config) Validate() error {
 	}
 	// returns nil if no errors in slice
 	return errors.Join(e...)
+}
+
+// getNamespaceFilterAsMap returns a map of namespaces to filter on
+// namespaces are comma separated and set via the NAMESPACE_FILTER environment variable
+// Values are stored as an empty struct to save memory
+func getNamespaceFilterAsMap() map[string]struct{} {
+	namespaceFilter := map[string]struct{}{}
+	for _, namespace := range utils.LookupEnvAsStringSlice("NAMESPACES") {
+		namespaceFilter[namespace] = struct{}{}
+	}
+	return namespaceFilter
 }

@@ -345,6 +345,86 @@ func Test_reportingTimesAndDurations(t *testing.T) {
 	}
 }
 
+func Test_shouldHandle(t *testing.T) {
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod",
+			Namespace: "unit-tests",
+		},
+		Status: v1.PodStatus{
+			PodIP: "1.2.3.4",
+		},
+	}
+
+	service := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "service",
+			Namespace: "unit-tests",
+		},
+		Spec: v1.ServiceSpec{
+			ClusterIP: "4.3.2.1",
+		},
+	}
+
+	k8sclient := utils.NewCachedK8sClient(fake.NewSimpleClientset(pod, service))
+	cancelableCtx, done := context.WithCancel(context.Background())
+	k8sclient.Start(cancelableCtx)
+	defer done()
+
+	config := config.Config{
+		NamespaceFilter: map[string]struct{}{
+			"unit-tests": {},
+		},
+	}
+
+	handler := NewLibhoneyEventHandler(config, k8sclient, make(chan assemblers.Event, 1), "test")
+	libhoneyEventHandler := handler.(*libhoneyEventHandler)
+
+	testCases := []struct {
+		name     string
+		srcIP    string
+		destIP   string
+		expected bool
+	}{
+		{
+			name:     "source IP matches pod IP",
+			srcIP:    pod.Status.PodIP,
+			destIP:   "",
+			expected: false,
+		},
+		{
+			name:     "destination IP matches pod IP",
+			srcIP:    "",
+			destIP:   pod.Status.PodIP,
+			expected: false,
+		},
+		{
+			name:     "source IP matches service IP",
+			srcIP:    service.Spec.ClusterIP,
+			destIP:   "",
+			expected: false,
+		},
+		{
+			name:     "destination IP matches service IP",
+			srcIP:    "",
+			destIP:   service.Spec.ClusterIP,
+			expected: false,
+		},
+		{
+			name:     "source and destination IPs do not match pod or service IPs",
+			srcIP:    "",
+			destIP:   "",
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, libhoneyEventHandler.shouldHandle(tc.srcIP, tc.destIP))
+		})
+	}
+}
+
 // setupTestLibhoney configures a Libhoney with a mock transmission for testing.
 //
 // Events sent can be found on the mock transmission:

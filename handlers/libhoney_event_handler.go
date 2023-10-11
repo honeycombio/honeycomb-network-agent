@@ -93,6 +93,11 @@ func initLibhoney(config config.Config, version string) func() {
 
 // handleEvent transforms a captured event into a libhoney event and sends it
 func (handler *libhoneyEventHandler) handleEvent(event assemblers.Event) {
+	// check if we should handle this event
+	if !handler.shouldHandle(event.SrcIp(), event.DstIp()) {
+		return
+	}
+
 	// the telemetry event to send
 	var ev *libhoney.Event = libhoney.NewEvent()
 
@@ -201,4 +206,28 @@ func (handler *libhoneyEventHandler) addHttpFields(ev *libhoney.Event, event *as
 	} else {
 		ev.AddField("http.response.missing", "no response on this event")
 	}
+}
+
+func (handler *libhoneyEventHandler) shouldHandle(srcIP, dstIp string) bool {
+	// if no namespace filter is set, handle all events
+	if len(handler.config.NamespaceFilter) == 0 {
+		return true
+	}
+
+	// if the source namespace is in the filter, don't handle the event
+	if sourceNamespace := handler.k8sClient.GetNamespaceForIP(srcIP); sourceNamespace != "" {
+		_, ok := handler.config.NamespaceFilter[sourceNamespace]
+		if ok {
+			return false
+		}
+	}
+
+	// if the dest namespace is in the filter, don't handle the event
+	if destNamespace := handler.k8sClient.GetNamespaceForIP(dstIp); destNamespace != "" {
+		_, ok := handler.config.NamespaceFilter[destNamespace]
+		if ok {
+			return false
+		}
+	}
+	return true
 }

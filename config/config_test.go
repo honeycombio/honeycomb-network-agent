@@ -63,6 +63,7 @@ func TestEnvVars(t *testing.T) {
 	t.Setenv("AGENT_POD_NAME", "pod_name")
 	t.Setenv("ADDITIONAL_ATTRIBUTES", "key1=value1,key2=value2")
 	t.Setenv("INCLUDE_REQUEST_URL", "true")
+	t.Setenv("NAMESPACES", "namespace1,namespace2")
 
 	config := config.NewConfig()
 	assert.Equal(t, "1234567890123456789012", config.APIKey)
@@ -79,6 +80,7 @@ func TestEnvVars(t *testing.T) {
 	assert.Equal(t, "pod_name", config.AgentPodName)
 	assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, config.AdditionalAttributes)
 	assert.Equal(t, true, config.IncludeRequestURL)
+	assert.Equal(t, map[string]struct{}{"namespace1": {}, "namespace2": {}}, config.NamespaceFilter)
 }
 
 func TestEnvVarsDefault(t *testing.T) {
@@ -103,4 +105,5 @@ func TestEnvVarsDefault(t *testing.T) {
 	assert.Equal(t, "", config.AgentPodName)
 	assert.Equal(t, map[string]string{}, config.AdditionalAttributes)
 	assert.Equal(t, false, config.IncludeRequestURL)
+	assert.Equal(t, map[string]struct{}{}, config.NamespaceFilter)
 }

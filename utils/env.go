@@ -41,3 +41,16 @@ func LookupEnvAsStringMap(key string) map[string]string {
 	}
 	return values
 }
+
+// LookupEnvAsStringSlice returns a slice of strings from the environment variable with the given key
+// values are comma separated
+// Example: value1,value2,value3
+func LookupEnvAsStringSlice(key string) []string {
+	values := []string{}
+	if env := os.Getenv(key); env != "" {
+		for _, value := range strings.Split(env, ",") {
+			values = append(values, value)
+		}
+	}
+	return values
+}
