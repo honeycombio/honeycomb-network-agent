@@ -56,14 +56,14 @@ func (handler *libhoneyEventHandler) Close() {
 
 // initLibhoney initializes libhoney and sets global fields
 func initLibhoney(config config.Config, version string) func() {
+	// appends libhoney's user-agent, has to happen before libhoney.Init()
+	libhoney.UserAgentAddition = fmt.Sprintf("hny-network-agent/%s", version)
+
 	libhoney.Init(libhoney.Config{
 		APIKey:  config.APIKey,
 		Dataset: config.Dataset,
 		APIHost: config.Endpoint,
 	})
-
-	// appends libhoney's user-agent (TODO: doesn't work, no useragent right now)
-	libhoney.UserAgentAddition = fmt.Sprintf("hny-network-agent/%s", version)
 
 	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", version)
