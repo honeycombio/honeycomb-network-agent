@@ -1,7 +1,9 @@
 package config
 
 import (
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -155,24 +157,51 @@ func (c *Config) GetMaskedAPIKey() string {
 	return strings.Repeat("*", len(c.APIKey)-4) + c.APIKey[len(c.APIKey)-4:]
 }
 
+// HTTP Payloads start with one of these strings.
+// Four characters are given because this feeds into a BPF filter
+// and BPF really wants to match on 1, 2, or 4 byte boundaries.
+var httpPayloadsStartWith = []string{
+	// HTTP Methods are request start
+	"GET ", "POST", "PUT ", "DELE", "HEAD", "OPTI", "PATC", "TRAC", "CONN",
+	// HTTP/1.x is the response start
+	"HTTP",
+}
+
+// pcapComputeTcpHeaderOffset is a [pcap filter] sub-string for pcap
+// to figure out the TCP header length for a given packet.
+//
+// We use this to find the start of the TCP payload. See a [breakdown of this filter].
+//
+// [pcap filter]: https://www.tcpdump.org/manpages/pcap-filter.7.html
+// [breakdown of this filter]: https://security.stackexchange.com/a/121013
+const pcapComputeTcpHeaderOffset = "((tcp[12:1] & 0xf0) >> 2)"
+
+// pcapTcpPayloadStartsWith returns a [pcap filter] string.
+// The filter matches a given string against the first bytes of a TCP payload.
+// Deeper details this filter can be found at [capturing HTTP requests with tcpdump].
+//
+// [pcap filter]: https://www.tcpdump.org/manpages/pcap-filter.7.html
+// [capturing HTTP requests with tcpdump]: https://www.middlewareinventory.com/blog/tcpdump-capture-http-get-post-requests-apache-weblogic-websphere/
+func pcapTcpPayloadStartsWith(s string) (filter string, err error) {
+	if len(s) != 4 {
+		return "", fmt.Errorf("pcapTcpPayloadStartsWith: string must be 4 characters long, got %d", len(s))
+	}
+
+	// tcp[O:N] - from TCP traffic, get the N bytes that appear after the offset O
+	return fmt.Sprintf("tcp[%s:4] = 0x%s", pcapComputeTcpHeaderOffset, hex.EncodeToString([]byte(s))), nil
+}
+
 // buildBpfFilter builds a BPF filter to only capture HTTP traffic
-// TODO: Move somewhere more appropriate
 func buildBpfFilter() string {
-	// Add filters to only capture common HTTP methods
+	// TODO: Move this logic somewhere more HTTP-flavored
 	// TODO "not host me", // how do we get our current IP?
-	// reference links:
-	// https://www.middlewareinventory.com/blog/tcpdump-capture-http-get-post-requests-apache-weblogic-websphere/
-	// https://www.middlewareinventory.com/ascii-table/
-	filters := []string{
-		// tcp[((tcp[12:1] & 0xf0) >> 2):<num> means skip the ip & tcp headers, then get the next <num> bytes and match hex
-		// bpf insists that we must use 1, 2, or 4 bytes
-		// HTTP Methods are request start strings
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x47455420", // 'GET '
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x504F5354", // 'POST'
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x50555420", // 'PUT '
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x44454C45", // 'DELE'TE
-		// HTTP 1.1 is the response start string
-		"tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x48545450", // 'HTTP' 1.1
+
+	filters := []string{}
+	for _, method := range httpPayloadsStartWith {
+		filter, err := pcapTcpPayloadStartsWith(method)
+		if err == nil {
+			filters = append(filters, filter)
+		}
 	}
 	return strings.Join(filters, " or ")
 }
