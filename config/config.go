@@ -108,7 +108,7 @@ type Config struct {
 	// Include the request URL in the event.
 	IncludeRequestURL bool
 
-	// Map of namespaces to filter on.
+	// Kubernetes namespaces to exclude creating events for.
 	NamespaceFilter map[string]struct{}
 }
 
@@ -146,7 +146,7 @@ func NewConfig() Config {
 		AgentPodName:                  utils.LookupEnvOrString("AGENT_POD_NAME", ""),
 		AdditionalAttributes:          utils.LookupEnvAsStringMap("ADDITIONAL_ATTRIBUTES"),
 		IncludeRequestURL:             utils.LookupEnvOrBool("INCLUDE_REQUEST_URL", false),
-		NamespaceFilter:               getNamespaceFilterAsMap(),
+		NamespaceFilter:               getK8sNamespaceFilterAsMap(),
 	}
 }
 
@@ -212,10 +212,10 @@ func (c *Config) Validate() error {
 	return errors.Join(e...)
 }
 
-// getNamespaceFilterAsMap returns a map of namespaces to filter on
-// namespaces are comma separated and set via the NAMESPACE_FILTER environment variable
-// Values are stored as an empty struct to save memory
-func getNamespaceFilterAsMap() map[string]struct{} {
+// getK8sNamespaceFilterAsMap returns a map of Kubernetes namespaces to exclude creating events for
+// namespaces are comma separated and set via the NAMESPACES environment variable
+// Returns a map of namespaces to make lookups easier
+func getK8sNamespaceFilterAsMap() map[string]struct{} {
 	namespaceFilter := map[string]struct{}{}
 	for _, namespace := range utils.LookupEnvAsStringSlice("NAMESPACES") {
 		namespaceFilter[namespace] = struct{}{}
