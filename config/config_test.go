@@ -1,11 +1,14 @@
-package config_test
+package config
 
 import (
+	"encoding/hex"
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 
-	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAPIMask(t *testing.T) {
@@ -38,7 +41,7 @@ func TestAPIMask(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			config := config.Config{
+			config := Config{
 				APIKey: tc.apiKey,
 			}
 
@@ -64,7 +67,7 @@ func TestEnvVars(t *testing.T) {
 	t.Setenv("ADDITIONAL_ATTRIBUTES", "key1=value1,key2=value2")
 	t.Setenv("INCLUDE_REQUEST_URL", "false")
 
-	config := config.NewConfig()
+	config := NewConfig()
 	assert.Equal(t, "1234567890123456789012", config.APIKey)
 	assert.Equal(t, "https://api.example.com", config.Endpoint)
 	assert.Equal(t, "test-dataset", config.Dataset)
@@ -88,7 +91,7 @@ func TestEnvVarsDefault(t *testing.T) {
 	// all the env vars in an array
 	os.Clearenv()
 
-	config := config.NewConfig()
+	config := NewConfig()
 	assert.Equal(t, "", config.APIKey)
 	assert.Equal(t, "https://api.honeycomb.io", config.Endpoint)
 	assert.Equal(t, "hny-network-agent", config.Dataset)
@@ -103,4 +106,62 @@ func TestEnvVarsDefault(t *testing.T) {
 	assert.Equal(t, "", config.AgentPodName)
 	assert.Equal(t, map[string]string{}, config.AdditionalAttributes)
 	assert.Equal(t, true, config.IncludeRequestURL)
+}
+
+func Test_Config_buildBpfFilter(t *testing.T) {
+	captureFilter := buildBpfFilter()
+
+	assert.Equal(t,
+		len(httpPayloadsStartWith)-1,
+		strings.Count(captureFilter, " or "),
+		"complete filter joins all defined HTTP-matching filters with 'or'",
+	)
+
+	for _, httpStart := range httpPayloadsStartWith {
+		httpStartHex := hex.EncodeToString([]byte(httpStart))
+		description := fmt.Sprintf("includes %s (%s)", httpStartHex, httpStart)
+		t.Run(description, func(t *testing.T) {
+			filter, err := pcapTcpPayloadStartsWith(httpStart)
+			require.NoError(t, err)
+			assert.Contains(t, captureFilter, filter)
+		})
+	}
+}
+
+func Test_Config_pcapTcpPayloadStartsWith(t *testing.T) {
+	testCases := []struct {
+		startsWith     string
+		expectSuccess  bool
+		expectedFilter string
+	}{
+		{
+			startsWith:     "GET",
+			expectSuccess:  false,
+			expectedFilter: "",
+		},
+		{
+			startsWith:     "GET ",
+			expectSuccess:  true,
+			expectedFilter: "tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x47455420",
+		},
+		{
+			startsWith:     "HEAD",
+			expectSuccess:  true,
+			expectedFilter: "tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x48454144",
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.startsWith, func(t *testing.T) {
+			filter, err := pcapTcpPayloadStartsWith(tC.startsWith)
+
+			if tC.expectSuccess {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "string must be 4 characters long")
+			}
+
+			assert.Equal(t, tC.expectedFilter, filter)
+		})
+	}
 }
