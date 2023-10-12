@@ -1,5 +1,6 @@
 # Releasing
 
+- If there are changes going out that should be updated in the [docs](https://docs.honeycomb.io/integrations/kubernetes/honeycomb-network-agent), prep a docs PR.
 - Update version number in `main.go`
 - Update `CHANGELOG.md` with the changes since the last release. Consider automating with a command such as these two:
   - `git log $(git describe --tags --abbrev=0)..HEAD --no-merges --oneline > new-in-this-release.log`
