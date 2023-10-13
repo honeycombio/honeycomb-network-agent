@@ -51,7 +51,7 @@ func NewTcpStream(net gopacket.Flow, transport gopacket.Flow, config config.Conf
 		dstPort:    transport.Dst().String(),
 		buffer:     bufio.NewReader(bytes.NewReader(nil)),
 		parsers: []parser{
-			newHttpParser(),
+			newHttpParser(config.HTTPHeadersToExtract),
 		},
 	}
 }
