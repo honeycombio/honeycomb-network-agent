@@ -43,14 +43,19 @@ func LookupEnvAsStringMap(key string) map[string]string {
 }
 
 // LookupEnvAsStringSlice returns a slice of strings from the environment variable with the given key
+// and a boolean indicating if the key was present
 // values are comma separated
 // Example: value1,value2,value3
-func LookupEnvAsStringSlice(key string) []string {
+func LookupEnvAsStringSlice(key string) ([]string, bool) {
 	values := []string{}
-	if env := os.Getenv(key); env != "" {
-		for _, value := range strings.Split(env, ",") {
+	env, found := os.LookupEnv(key)
+	if !found {
+		return values, false
+	}
+	for _, value := range strings.Split(env, ",") {
+		if value != "" {
 			values = append(values, value)
 		}
 	}
-	return values
+	return values, true
 }

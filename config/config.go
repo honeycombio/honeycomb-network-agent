@@ -247,9 +247,8 @@ var defaultHeadersToExtract = []string{
 
 // getHTTPHeadersToExtract returns the list of HTTP headers to extract from a HTTP request/response
 func getHTTPHeadersToExtract() []string {
-	httpHeaders := utils.LookupEnvAsStringSlice("HTTP_HEADERS")
-	if len(httpHeaders) > 0 {
-		return httpHeaders
+	if headers, found := utils.LookupEnvAsStringSlice("HTTP_HEADERS"); found {
+		return headers
 	}
 	return defaultHeadersToExtract
 }

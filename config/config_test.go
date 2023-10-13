@@ -86,6 +86,13 @@ func TestEnvVars(t *testing.T) {
 	assert.Equal(t, []string{"header1", "header2"}, config.HTTPHeadersToExtract)
 }
 
+func TestEmptyHeadersEnvVar(t *testing.T) {
+	t.Setenv("HTTP_HEADERS", "")
+
+	config := NewConfig()
+	assert.Equal(t, []string{}, config.HTTPHeadersToExtract)
+}
+
 func TestEnvVarsDefault(t *testing.T) {
 	// clear all env vars
 	// this doesn't reset the env vars for the test suite
