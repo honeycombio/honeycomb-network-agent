@@ -144,7 +144,7 @@ func NewConfig() Config {
 		AgentPodIP:                    utils.LookupEnvOrString("AGENT_POD_IP", ""),
 		AgentPodName:                  utils.LookupEnvOrString("AGENT_POD_NAME", ""),
 		AdditionalAttributes:          utils.LookupEnvAsStringMap("ADDITIONAL_ATTRIBUTES"),
-		IncludeRequestURL:             utils.LookupEnvOrBool("INCLUDE_REQUEST_URL", false),
+		IncludeRequestURL:             utils.LookupEnvOrBool("INCLUDE_REQUEST_URL", true),
 	}
 }
 
