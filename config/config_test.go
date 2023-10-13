@@ -65,7 +65,7 @@ func TestEnvVars(t *testing.T) {
 	t.Setenv("AGENT_POD_IP", "pod_ip")
 	t.Setenv("AGENT_POD_NAME", "pod_name")
 	t.Setenv("ADDITIONAL_ATTRIBUTES", "key1=value1,key2=value2")
-	t.Setenv("INCLUDE_REQUEST_URL", "true")
+	t.Setenv("INCLUDE_REQUEST_URL", "false")
 	t.Setenv("HTTP_HEADERS", "header1,header2")
 
 	config := NewConfig()
@@ -82,7 +82,7 @@ func TestEnvVars(t *testing.T) {
 	assert.Equal(t, "pod_ip", config.AgentPodIP)
 	assert.Equal(t, "pod_name", config.AgentPodName)
 	assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, config.AdditionalAttributes)
-	assert.Equal(t, true, config.IncludeRequestURL)
+	assert.Equal(t, false, config.IncludeRequestURL)
 	assert.Equal(t, []string{"header1", "header2"}, config.HTTPHeadersToExtract)
 }
 
@@ -107,7 +107,7 @@ func TestEnvVarsDefault(t *testing.T) {
 	assert.Equal(t, "", config.AgentPodIP)
 	assert.Equal(t, "", config.AgentPodName)
 	assert.Equal(t, map[string]string{}, config.AdditionalAttributes)
-	assert.Equal(t, false, config.IncludeRequestURL)
+	assert.Equal(t, true, config.IncludeRequestURL)
 	assert.Equal(t, []string{"User-Agent"}, config.HTTPHeadersToExtract)
 }
 
