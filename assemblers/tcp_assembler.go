@@ -101,7 +101,6 @@ func NewTcpAssembler(config config.Config, eventsChan chan Event) tcpAssembler {
 func (h *tcpAssembler) Start(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	log.Info().Msg("Starting TCP assembler")
 	// Tick on the tightest loop. The flush timeout is the shorter of the two timeouts using this ticker.
 	// Tick even more frequently than the flush interval (4 is somewhat arbitrary)
 	flushCloseTicker := time.NewTicker(h.config.StreamFlushTimeout / 4)
