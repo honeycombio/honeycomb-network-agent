@@ -46,7 +46,7 @@ kubectl create secret generic honeycomb --from-literal=api-key=$HONEYCOMB_API_KE
 The network agent can be configured using the following environment variables.
 
 | Environment Variable      | Description                                                                              | Default                    | Required? |
-|---------------------------|------------------------------------------------------------------------------------------|----------------------------|-----------|
+| ------------------------- | ---------------------------------------------------------------------------------------- | -------------------------- | --------- |
 | `HONEYCOMB_API_KEY`       | The Honeycomb API key used when sending events                                           | `` (empty)                 | **Yes**   |
 | `HONEYCOMB_API_ENDPOINT`  | The endpoint to send events to                                                           | `https://api.honeycomb.io` | No        |
 | `HONEYCOMB_DATASET`       | Dataset where network events are stored                                                  | `hny-network-agent`        | No        |
@@ -58,7 +58,7 @@ The network agent can be configured using the following environment variables.
 | `INCLUDE_REQUEST_URL`     | Include the request URL in events                                                        | `true`                     | No        |
 | `HTTP_HEADERS`            | Case-sensitive, comma separated list of headers to be recorded from requests/responses†  | `User-Agent`               | No        |
 
-†: When providing an overide of a list of values, you must provide all values including any defaults.
+†: When providing an override of a list of values, you must provide all values including any defaults.
 
 ### Run
 
@@ -73,7 +73,7 @@ Alternative options for configuration and running can be found in [Deploying the
 ## Supported Platforms
 
 | Platform                                                             | Supported                           |
-|----------------------------------------------------------------------|-------------------------------------|
+| -------------------------------------------------------------------- | ----------------------------------- |
 | [AKS](https://azure.microsoft.com/en-gb/products/kubernetes-service) | Supported ✅                         |
 | [EKS](https://aws.amazon.com/eks/)                                   | Self-managed hosts ✅ <br> Fargate ❌ |
 | [GKE](https://cloud.google.com/kubernetes-engine)                    | Standard cluster ✅ <br> AutoPilot ❌ |
