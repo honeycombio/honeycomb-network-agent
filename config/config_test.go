@@ -66,6 +66,7 @@ func TestEnvVars(t *testing.T) {
 	t.Setenv("AGENT_POD_NAME", "pod_name")
 	t.Setenv("ADDITIONAL_ATTRIBUTES", "key1=value1,key2=value2")
 	t.Setenv("INCLUDE_REQUEST_URL", "false")
+	t.Setenv("HTTP_HEADERS", "header1,header2")
 
 	config := NewConfig()
 	assert.Equal(t, "1234567890123456789012", config.APIKey)
@@ -82,6 +83,14 @@ func TestEnvVars(t *testing.T) {
 	assert.Equal(t, "pod_name", config.AgentPodName)
 	assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, config.AdditionalAttributes)
 	assert.Equal(t, false, config.IncludeRequestURL)
+	assert.Equal(t, []string{"header1", "header2"}, config.HTTPHeadersToExtract)
+}
+
+func TestEmptyHeadersEnvVar(t *testing.T) {
+	t.Setenv("HTTP_HEADERS", "")
+
+	config := NewConfig()
+	assert.Equal(t, []string{}, config.HTTPHeadersToExtract)
 }
 
 func TestEnvVarsDefault(t *testing.T) {
@@ -106,6 +115,7 @@ func TestEnvVarsDefault(t *testing.T) {
 	assert.Equal(t, "", config.AgentPodName)
 	assert.Equal(t, map[string]string{}, config.AdditionalAttributes)
 	assert.Equal(t, true, config.IncludeRequestURL)
+	assert.Equal(t, []string{"User-Agent"}, config.HTTPHeadersToExtract)
 }
 
 func Test_Config_buildBpfFilter(t *testing.T) {
