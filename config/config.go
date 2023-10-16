@@ -112,6 +112,9 @@ type Config struct {
 
 	// The list of HTTP headers to extract from a HTTP request/response.
 	HTTPHeadersToExtract []string
+
+	// Event Handler type to use for sending events.
+	EventHandlerType string
 }
 
 // NewConfig returns a new Config struct.
@@ -149,6 +152,7 @@ func NewConfig() Config {
 		AdditionalAttributes:          utils.LookupEnvAsStringMap("ADDITIONAL_ATTRIBUTES"),
 		IncludeRequestURL:             utils.LookupEnvOrBool("INCLUDE_REQUEST_URL", true),
 		HTTPHeadersToExtract:          getHTTPHeadersToExtract(),
+		EventHandlerType:              utils.LookupEnvOrString("HANDLER_TYPE", "libhoney"),
 	}
 }
 
@@ -246,7 +250,7 @@ var defaultHeadersToExtract = []string{
 }
 
 // getHTTPHeadersToExtract returns the list of HTTP headers to extract from a HTTP request/response
-// based on a user-defined list in HTTP_HEADERS, or the default headers if no list is given. 
+// based on a user-defined list in HTTP_HEADERS, or the default headers if no list is given.
 func getHTTPHeadersToExtract() []string {
 	if headers, found := utils.LookupEnvAsStringSlice("HTTP_HEADERS"); found {
 		return headers
