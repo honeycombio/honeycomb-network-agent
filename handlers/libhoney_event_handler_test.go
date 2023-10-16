@@ -319,12 +319,13 @@ func Test_reportingTimesAndDurations(t *testing.T) {
 			expectedTelemetryTime:     nowish,
 		},
 	}
+	handler := &libhoneyEventHandler{}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			ev := libhoney.NewEvent()
 			event := createTestHttpEvent(tC.reqTime, tC.respTime)
 
-			setTimestampsAndDurationIfValid(ev, event)
+			handler.setTimestampsAndDurationIfValid(ev, event)
 
 			if tC.expectedTelemetryTime != nowish {
 				assert.Equal(t, tC.expectedTelemetryTime, ev.Timestamp)
