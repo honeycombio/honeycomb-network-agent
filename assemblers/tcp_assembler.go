@@ -222,7 +222,7 @@ func (a *tcpAssembler) logAssemblerStats() {
 }
 
 func newPcapPacketSource(config config.Config) (*gopacket.PacketSource, error) {
-	log.Info().
+	log.Debug().
 		Str("interface", config.Interface).
 		Int("snaplen", config.Snaplen).
 		Bool("promiscuous", config.Promiscuous).
