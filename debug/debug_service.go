@@ -64,10 +64,6 @@ func (s *DebugService) Start() error {
 		if configAddr != "" {
 			host, portStr, _ := net.SplitHostPort(configAddr)
 			addr := net.JoinHostPort(host, portStr)
-			log.Info().
-				Str("addr", addr).
-				Msg("Debug service listening")
-
 			err := http.ListenAndServe(addr, s.mux)
 			log.Debug().
 				Err(err).
