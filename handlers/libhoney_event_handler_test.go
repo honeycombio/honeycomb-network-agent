@@ -101,6 +101,8 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 		"http.request.method":            "GET",
 		"url.path":                       "/check",
 		"http.request.body.size":         int64(42),
+		"http.request.headers":           http.Header{"User-Agent": []string{"teapot-checker/1.0"}, "Connection": []string{"keep-alive"}},
+		"http.response.headers":          http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}, "X-Custom-Header": []string{"tea-party"}},
 		"http.request.timestamp":         requestTimestamp,
 		"http.response.timestamp":        responseTimestamp,
 		"http.response.status_code":      418,
@@ -248,6 +250,8 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 		"http.request.method":            "GET",
 		"url.path":                       "/check",
 		"http.request.body.size":         int64(42),
+		"http.request.headers":           http.Header{"User-Agent": []string{"teapot-checker/1.0"}, "Connection": []string{"keep-alive"}},
+		"http.response.headers":          http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}, "X-Custom-Header": []string{"tea-party"}},
 		"http.request.timestamp":         requestTimestamp,
 		"http.response.timestamp":        responseTimestamp,
 		"http.response.status_code":      418,
@@ -379,11 +383,12 @@ func createTestHttpEvent(requestTimestamp, responseTimestamp time.Time) *assembl
 			Method:        "GET",
 			RequestURI:    "/check?teapot=true",
 			ContentLength: 42,
-			Header:        http.Header{"User-Agent": []string{"teapot-checker/1.0"}},
+			Header:        http.Header{"User-Agent": []string{"teapot-checker/1.0"}, "Connection": []string{"keep-alive"}},
 		},
 		&http.Response{
 			StatusCode:    418,
 			ContentLength: 84,
+			Header:        http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}, "X-Custom-Header": []string{"tea-party"}},
 		},
 	)
 }
