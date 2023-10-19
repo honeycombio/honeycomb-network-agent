@@ -13,6 +13,7 @@ import (
 	"github.com/honeycombio/otel-config-go/otelconfig"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -77,115 +78,144 @@ func (handler *otelHandler) Close() {
 
 // handleEvent transforms a captured event into a libhoney event and sends it
 func (handler *otelHandler) handleEvent(event assemblers.Event) {
-	// the telemetry event to send
-	_, span := handler.tracer.
-		Start(context.Background(), "HTTP ",
-			trace.WithTimestamp(event.RequestTimestamp()),
-		)
-
-	handler.setTimestampsAndDurationIfValid(span, event)
-
-	ev.AddField("meta.stream.ident", event.StreamIdent())
-	ev.AddField("meta.seqack", event.RequestId())
-	ev.AddField("meta.request.packet_count", event.RequestPacketCount())
-	ev.AddField("meta.response.packet_count", event.ResponsePacketCount())
-
-	ev.AddField(string(semconv.ClientSocketAddressKey), event.SrcIp())
-	ev.AddField(string(semconv.ServerSocketAddressKey), event.DstIp())
-
-	// add custom fields based on the event type
-	switch event.(type) {
-	case *assemblers.HttpEvent:
-		handler.addHttpFields(span, event.(*assemblers.HttpEvent))
-	}
-
-	ev.Add(handler.k8sClient.GetK8sAttrsForSourceIP(handler.config.AgentPodIP, event.SrcIp()))
-	ev.Add(handler.k8sClient.GetK8sAttrsForDestinationIP(handler.config.AgentPodIP, event.DstIp()))
-
 	log.Debug().
 		Str("stream_ident", event.StreamIdent()).
 		Int64("request_id", event.RequestId()).
-		Time("event.timestamp", ev.Timestamp).
 		Msg("Event sent")
-	err := ev.Send()
-	if err != nil {
-		log.Debug().
-			Err(err).
-			Msg("error sending event")
+
+	// Get event start/end timestamps and attributes
+	startTime, endTime, attrs := handler.getEventStartEndTimestamps(event)
+
+	switch event.(type) {
+	case *assemblers.HttpEvent:
+		handler.createHTTPSpan(event.(*assemblers.HttpEvent), startTime, endTime, attrs)
+	default:
+		log.Warn().Msg("Unknown event type")
+		return
 	}
 }
 
-// setTimestampsAndDurationIfValid sets time-related fields in the emitted telemetry
-// about the request/response cycle.
-//
-// It only sets timestamps if they are present in the captured event, and only
-// computes and includes durations for which there are correct timestamps to based them upon.
-func (handler *otelHandler) setTimestampsAndDurationIfValid(span trace.Span, event assemblers.Event) {
-	span.AddField("meta.event_handled_at", time.Now())
-	switch {
-	case event.RequestTimestamp().IsZero() && event.ResponseTimestamp().IsZero():
-		// no request or response, which is weird, but let's send what we do know
-		span.AddField("meta.timestamps_missing", "request, response")
-		span.Timestamp = time.Now()
-
-	case event.RequestTimestamp().IsZero():
-		// no request
-		span.AddField("meta.timestamps_missing", "request")
-		// but we have a response
-		span.Timestamp = event.ResponseTimestamp()
-		span.AddField("http.response.timestamp", event.ResponseTimestamp())
-		span.AddField("meta.response.capture_to_handle.latency_ms", time.Since(event.ResponseTimestamp()).Milliseconds())
-
-	case event.ResponseTimestamp().IsZero(): // have request, no response
-		// no response
-		span.AddField("meta.timestamps_missing", "response")
-		// but we have a request
-		span.Timestamp = event.RequestTimestamp()
-		span.AddField("http.request.timestamp", event.RequestTimestamp())
-		span.AddField("meta.request.capture_to_handle.latency_ms", time.Since(event.RequestTimestamp()).Milliseconds())
-
-	default: // the happiest of paths, we have both request and response
-		span.Timestamp = event.RequestTimestamp()
-		span.AddField("http.request.timestamp", event.RequestTimestamp())
-		span.AddField("http.response.timestamp", event.ResponseTimestamp())
-		span.AddField("meta.request.capture_to_handle.latency_ms", time.Since(event.RequestTimestamp()).Milliseconds())
-		span.AddField("meta.response.capture_to_handle.latency_ms", time.Since(event.ResponseTimestamp()).Milliseconds())
-		span.AddField("duration_ms", event.ResponseTimestamp().Sub(event.RequestTimestamp()).Milliseconds())
+func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTime, endTime time.Time, attrs []attribute.KeyValue) {
+	var spanName string
+	if event.Request() == nil {
+		spanName = "HTTP"
+	} else {
+		spanName = fmt.Sprintf("HTTP %s", event.Request().Method)
 	}
-}
 
-func (handler *otelHandler) addHttpFields(span trace.Span, event *assemblers.HttpEvent) {
+	_, span := handler.tracer.Start(
+		context.Background(),
+		spanName,
+		trace.WithTimestamp(startTime),
+		trace.WithAttributes(
+			attribute.String("meta.stream.ident", event.StreamIdent()),
+			attribute.Int64("meta.seqack", event.RequestId()),
+			attribute.Int("meta.request.packet_count", event.RequestPacketCount()),
+			attribute.Int("meta.response.packet_count", event.ResponsePacketCount()),
+			semconv.ClientSocketAddress(event.SrcIp()),
+			semconv.ServerSocketAddress(event.DstIp()),
+		),
+		trace.WithAttributes(attrs...),
+	)
+	defer span.End(trace.WithTimestamp(endTime))
+
 	// request attributes
 	if event.Request() != nil {
-		span.AddField("name", fmt.Sprintf("HTTP %s", event.Request().Method))
-		span.AddField(string(semconv.HTTPRequestMethodKey), event.Request().Method)
-		span.AddField(string(semconv.UserAgentOriginalKey), event.Request().Header.Get("User-Agent"))
-		span.AddField(string(semconv.HTTPRequestBodySizeKey), event.Request().ContentLength)
+		span.SetAttributes(
+			semconv.HTTPMethod(event.Request().Method),
+			semconv.UserAgentOriginal(event.Request().Header.Get("User-Agent")),
+			semconv.HTTPRequestBodySize(int(event.Request().ContentLength)),
+		)
 		if handler.config.IncludeRequestURL {
 			url, err := url.ParseRequestURI(event.Request().RequestURI)
 			if err == nil {
-				span.AddField(string(semconv.URLPathKey), url.Path)
+				span.SetAttributes(
+					semconv.HTTPURL(url.Path),
+				)
 			}
 		}
 	} else {
-		span.AddField("name", "HTTP")
-		span.AddField("http.request.missing", "no request on this event")
+		span.SetAttributes(
+			attribute.String("http.request.missing", "no request on this event"),
+		)
 	}
 
 	// response attributes
 	if event.Response() != nil {
-		span.AddField(string(semconv.HTTPResponseStatusCodeKey), event.Response().StatusCode)
+		span.SetAttributes(
+			semconv.HTTPResponseStatusCode(event.Response().StatusCode),
+			semconv.HTTPResponseBodySize(int(event.Response().ContentLength)),
+		)
 		// We cannot quite follow the OTel spec for HTTP instrumentation and OK/Error Status.
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.25.0/specification/trace/semantic_conventions/http.md#status
 		// We don't (yet?) have a way to determine the client-or-server perspective of the event,
 		// so we'll set the "error" field to the general category of the error status codes.
 		if event.Response().StatusCode >= 500 {
-			span.AddField("error", "HTTP server error")
+			span.SetAttributes(
+				attribute.String("error", "HTTP server error"),
+			)
 		} else if event.Response().StatusCode >= 400 {
-			span.AddField("error", "HTTP client error")
+			span.SetAttributes(
+				attribute.String("error", "HTTP client error"),
+			)
 		}
-		span.AddField(string(semconv.HTTPResponseBodySizeKey), event.Response().ContentLength)
 	} else {
-		span.AddField("http.response.missing", "no response on this event")
+		span.SetAttributes(
+			attribute.String("http.response.missing", "no response on this event"),
+		)
 	}
+
+	// TODO: it would be nicer if the k8s attrs were returned as otel attrs instead of a map
+	// so that we don't need to loop over them again here
+	// Add k8s attributes for source and destination IPs
+	for key, val := range handler.k8sClient.GetK8sAttrsForSourceIP(handler.config.AgentPodIP, event.SrcIp()) {
+		span.SetAttributes(attribute.String(key, val))
+	}
+	for key, val := range handler.k8sClient.GetK8sAttrsForDestinationIP(handler.config.AgentPodIP, event.DstIp()) {
+		span.SetAttributes(attribute.String(key, val))
+	}
+}
+
+// getEventStartEndTimestamps sets time-related fields in the emitted telemetry
+// about the request/response cycle.
+//
+// It only sets timestamps if they are present in the captured event, and only
+// computes and includes durations for which there are correct timestamps to based them upon.
+func (handler *otelHandler) getEventStartEndTimestamps(event assemblers.Event) (time.Time, time.Time, []attribute.KeyValue) {
+	var startTime, endTime time.Time
+	attrs := []attribute.KeyValue{
+		attribute.String("meta.event_handled_at", time.Now().String()),
+	}
+
+	switch {
+	case event.RequestTimestamp().IsZero() && event.ResponseTimestamp().IsZero(): // no request or response
+		attrs = append(attrs, attribute.String("meta.timestamps_missing", "request, response"))
+		startTime = time.Now()
+		endTime = startTime
+
+	case event.RequestTimestamp().IsZero(): // have response, no request
+		attrs = append(attrs, attribute.String("meta.timestamps_missing", "request"))
+		startTime = event.ResponseTimestamp()
+		endTime = startTime
+		attrs = append(attrs, attribute.String("http.response.timestamp", event.ResponseTimestamp().String()))
+		attrs = append(attrs, attribute.Int64("meta.response.capture_to_handle.latency_ms", time.Since(event.ResponseTimestamp()).Milliseconds()))
+
+	case event.ResponseTimestamp().IsZero(): // have request, no response
+		attrs = append(attrs, attribute.String("meta.timestamps_missing", "response"))
+		startTime = event.RequestTimestamp()
+		endTime = startTime
+		attrs = append(attrs, attribute.String("http.request.timestamp", event.RequestTimestamp().String()))
+		attrs = append(attrs, attribute.Int64("meta.request.capture_to_handle.latency_ms", time.Since(event.RequestTimestamp()).Milliseconds()))
+
+	default: // the happiest of paths, we have both request and response
+		startTime = event.RequestTimestamp()
+		endTime = event.ResponseTimestamp()
+		attrs = append(attrs, attribute.String("http.request.timestamp", event.RequestTimestamp().String()))
+		attrs = append(attrs, attribute.String("http.response.timestamp", event.ResponseTimestamp().String()))
+		attrs = append(attrs, attribute.Int64("meta.request.capture_to_handle.latency_ms", time.Since(event.RequestTimestamp()).Milliseconds()))
+		attrs = append(attrs, attribute.Int64("meta.response.capture_to_handle.latency_ms", time.Since(event.ResponseTimestamp()).Milliseconds()))
+		attrs = append(attrs, attribute.Int64("duration_ms", event.ResponseTimestamp().Sub(event.RequestTimestamp()).Milliseconds()))
+
+	}
+	return startTime, endTime, attrs
 }
