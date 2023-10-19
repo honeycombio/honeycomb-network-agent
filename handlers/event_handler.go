@@ -22,6 +22,8 @@ func NewEventHandler(config config.Config, cachedK8sClient *utils.CachedK8sClien
 	switch config.EventHandlerType {
 	case "libhoney":
 		eventHandler = NewLibhoneyEventHandler(config, cachedK8sClient, eventsChannel, version)
+	case "otel":
+		eventHandler = NewOtelHandler(config, cachedK8sClient, eventsChannel, version)
 	}
 	return eventHandler
 }
