@@ -130,13 +130,13 @@ func (c *CachedK8sClient) GetNodeForPod(pod *v1.Pod) *v1.Node {
 
 // GetK8sAttrsForSourceIP returns a map of kubernetes metadata attributes for
 // a given IP address. Attribute names will be prefixed with "source.".
-func (c *CachedK8sClient) GetK8sAttrsForSourceIP(agentIP string, ip string) map[string]any {
+func (c *CachedK8sClient) GetK8sAttrsForSourceIP(agentIP string, ip string) map[string]string {
 	return c.getK8sAttrsForIp(agentIP, ip, "source")
 }
 
 // GetK8sAttrsForDestinationIP returns a map of kubernetes metadata attributes for
 // a given IP address. Attribute names will be prefixed with "destination.".
-func (c *CachedK8sClient) GetK8sAttrsForDestinationIP(agentIP string, ip string) map[string]any {
+func (c *CachedK8sClient) GetK8sAttrsForDestinationIP(agentIP string, ip string) map[string]string {
 	return c.getK8sAttrsForIp(agentIP, ip, "destination")
 }
 
@@ -145,8 +145,8 @@ func (c *CachedK8sClient) GetK8sAttrsForDestinationIP(agentIP string, ip string)
 // Provide a prefix to prepend to the attribute names, example: "source" or "destination".
 //
 // If the IP address is not found in the kubernetes cache, an empty map is returned.
-func (client *CachedK8sClient) getK8sAttrsForIp(agentIP string, ip string, prefix string) map[string]any {
-	k8sAttrs := map[string]any{}
+func (client *CachedK8sClient) getK8sAttrsForIp(agentIP string, ip string, prefix string) map[string]string {
+	k8sAttrs := map[string]string{}
 
 	if ip == "" {
 		return k8sAttrs
@@ -166,7 +166,7 @@ func (client *CachedK8sClient) getK8sAttrsForIp(agentIP string, ip string, prefi
 	if pod := client.GetPodByIPAddr(ip); pod != nil {
 		k8sAttrs[prefix+k8sResourceType] = k8sResourceTypePod
 		k8sAttrs[prefix+string(semconv.K8SPodNameKey)] = pod.Name
-		k8sAttrs[prefix+string(semconv.K8SPodUIDKey)] = pod.UID
+		k8sAttrs[prefix+string(semconv.K8SPodUIDKey)] = string(pod.UID)
 		k8sAttrs[prefix+string(semconv.K8SNamespaceNameKey)] = pod.Namespace
 
 		if len(pod.Spec.Containers) > 0 {
@@ -179,20 +179,20 @@ func (client *CachedK8sClient) getK8sAttrsForIp(agentIP string, ip string, prefi
 
 		if node := client.GetNodeForPod(pod); node != nil {
 			k8sAttrs[prefix+string(semconv.K8SNodeNameKey)] = node.Name
-			k8sAttrs[prefix+string(semconv.K8SNodeUIDKey)] = node.UID
+			k8sAttrs[prefix+string(semconv.K8SNodeUIDKey)] = string(node.UID)
 		}
 
 		if service := client.GetServiceForPod(pod); service != nil {
 			// no semconv for service yet
 			k8sAttrs[prefix+k8sServiceName] = service.Name
-			k8sAttrs[prefix+k8sServiceUID] = service.UID
+			k8sAttrs[prefix+k8sServiceUID] = string(service.UID)
 		}
 	} else if service := client.GetServiceByIPAddr(ip); service != nil {
 		k8sAttrs[prefix+k8sResourceType] = k8sResourceTypeService
 		k8sAttrs[prefix+string(semconv.K8SNamespaceNameKey)] = service.Namespace
 		// no semconv for service yet
 		k8sAttrs[prefix+k8sServiceName] = service.Name
-		k8sAttrs[prefix+k8sServiceUID] = service.UID
+		k8sAttrs[prefix+k8sServiceUID] = string(service.UID)
 	}
 	return k8sAttrs
 }

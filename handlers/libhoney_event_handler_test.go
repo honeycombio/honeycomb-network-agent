@@ -111,11 +111,11 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 		"source.k8s.resource.type":       "pod",
 		"source.k8s.namespace.name":      "unit-tests",
 		"source.k8s.pod.name":            "src-pod",
-		"source.k8s.pod.uid":             srcPod.UID,
+		"source.k8s.pod.uid":             string(srcPod.UID),
 		"destination.k8s.resource.type":  "pod",
 		"destination.k8s.namespace.name": "unit-tests",
 		"destination.k8s.pod.name":       "dest-pod",
-		"destination.k8s.pod.uid":        destPod.UID,
+		"destination.k8s.pod.uid":        string(destPod.UID),
 	}
 
 	assert.Equal(t, expectedAttrs, attrs)
@@ -258,11 +258,11 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 		"source.k8s.resource.type":       "pod",
 		"source.k8s.namespace.name":      "unit-tests",
 		"source.k8s.pod.name":            "src-pod",
-		"source.k8s.pod.uid":             srcPod.UID,
+		"source.k8s.pod.uid":             string(srcPod.UID),
 		"destination.k8s.resource.type":  "service",
 		"destination.k8s.namespace.name": "unit-tests",
 		"destination.k8s.service.name":   "dest-service",
-		"destination.k8s.service.uid":    destService.UID,
+		"destination.k8s.service.uid":    string(destService.UID),
 	}
 
 	assert.Equal(t, expectedAttrs, attrs)

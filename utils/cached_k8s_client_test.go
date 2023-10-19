@@ -80,73 +80,73 @@ func Test_GetAttrs(t *testing.T) {
 		name              string
 		agentIP           string
 		srcIP             string
-		expectedSrcAttrs  map[string]interface{}
+		expectedSrcAttrs  map[string]string
 		destIP            string
-		expectedDestAttrs map[string]interface{}
+		expectedDestAttrs map[string]string
 	}{
 		{
 			name:    "src & dest pods",
 			agentIP: "1.1.1.1",
 			srcIP:   srcPod.Status.PodIP,
-			expectedSrcAttrs: map[string]interface{}{
+			expectedSrcAttrs: map[string]string{
 				"source.k8s.resource.type":  "pod",
 				"source.k8s.namespace.name": srcPod.Namespace,
 				"source.k8s.pod.name":       srcPod.Name,
-				"source.k8s.pod.uid":        srcPod.UID,
+				"source.k8s.pod.uid":        string(srcPod.UID),
 				"source.k8s.container.name": "src-pod-container-1,src-pod-container-2",
 				"source.k8s.node.name":      node.Name,
-				"source.k8s.node.uid":       node.UID,
+				"source.k8s.node.uid":       string(node.UID),
 				"source.k8s.service.name":   service.Name,
-				"source.k8s.service.uid":    service.UID,
+				"source.k8s.service.uid":    string(service.UID),
 			},
 			destIP: destPod.Status.PodIP,
-			expectedDestAttrs: map[string]interface{}{
+			expectedDestAttrs: map[string]string{
 				"destination.k8s.resource.type":  "pod",
 				"destination.k8s.namespace.name": destPod.Namespace,
 				"destination.k8s.pod.name":       destPod.Name,
-				"destination.k8s.pod.uid":        destPod.UID,
+				"destination.k8s.pod.uid":        string(destPod.UID),
 				"destination.k8s.container.name": "dest-pod-container-1,dest-pod-container-2",
 				"destination.k8s.node.name":      node.Name,
-				"destination.k8s.node.uid":       node.UID,
+				"destination.k8s.node.uid":       string(node.UID),
 				"destination.k8s.service.name":   service.Name,
-				"destination.k8s.service.uid":    service.UID,
+				"destination.k8s.service.uid":    string(service.UID),
 			},
 		},
 		{
 			name:             "src IP matches agent IP - no src pod attrs",
 			agentIP:          srcPod.Status.PodIP,
 			srcIP:            srcPod.Status.PodIP,
-			expectedSrcAttrs: map[string]interface{}{},
+			expectedSrcAttrs: map[string]string{},
 			destIP:           destPod.Status.PodIP,
-			expectedDestAttrs: map[string]interface{}{
+			expectedDestAttrs: map[string]string{
 				"destination.k8s.resource.type":  "pod",
 				"destination.k8s.namespace.name": destPod.Namespace,
 				"destination.k8s.pod.name":       destPod.Name,
-				"destination.k8s.pod.uid":        destPod.UID,
+				"destination.k8s.pod.uid":        string(destPod.UID),
 				"destination.k8s.container.name": "dest-pod-container-1,dest-pod-container-2",
 				"destination.k8s.node.name":      node.Name,
-				"destination.k8s.node.uid":       node.UID,
+				"destination.k8s.node.uid":       string(node.UID),
 				"destination.k8s.service.name":   service.Name,
-				"destination.k8s.service.uid":    service.UID,
+				"destination.k8s.service.uid":    string(service.UID),
 			},
 		},
 		{
 			name:    "dest IP matches agent IP - no dest pod attrs",
 			agentIP: destPod.Status.PodIP,
 			srcIP:   srcPod.Status.PodIP,
-			expectedSrcAttrs: map[string]interface{}{
+			expectedSrcAttrs: map[string]string{
 				"source.k8s.resource.type":  "pod",
 				"source.k8s.namespace.name": srcPod.Namespace,
 				"source.k8s.pod.name":       srcPod.Name,
-				"source.k8s.pod.uid":        srcPod.UID,
+				"source.k8s.pod.uid":        string(srcPod.UID),
 				"source.k8s.container.name": "src-pod-container-1,src-pod-container-2",
 				"source.k8s.node.name":      node.Name,
-				"source.k8s.node.uid":       node.UID,
+				"source.k8s.node.uid":       string(node.UID),
 				"source.k8s.service.name":   service.Name,
-				"source.k8s.service.uid":    service.UID,
+				"source.k8s.service.uid":    string(service.UID),
 			},
 			destIP:            destPod.Status.PodIP,
-			expectedDestAttrs: map[string]interface{}{},
+			expectedDestAttrs: map[string]string{},
 		},
 	}
 
