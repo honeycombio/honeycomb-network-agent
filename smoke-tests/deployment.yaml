@@ -139,8 +139,8 @@ spec:
             ## uncomment this to disable including the request URL in events
             # - name: INCLUDE_REQUEST_URL
             #   value: "false"
-            - name: HANDLER_TYPE
-              value: "otel"
+            # - name: HANDLER_TYPE
+            #   value: "otel"
           securityContext:
             capabilities:
               add:
