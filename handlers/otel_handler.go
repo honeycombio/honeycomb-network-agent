@@ -39,9 +39,11 @@ func NewOtelHandler(config config.Config, k8sClient *utils.CachedK8sClient, even
 			"x-honeycomb-dataset": config.Dataset,
 		}),
 		otelconfig.WithResourceAttributes(map[string]string{
-			"honeycomb.agent_version": version,
-			string(semconv.TelemetrySDKNameKey): "honeycomb-network-agent",
+			"honeycomb.agent_version":              version,
+			string(semconv.TelemetrySDKNameKey):    "honeycomb-network-agent",
+			string(semconv.TelemetrySDKVersionKey): version,
 		}),
+		otelconfig.WithMetricsEnabled(false),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to configure OpenTelemetry")
