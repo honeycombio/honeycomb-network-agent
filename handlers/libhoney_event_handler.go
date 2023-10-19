@@ -182,6 +182,9 @@ func (handler *libhoneyEventHandler) addHttpFields(ev *libhoney.Event, event *as
 				ev.AddField(string(semconv.URLPathKey), url.Path)
 			}
 		}
+		// by this point, we've already extracted headers based on HTTP_HEADERS list
+		// so we can safely add the headers to the event
+		ev.AddField("http.request.headers", event.Request().Header)
 	} else {
 		ev.AddField("name", "HTTP")
 		ev.AddField("http.request.missing", "no request on this event")
@@ -200,6 +203,9 @@ func (handler *libhoneyEventHandler) addHttpFields(ev *libhoney.Event, event *as
 			ev.AddField("error", "HTTP client error")
 		}
 		ev.AddField(string(semconv.HTTPResponseBodySizeKey), event.Response().ContentLength)
+		// by this point, we've already extracted headers based on HTTP_HEADERS list
+		// so we can safely add the headers to the event
+		ev.AddField("http.response.headers", event.Response().Header)
 	} else {
 		ev.AddField("http.response.missing", "no response on this event")
 	}
