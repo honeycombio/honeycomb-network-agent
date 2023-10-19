@@ -33,7 +33,6 @@ func main() {
 		Str("endpoint", config.Endpoint).
 		Str("dataset", config.Dataset).
 		Str("stats_dataset", config.StatsDataset).
-		Str("event_handler_type", config.EventHandlerType).
 		Msg("Starting Honeycomb Network Agent")
 
 	// validate config after logging existing config values
