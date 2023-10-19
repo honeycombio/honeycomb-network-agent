@@ -39,9 +39,7 @@ func NewOtelHandler(config config.Config, k8sClient *utils.CachedK8sClient, even
 			"x-honeycomb-dataset": config.Dataset,
 		}),
 		otelconfig.WithResourceAttributes(map[string]string{
-			"honeycomb.agent_version":              version,
-			string(semconv.TelemetrySDKNameKey):    "honeycomb-network-agent",
-			string(semconv.TelemetrySDKVersionKey): version,
+			"honeycomb.agent_version": version,
 		}),
 		otelconfig.WithMetricsEnabled(false),
 	)
