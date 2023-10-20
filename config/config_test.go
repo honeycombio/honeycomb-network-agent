@@ -67,6 +67,7 @@ func TestEnvVars(t *testing.T) {
 	t.Setenv("ADDITIONAL_ATTRIBUTES", "key1=value1,key2=value2")
 	t.Setenv("INCLUDE_REQUEST_URL", "false")
 	t.Setenv("HTTP_HEADERS", "header1,header2")
+	t.Setenv("ENABLE_OTEL_TRACE_LINKING", "true")
 
 	config := NewConfig()
 	assert.Equal(t, "1234567890123456789012", config.APIKey)
@@ -84,6 +85,7 @@ func TestEnvVars(t *testing.T) {
 	assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, config.AdditionalAttributes)
 	assert.Equal(t, false, config.IncludeRequestURL)
 	assert.Equal(t, []string{"header1", "header2"}, config.HTTPHeadersToExtract)
+	assert.Equal(t, true, config.EnableOtelTraceLinking)
 }
 
 func TestEmptyHeadersEnvVar(t *testing.T) {
@@ -116,6 +118,7 @@ func TestEnvVarsDefault(t *testing.T) {
 	assert.Equal(t, map[string]string{}, config.AdditionalAttributes)
 	assert.Equal(t, true, config.IncludeRequestURL)
 	assert.Equal(t, []string{"User-Agent"}, config.HTTPHeadersToExtract)
+	assert.Equal(t, false, config.EnableOtelTraceLinking)
 }
 
 func Test_Config_buildBpfFilter(t *testing.T) {

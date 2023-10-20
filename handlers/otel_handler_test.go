@@ -5,15 +5,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func Test_extractContextFromEvent(t *testing.T) {
-	// ensure the global propagator is set
-	otel.SetTextMapPropagator(propagation.TraceContext{})
+	// create otel handler
+	handler := NewOtelHandler(
+		config.Config{
+			Endpoint:               "https://api.example.com",
+			EnableOtelTraceLinking: true,
+		},
+		nil,
+		nil,
+		"").(*otelHandler)
+	defer handler.Close()
 
 	// create a test http event
 	now := time.Now()
@@ -22,7 +29,7 @@ func Test_extractContextFromEvent(t *testing.T) {
 	})
 
 	// extract the context from the event and ensure it matches the expected values
-	ctx := getContextFromEvent(event)
+	ctx := handler.getContextFromEvent(event)
 	spanCtx := trace.SpanContextFromContext(ctx)
 	traceID, _ := trace.TraceIDFromHex("0af7651916cd43dd8448eb211c80319c")
 	assert.Equal(t, spanCtx.TraceID(), traceID)

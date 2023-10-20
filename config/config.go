@@ -115,6 +115,9 @@ type Config struct {
 
 	// Event Handler type to use for sending events.
 	EventHandlerType string
+
+	// Enable OpenTelemetry trace linking.
+	EnableOtelTraceLinking bool
 }
 
 // NewConfig returns a new Config struct.
@@ -153,6 +156,7 @@ func NewConfig() Config {
 		IncludeRequestURL:             utils.LookupEnvOrBool("INCLUDE_REQUEST_URL", true),
 		HTTPHeadersToExtract:          getHTTPHeadersToExtract(),
 		EventHandlerType:              utils.LookupEnvOrString("HANDLER_TYPE", "libhoney"),
+		EnableOtelTraceLinking:        utils.LookupEnvOrBool("ENABLE_OTEL_TRACE_LINKING", false),
 	}
 }
 

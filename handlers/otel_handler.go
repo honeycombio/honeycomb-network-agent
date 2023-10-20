@@ -111,7 +111,7 @@ func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTim
 	}
 
 	_, span := handler.tracer.Start(
-		getContextFromEvent(event),
+		handler.getContextFromEvent(event),
 		spanName,
 		trace.WithTimestamp(startTime),
 		trace.WithAttributes(
@@ -250,9 +250,9 @@ func headerToAttributes(isRequest bool, header http.Header) []attribute.KeyValue
 // getContextFromEvent attempts to extract OTEL trace context from a HTTP event's request headers
 // if present, it returns a new context with the extracted trace context
 // if not, it returns a new empty context
-func getContextFromEvent(event *assemblers.HttpEvent) context.Context {
+func (handler *otelHandler) getContextFromEvent(event *assemblers.HttpEvent) context.Context {
 	ctx := context.Background()
-	if event.Request() != nil {
+	if handler.config.EnableOtelTraceLinking && event.Request() != nil {
 		ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(event.Request().Header))
 	}
 	return ctx
