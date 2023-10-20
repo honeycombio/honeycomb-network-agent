@@ -36,7 +36,6 @@ func NewOtelHandler(config config.Config, k8sClient *utils.CachedK8sClient, even
 		otelconfig.WithExporterEndpoint(config.Endpoint),
 		otelconfig.WithHeaders(map[string]string{
 			"x-honeycomb-team":    config.APIKey,
-			"x-honeycomb-dataset": config.Dataset,
 		}),
 		otelconfig.WithResourceAttributes(map[string]string{
 			"honeycomb.agent_version": version,
