@@ -7,6 +7,7 @@ import (
 	"github.com/honeycombio/honeycomb-network-agent/assemblers"
 	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/honeycombio/honeycomb-network-agent/utils"
+	"github.com/rs/zerolog/log"
 )
 
 // EventHandler is an interface for event handlers
@@ -24,6 +25,9 @@ func NewEventHandler(config config.Config, cachedK8sClient *utils.CachedK8sClien
 		eventHandler = NewLibhoneyEventHandler(config, cachedK8sClient, eventsChannel, version)
 	case "otel":
 		eventHandler = NewOtelHandler(config, cachedK8sClient, eventsChannel, version)
+	default:
+		log.Warn().Str("event_handler_type", config.EventHandlerType).Msg("Unknown event handler type. Using libhoney.")
+		eventHandler = NewLibhoneyEventHandler(config, cachedK8sClient, eventsChannel, version)
 	}
 	return eventHandler
 }
