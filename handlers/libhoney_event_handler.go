@@ -56,14 +56,14 @@ func (handler *libhoneyEventHandler) Close() {
 
 // initLibhoney initializes libhoney and sets global fields
 func initLibhoney(config config.Config, version string) func() {
+	// appends libhoney's user-agent, has to happen before libhoney.Init()
+	libhoney.UserAgentAddition = fmt.Sprintf("hny-network-agent/%s", version)
+
 	libhoney.Init(libhoney.Config{
 		APIKey:  config.APIKey,
 		Dataset: config.Dataset,
 		APIHost: config.Endpoint,
 	})
-
-	// appends libhoney's user-agent (TODO: doesn't work, no useragent right now)
-	libhoney.UserAgentAddition = fmt.Sprintf("hny-network-agent/%s", version)
 
 	// configure global fields that are set on all events
 	libhoney.AddField("honeycomb.agent_version", version)
@@ -185,6 +185,9 @@ func (handler *libhoneyEventHandler) addHttpFields(ev *libhoney.Event, event *as
 				ev.AddField(string(semconv.URLPathKey), url.Path)
 			}
 		}
+		// by this point, we've already extracted headers based on HTTP_HEADERS list
+		// so we can safely add the headers to the event
+		ev.AddField("http.request.headers", event.Request().Header)
 	} else {
 		ev.AddField("name", "HTTP")
 		ev.AddField("http.request.missing", "no request on this event")
@@ -203,6 +206,9 @@ func (handler *libhoneyEventHandler) addHttpFields(ev *libhoney.Event, event *as
 			ev.AddField("error", "HTTP client error")
 		}
 		ev.AddField(string(semconv.HTTPResponseBodySizeKey), event.Response().ContentLength)
+		// by this point, we've already extracted headers based on HTTP_HEADERS list
+		// so we can safely add the headers to the event
+		ev.AddField("http.response.headers", event.Response().Header)
 	} else {
 		ev.AddField("http.response.missing", "no response on this event")
 	}

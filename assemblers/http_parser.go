@@ -8,12 +8,14 @@ import (
 
 // httpParser parses HTTP requests and responses
 type httpParser struct {
-	matcher *httpMatcher
+	matcher          *httpMatcher
+	headersToExtract []string
 }
 
-func newHttpParser() *httpParser {
+func newHttpParser(headersToExtract []string) *httpParser {
 	return &httpParser{
-		matcher: newRequestResponseMatcher(),
+		matcher:          newRequestResponseMatcher(),
+		headersToExtract: headersToExtract,
 	}
 }
 
@@ -28,7 +30,7 @@ func (parser *httpParser) parse(stream *tcpStream, requestId int64, timestamp ti
 			return false, err
 		}
 		// We only care about a few headers, so recreate the header with just the ones we need
-		req.Header = extractHeaders(req.Header)
+		req.Header = parser.extractHeaders(req.Header)
 		// We don't need the body, so just close it if set
 		if req.Body != nil {
 			req.Body.Close()
@@ -54,7 +56,7 @@ func (parser *httpParser) parse(stream *tcpStream, requestId int64, timestamp ti
 			return false, err
 		}
 		// We only care about a few headers, so recreate the header with just the ones we need
-		res.Header = extractHeaders(res.Header)
+		res.Header = parser.extractHeaders(res.Header)
 		// We don't need the body, so just close it if set
 		if res.Body != nil {
 			res.Body.Close()
@@ -78,19 +80,15 @@ func (parser *httpParser) parse(stream *tcpStream, requestId int64, timestamp ti
 	return true, nil
 }
 
-var headersToExtract = []string{
-	"User-Agent",
-}
-
 // extractHeaders returns a new http.Header object with only specified headers from the original.
 // The original request/response header contains a lot of stuff we don't really care about
 // and stays in memory until the request/response pair is processed
-func extractHeaders(header http.Header) http.Header {
+func (parser *httpParser) extractHeaders(header http.Header) http.Header {
 	cleanHeader := http.Header{}
 	if header == nil {
 		return cleanHeader
 	}
-	for _, headerName := range headersToExtract {
+	for _, headerName := range parser.headersToExtract {
 		if headerValue := header.Get(headerName); headerValue != "" {
 			cleanHeader.Set(headerName, headerValue)
 		}

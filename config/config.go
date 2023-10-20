@@ -112,6 +112,9 @@ type Config struct {
 
 	// Kubernetes namespaces to exclude creating events for.
 	NamespaceFilter map[string]struct{}
+
+	// The list of HTTP headers to extract from a HTTP request/response.
+	HTTPHeadersToExtract []string
 }
 
 // NewConfig returns a new Config struct.
@@ -147,8 +150,9 @@ func NewConfig() Config {
 		AgentPodIP:                    utils.LookupEnvOrString("AGENT_POD_IP", ""),
 		AgentPodName:                  utils.LookupEnvOrString("AGENT_POD_NAME", ""),
 		AdditionalAttributes:          utils.LookupEnvAsStringMap("ADDITIONAL_ATTRIBUTES"),
-		IncludeRequestURL:             utils.LookupEnvOrBool("INCLUDE_REQUEST_URL", false),
 		NamespaceFilter:               getK8sNamespaceFilterAsMap(),
+		IncludeRequestURL:             utils.LookupEnvOrBool("INCLUDE_REQUEST_URL", true),
+		HTTPHeadersToExtract:          getHTTPHeadersToExtract(),
 	}
 }
 
@@ -246,8 +250,23 @@ func (c *Config) Validate() error {
 // Returns a map of namespaces to make lookups easier
 func getK8sNamespaceFilterAsMap() map[string]struct{} {
 	namespaceFilter := map[string]struct{}{}
-	for _, namespace := range utils.LookupEnvAsStringSlice("NAMESPACES") {
-		namespaceFilter[namespace] = struct{}{}
+	if namespaces, found := utils.LookupEnvAsStringSlice("NAMESPACES"); found {
+		for _, namespace := range namespaces {
+			namespaceFilter[namespace] = struct{}{}
+		}
 	}
 	return namespaceFilter
+}
+
+var defaultHeadersToExtract = []string{
+	"User-Agent",
+}
+
+// getHTTPHeadersToExtract returns the list of HTTP headers to extract from a HTTP request/response
+// based on a user-defined list in HTTP_HEADERS, or the default headers if no list is given.
+func getHTTPHeadersToExtract() []string {
+	if headers, found := utils.LookupEnvAsStringSlice("HTTP_HEADERS"); found {
+		return headers
+	}
+	return defaultHeadersToExtract
 }

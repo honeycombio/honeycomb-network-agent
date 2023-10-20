@@ -1,5 +1,22 @@
 # Honeycomb Network Agent changelog
 
+## [0.0.22-alpha] - 2023-10-13
+
+### Enhancements
+
+- feat: Add configurable list of HTTP headers to extract (#277) | @MikeGoldsmith
+- feat: Enable HTTP URL recording by default (#281) | @MikeGoldsmith
+- feat: capture more types of HTTP requests (#276) | @robbkidd
+
+### Fixes
+
+- fix: append agent info to user-agent (#283) | @vreynolds
+
+### Maintenance
+
+- maint(deps): bump golang.org/x/net from 0.13.0 to 0.17.0 (#282) | [dependabot[bot]](https://github.com/)
+- docs: reminder to update docs when releasing (#279) | @vreynolds
+
 ## [0.0.21-alpha] - 2023-10-10
 
 ### Enhancements
