@@ -128,7 +128,7 @@ func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTim
 	// request attributes
 	if event.Request() != nil {
 		span.SetAttributes(
-			semconv.HTTPMethod(event.Request().Method),
+			semconv.HTTPRequestMethodKey.String(event.Request().Method),
 			semconv.HTTPRequestBodySize(int(event.Request().ContentLength)),
 		)
 		// by this point, we've already extracted headers based on HTTP_HEADERS list
@@ -138,7 +138,7 @@ func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTim
 			url, err := url.ParseRequestURI(event.Request().RequestURI)
 			if err == nil {
 				span.SetAttributes(
-					semconv.HTTPURL(url.Path),
+					semconv.URLPath(url.Path),
 				)
 			}
 		}
