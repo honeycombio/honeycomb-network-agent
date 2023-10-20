@@ -38,7 +38,12 @@ func NewOtelHandler(config config.Config, k8sClient *utils.CachedK8sClient, even
 			"x-honeycomb-team":    config.APIKey,
 		}),
 		otelconfig.WithResourceAttributes(map[string]string{
-			"honeycomb.agent_version": version,
+			"honeycomb.agent_version":        version,
+			"meta.agent.node.ip":             config.AgentNodeIP,
+			"meta.agent.node.name":           config.AgentNodeName,
+			"meta.agent.serviceaccount.name": config.AgentServiceAccount,
+			"meta.agent.pod.ip":              config.AgentPodIP,
+			"meta.agent.pod.name":            config.AgentPodName,
 		}),
 		otelconfig.WithMetricsEnabled(false),
 	)
