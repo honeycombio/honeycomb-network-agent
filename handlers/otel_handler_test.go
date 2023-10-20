@@ -24,7 +24,7 @@ func Test_extractContextFromEvent(t *testing.T) {
 
 	// create a test http event
 	now := time.Now()
-	event := createTestHttpEvent(now, now, &http.Header{
+	event := createTestHttpEventWithRequestHeader(now, now, &http.Header{
 		"Traceparent": []string{"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"},
 	})
 

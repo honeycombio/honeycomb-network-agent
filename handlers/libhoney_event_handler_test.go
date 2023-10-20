@@ -24,7 +24,7 @@ func Test_libhoneyEventHandler_handleEvent(t *testing.T) {
 	// Test Data - an assembled HTTP Event
 	requestTimestamp := time.Now()
 	responseTimestamp := requestTimestamp.Add(3 * time.Millisecond)
-	event := createTestHttpEvent(requestTimestamp, responseTimestamp, nil)
+	event := createTestHttpEvent(requestTimestamp, responseTimestamp)
 
 	// Test Data - k8s metadata
 	srcPod := &v1.Pod{
@@ -127,7 +127,7 @@ func Test_libhoneyEventHandler_handleEvent_doesNotSetUrlPath(t *testing.T) {
 	// Test Data - an assembled HTTP Event
 	requestTimestamp := time.Now()
 	responseTimestamp := requestTimestamp.Add(3 * time.Millisecond)
-	event := createTestHttpEvent(requestTimestamp, responseTimestamp, nil)
+	event := createTestHttpEvent(requestTimestamp, responseTimestamp)
 
 	// create a fake k8s clientset with the test pod metadata and start the cached client with it
 	fakeCachedK8sClient := utils.NewCachedK8sClient(fake.NewSimpleClientset())
@@ -174,7 +174,7 @@ func Test_libhoneyEventHandler_handleEvent_routed_to_service(t *testing.T) {
 	// Test Data - an assembled HTTP Event
 	requestTimestamp := time.Now()
 	responseTimestamp := requestTimestamp.Add(3 * time.Millisecond)
-	event := createTestHttpEvent(requestTimestamp, responseTimestamp, nil)
+	event := createTestHttpEvent(requestTimestamp, responseTimestamp)
 
 	// Test Data - k8s metadata
 	srcPod := &v1.Pod{
@@ -327,7 +327,7 @@ func Test_reportingTimesAndDurations(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			ev := libhoney.NewEvent()
-			event := createTestHttpEvent(tC.reqTime, tC.respTime, nil)
+			event := createTestHttpEvent(tC.reqTime, tC.respTime)
 
 			handler.setTimestampsAndDurationIfValid(ev, event)
 
@@ -368,31 +368,4 @@ func setupTestLibhoney(t testing.TB) *transmission.MockSender {
 	assert.NoError(t, err, "Failed to setup libhoney for testing")
 
 	return mockTransmission
-}
-
-func createTestHttpEvent(requestTimestamp, responseTimestamp time.Time, requestHeader *http.Header) *assemblers.HttpEvent {
-	if requestHeader == nil {
-		requestHeader = &http.Header{"User-Agent": []string{"teapot-checker/1.0"}, "Connection": []string{"keep-alive"}}
-	}
-	return assemblers.NewHttpEvent(
-		"c->s:1->2",
-		0,
-		requestTimestamp,
-		responseTimestamp,
-		2,
-		3,
-		"1.2.3.4",
-		"5.6.7.8",
-		&http.Request{
-			Method:        "GET",
-			RequestURI:    "/check?teapot=true",
-			ContentLength: 42,
-			Header:        *requestHeader,
-		},
-		&http.Response{
-			StatusCode:    418,
-			ContentLength: 84,
-			Header:        http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}, "X-Custom-Header": []string{"tea-party"}},
-		},
-	)
 }
