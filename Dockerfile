@@ -15,12 +15,12 @@ RUN make test
 
 # last unnamed stage is the default target for any image build
 # this produces the runnable agent image
-# the --no-install-recommends flag is used to avoid installing unnecessary packages
-# apt-get clean is used to remove cached package files after installation
-FROM ubuntu:22.04
-RUN apt-get update -yq && \
-    apt-get install -yq --no-install-recommends ca-certificates libpcap-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+FROM redhat/ubi9-minimal
+# install libpcap-devel and clean up after to help reduce image size
+RUN microdnf -y update && \
+    microdnf -y install libpcap-devel && \
+    microdnf -y clean all
+# link libpcap.so.0.8 to libpcap.so to the agent can find it
+RUN ln -s /usr/lib64/libpcap.so /usr/lib64/libpcap.so.0.8
 COPY --from=base /src/hny-network-agent /bin/hny-network-agent
 ENTRYPOINT [ "/bin/hny-network-agent" ]
