@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sync"
 	"time"
@@ -35,7 +36,7 @@ func NewOtelHandler(config config.Config, k8sClient *utils.CachedK8sClient, even
 		otelconfig.WithServiceVersion(version),
 		otelconfig.WithExporterEndpoint(config.Endpoint),
 		otelconfig.WithHeaders(map[string]string{
-			"x-honeycomb-team":    config.APIKey,
+			"x-honeycomb-team": config.APIKey,
 		}),
 		otelconfig.WithResourceAttributes(map[string]string{
 			"honeycomb.agent_version":        version,
@@ -128,9 +129,11 @@ func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTim
 	if event.Request() != nil {
 		span.SetAttributes(
 			semconv.HTTPMethod(event.Request().Method),
-			semconv.UserAgentOriginal(event.Request().Header.Get("User-Agent")),
 			semconv.HTTPRequestBodySize(int(event.Request().ContentLength)),
 		)
+		// by this point, we've already extracted headers based on HTTP_HEADERS list
+		// so we can safely add the headers to the event
+		span.SetAttributes(headerToAttributes(true, event.Request().Header)...)
 		if handler.config.IncludeRequestURL {
 			url, err := url.ParseRequestURI(event.Request().RequestURI)
 			if err == nil {
@@ -151,6 +154,9 @@ func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTim
 			semconv.HTTPResponseStatusCode(event.Response().StatusCode),
 			semconv.HTTPResponseBodySize(int(event.Response().ContentLength)),
 		)
+		// by this point, we've already extracted headers based on HTTP_HEADERS list
+		// so we can safely add the headers to the event
+		span.SetAttributes(headerToAttributes(false, event.Request().Header)...)
 		// We cannot quite follow the OTel spec for HTTP instrumentation and OK/Error Status.
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.25.0/specification/trace/semantic_conventions/http.md#status
 		// We don't (yet?) have a way to determine the client-or-server perspective of the event,
@@ -223,4 +229,19 @@ func (handler *otelHandler) getEventStartEndTimestamps(event assemblers.Event) (
 
 	}
 	return startTime, endTime, attrs
+}
+
+// headerToAttributes converts a http.Header into a slice of OpenTelemetry attributes
+func headerToAttributes(isRequest bool, header http.Header) []attribute.KeyValue {
+	var prefix string
+	if isRequest {
+		prefix = "http.request.header"
+	} else {
+		prefix = "http.response.header"
+	}
+	attrs := []attribute.KeyValue{}
+	for key, val := range header {
+		attrs = append(attrs, attribute.StringSlice(fmt.Sprintf("%s.%s", prefix, key), val))
+	}
+	return attrs
 }
