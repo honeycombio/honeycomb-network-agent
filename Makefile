@@ -13,7 +13,7 @@ docker-build:
 .PHONY: test
 #: run unit tests
 test:
-	go test ./...
+	go test ./... -count=1
 
 .PHONY: docker-test
 #: run unit tests in docker
