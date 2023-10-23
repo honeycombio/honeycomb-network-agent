@@ -234,7 +234,7 @@ func (handler *otelHandler) getEventStartEndTimestamps(event assemblers.Event) (
 // headerToAttributes converts a http.Header into a slice of OpenTelemetry attributes
 func headerToAttributes(isRequest bool, header http.Header) []attribute.KeyValue {
 	attrs := []attribute.KeyValue{}
-	for key, val := range santitizeHeaders(isRequest, header) {
+	for key, val := range sanitizeHeaders(isRequest, header) {
 		attrs = append(attrs, attribute.String(key, val))
 	}
 	return attrs

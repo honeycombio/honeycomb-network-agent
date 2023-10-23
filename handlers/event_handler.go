@@ -35,12 +35,12 @@ func NewEventHandler(config config.Config, cachedK8sClient *utils.CachedK8sClien
 	return eventHandler
 }
 
-// santitizeHeaders takes a map of headers and returns a new map with the keys sanitized
+// sanitizeHeaders takes a map of headers and returns a new map with the keys sanitized
 // sanitization involves:
 // - converting the keys to lowercase
 // - replacing - with _
 // - prepending http.request.header or http.response.header
-func santitizeHeaders(isRequest bool, header http.Header) map[string]string {
+func sanitizeHeaders(isRequest bool, header http.Header) map[string]string {
 	var prefix string
 	if isRequest {
 		prefix = "http.request.header"

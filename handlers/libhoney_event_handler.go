@@ -184,7 +184,7 @@ func (handler *libhoneyEventHandler) addHttpFields(ev *libhoney.Event, event *as
 		}
 		// by this point, we've already extracted headers based on HTTP_HEADERS list
 		// so we can safely add the headers to the event
-		for k, v := range santitizeHeaders(true, event.Request().Header) {
+		for k, v := range sanitizeHeaders(true, event.Request().Header) {
 			ev.AddField(k, v)
 		}
 	} else {
@@ -207,7 +207,7 @@ func (handler *libhoneyEventHandler) addHttpFields(ev *libhoney.Event, event *as
 		ev.AddField(string(semconv.HTTPResponseBodySizeKey), event.Response().ContentLength)
 		// by this point, we've already extracted headers based on HTTP_HEADERS list
 		// so we can safely add the headers to the event
-		for k, v := range santitizeHeaders(false, event.Response().Header) {
+		for k, v := range sanitizeHeaders(false, event.Response().Header) {
 			ev.AddField(k, v)
 		}
 	} else {
