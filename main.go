@@ -65,7 +65,7 @@ func main() {
 
 	// create event handler that sends events to backend (eg Honeycomb)
 	// TODO: move version outside of main package so it can be used directly in the eventHandler
-	eventHandler := handlers.NewLibhoneyEventHandler(config, cachedK8sClient, eventsChannel, Version)
+	eventHandler := handlers.NewEventHandler(config, cachedK8sClient, eventsChannel, Version)
 	wgServices.Add(1)
 	go eventHandler.Start(ctx, &wgServices)
 
