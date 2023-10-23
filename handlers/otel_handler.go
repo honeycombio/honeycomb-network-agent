@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
@@ -234,19 +233,9 @@ func (handler *otelHandler) getEventStartEndTimestamps(event assemblers.Event) (
 
 // headerToAttributes converts a http.Header into a slice of OpenTelemetry attributes
 func headerToAttributes(isRequest bool, header http.Header) []attribute.KeyValue {
-	var prefix string
-	if isRequest {
-		prefix = "http.request.header"
-	} else {
-		prefix = "http.response.header"
-	}
 	attrs := []attribute.KeyValue{}
-	for key, val := range header {
-		// semantic conventions suggest lowercase, with - characters replaced by _
-		semconvKey := strings.ToLower(strings.Replace(key, "-", "_", -1))
-		for _, v := range val {
-			attrs = append(attrs, attribute.String(fmt.Sprintf("%s.%s", prefix, semconvKey), v))
-		}
+	for key, val := range santitizeHeaders(isRequest, header) {
+		attrs = append(attrs, attribute.String(key, val))
 	}
 	return attrs
 }

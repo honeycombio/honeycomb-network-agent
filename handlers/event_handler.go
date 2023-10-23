@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/honeycombio/honeycomb-network-agent/assemblers"
@@ -30,4 +33,26 @@ func NewEventHandler(config config.Config, cachedK8sClient *utils.CachedK8sClien
 		eventHandler = NewLibhoneyEventHandler(config, cachedK8sClient, eventsChannel, version)
 	}
 	return eventHandler
+}
+
+// santitizeHeaders takes a map of headers and returns a new map with the keys sanitized
+// sanitization involves:
+// - converting the keys to lowercase
+// - replacing - with _
+// - prepending http.request.header or http.response.header
+func santitizeHeaders(isRequest bool, header http.Header) map[string]string {
+	var prefix string
+	if isRequest {
+		prefix = "http.request.header"
+	} else {
+		prefix = "http.response.header"
+	}
+
+	headers := make(map[string]string, len(header))
+	for key, values := range header {
+		// OTel semantic conventions suggest lowercase, with - characters replaced by _
+		sanitizedKey := strings.ToLower(strings.Replace(key, "-", "_", -1))
+		headers[fmt.Sprintf("%s.%s", prefix, sanitizedKey)] = strings.Join(values, ",")
+	}
+	return headers
 }
