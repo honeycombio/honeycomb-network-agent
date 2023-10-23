@@ -70,7 +70,7 @@ func main() {
 	go eventHandler.Start(ctx, &wgServices)
 
 	// create assembler that does packet capture and analysis
-	assembler := assemblers.NewTcpAssembler(config, eventsChannel)
+	assembler := assemblers.NewTcpAssembler(config, eventsChannel, cachedK8sClient)
 	wgServices.Add(1)
 	go assembler.Start(ctx, &wgServices)
 

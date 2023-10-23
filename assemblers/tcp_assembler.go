@@ -13,6 +13,7 @@ import (
 	"github.com/gopacket/gopacket/pcap"
 	"github.com/gopacket/gopacket/reassembly"
 	"github.com/honeycombio/honeycomb-network-agent/config"
+	"github.com/honeycombio/honeycomb-network-agent/utils"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -60,9 +61,10 @@ type tcpAssembler struct {
 	streamPool    *reassembly.StreamPool
 	assembler     *reassembly.Assembler
 	eventsChan    chan Event
+	k8sClient     *utils.CachedK8sClient
 }
 
-func NewTcpAssembler(config config.Config, eventsChan chan Event) tcpAssembler {
+func NewTcpAssembler(config config.Config, eventsChan chan Event, k8sClient *utils.CachedK8sClient) tcpAssembler {
 	var packetSource *gopacket.PacketSource
 	var err error
 
@@ -95,6 +97,7 @@ func NewTcpAssembler(config config.Config, eventsChan chan Event) tcpAssembler {
 		streamPool:    streamPool,
 		assembler:     assembler,
 		eventsChan:    eventsChan,
+		k8sClient:     k8sClient,
 	}
 }
 
@@ -127,8 +130,15 @@ func (h *tcpAssembler) Start(ctx context.Context, wg *sync.WaitGroup) {
 		case <-statsTicker.C:
 			h.logAssemblerStats()
 		case packet := <-h.packetSource.Packets():
-			if packet.NetworkLayer() == nil {
+			networkLayer := packet.NetworkLayer()
+			if networkLayer == nil {
 				// can't use this packet
+				continue
+			}
+
+			// check if source or dest IP should be ignored
+			netflow := networkLayer.NetworkFlow()
+			if h.shouldIgnore(netflow.Src().String(), netflow.Dst().String()) {
 				continue
 			}
 
@@ -173,7 +183,7 @@ func (h *tcpAssembler) Start(ctx context.Context, wg *sync.WaitGroup) {
 					ack:         reassembly.Sequence(tcp.Ack),
 				}
 				stats.totalsz += len(tcp.Payload)
-				h.assembler.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &context)
+				h.assembler.AssembleWithContext(netflow, tcp, &context)
 			}
 		}
 	}
@@ -219,6 +229,25 @@ func (a *tcpAssembler) logAssemblerStats() {
 	log.Debug().
 		Fields(statsFields).
 		Msg("TCP assembler stats")
+}
+
+func (assembler *tcpAssembler) shouldIgnore(srcIP, dstIp string) bool {
+	// if a namespace filter is set, check if the source or dest namespace is in the filter
+	if len(assembler.config.NamespaceFilter) > 0 {
+		// if the source namespace is in the filter, don't handle the event
+		if sourceNamespace := assembler.k8sClient.GetNamespaceForIP(srcIP); sourceNamespace != "" {
+			if _, ok := assembler.config.NamespaceFilter[sourceNamespace]; ok {
+				return true
+			}
+		}
+		// if the dest namespace is in the filter, don't handle the event
+		if destNamespace := assembler.k8sClient.GetNamespaceForIP(dstIp); destNamespace != "" {
+			if _, ok := assembler.config.NamespaceFilter[destNamespace]; ok {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func newPcapPacketSource(config config.Config) (*gopacket.PacketSource, error) {
