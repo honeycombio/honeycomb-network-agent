@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -241,7 +242,11 @@ func headerToAttributes(isRequest bool, header http.Header) []attribute.KeyValue
 	}
 	attrs := []attribute.KeyValue{}
 	for key, val := range header {
-		attrs = append(attrs, attribute.StringSlice(fmt.Sprintf("%s.%s", prefix, key), val))
+		// semantic conventions suggest lowercase, with - characters replaced by _
+		semconvKey := strings.ToLower(strings.Replace(key, "-", "_", -1))
+		for _, v := range val {
+			attrs = append(attrs, attribute.String(fmt.Sprintf("%s.%s", prefix, semconvKey), v))
+		}
 	}
 	return attrs
 }
