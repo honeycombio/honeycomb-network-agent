@@ -112,10 +112,14 @@ spec:
                 secretKeyRef:
                   name: honeycomb
                   key: api-key
-            ## uncomment this to change the endpoint for events (uncommon)
+            ## uncomment this to change the endpoint for events
             # - name: HONEYCOMB_API_ENDPOINT
             #   value: $HONEYCOMB_API_ENDPOINT
+            ## uncomment this to send to insecure endpoint like collector
+            # - name: OTEL_EXPORTER_OTLP_INSECURE
+            #   value: "true"
             ## uncomment this to set the destination dataset for events
+            ## this will represent service.name in honeycomb when using otel
             # - name: HONEYCOMB_DATASET
             #   value: $HONEYCOMB_DATASET
             ## uncomment this to set the destination dataset for agent performance stats
@@ -130,15 +134,21 @@ spec:
             ## uncomment this to enable profiling
             # - name: DEBUG
             #   value: "$DEBUG"
-            ## uncomment this to add extra attributes to all events
+            ## uncomment this to add extra attributes to all events when using libhoney handler
             # - name: ADDITIONAL_ATTRIBUTES
-            #   value: "key1=value1,key2=value2"
+            #   value: "handler=libhoney,environment=dev"
+            ## uncomment this to add extra attributes to all events when using otel handler
+            # - name: OTEL_RESOURCE_ATTRIBUTES
+            #   value: "handler=otel,environment=dev"
             ## uncomment this to configure a list of HTTP headers to be recorded from requests/responses.
+            ## this will show as http.request.header.user_agent and http.response.header.x_custom_header
             # - name: HTTP_HEADERS
             #   value: "User-Agent,X-Custom-Header"
             ## uncomment this to disable including the request URL in events
             # - name: INCLUDE_REQUEST_URL
             #   value: "false"
+            # - name: HANDLER_TYPE
+            #   value: "otel"
           securityContext:
             capabilities:
               add:

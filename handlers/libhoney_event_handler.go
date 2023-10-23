@@ -23,6 +23,8 @@ type libhoneyEventHandler struct {
 	eventsChan chan assemblers.Event
 }
 
+var _ EventHandler = (*libhoneyEventHandler)(nil)
+
 // NewLibhoneyEventHandler creates a new event handler that sends events using libhoney
 func NewLibhoneyEventHandler(config config.Config, k8sClient *utils.CachedK8sClient, eventsChan chan assemblers.Event, version string) EventHandler {
 	initLibhoney(config, version)
@@ -96,7 +98,7 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.Event) {
 	// the telemetry event to send
 	var ev *libhoney.Event = libhoney.NewEvent()
 
-	setTimestampsAndDurationIfValid(ev, event)
+	handler.setTimestampsAndDurationIfValid(ev, event)
 
 	ev.AddField("meta.stream.ident", event.StreamIdent())
 	ev.AddField("meta.seqack", event.RequestId())
@@ -133,7 +135,7 @@ func (handler *libhoneyEventHandler) handleEvent(event assemblers.Event) {
 //
 // It only sets timestamps if they are present in the captured event, and only
 // computes and includes durations for which there are correct timestamps to based them upon.
-func setTimestampsAndDurationIfValid(honeyEvent *libhoney.Event, event assemblers.Event) {
+func (handler *libhoneyEventHandler) setTimestampsAndDurationIfValid(honeyEvent *libhoney.Event, event assemblers.Event) {
 	honeyEvent.AddField("meta.event_handled_at", time.Now())
 	switch {
 	case event.RequestTimestamp().IsZero() && event.ResponseTimestamp().IsZero():
@@ -182,7 +184,9 @@ func (handler *libhoneyEventHandler) addHttpFields(ev *libhoney.Event, event *as
 		}
 		// by this point, we've already extracted headers based on HTTP_HEADERS list
 		// so we can safely add the headers to the event
-		ev.AddField("http.request.headers", event.Request().Header)
+		for k, v := range sanitizeHeaders(true, event.Request().Header) {
+			ev.AddField(k, v)
+		}
 	} else {
 		ev.AddField("name", "HTTP")
 		ev.AddField("http.request.missing", "no request on this event")
@@ -203,7 +207,9 @@ func (handler *libhoneyEventHandler) addHttpFields(ev *libhoney.Event, event *as
 		ev.AddField(string(semconv.HTTPResponseBodySizeKey), event.Response().ContentLength)
 		// by this point, we've already extracted headers based on HTTP_HEADERS list
 		// so we can safely add the headers to the event
-		ev.AddField("http.response.headers", event.Response().Header)
+		for k, v := range sanitizeHeaders(false, event.Response().Header) {
+			ev.AddField(k, v)
+		}
 	} else {
 		ev.AddField("http.response.missing", "no response on this event")
 	}
