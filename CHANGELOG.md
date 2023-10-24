@@ -1,5 +1,23 @@
 # Honeycomb Network Agent changelog
 
+## [0.0.23-alpha] - 2023-10-24
+
+### Enhancements
+
+- feat: Add OTLP handler to send events using OpenTelemetry (#290) | @MikeGoldsmith
+- feat: Sanitise headers to OTel semconv and add as separate fields/attributes (#296) | @MikeGoldsmith
+
+### Fixes
+
+- fix: add headers to honeycomb event (#289) | @JamieDanielson
+- fix: Update OTel header tests to use contains instead of comparing slices directly (#298) | @MikeGoldsmith
+
+### Maintenance
+
+- maint: Tidy start-up logging (#285) | @MikeGoldsmith
+- maint: update smoke test deployment for new env vars (#286) | @JamieDanielson
+- maint(deps): bump the k8s-dependencies group with 2 updates (#297) | [dependabot[bot]](https://github.com/)
+
 ## [0.0.22-alpha] - 2023-10-13
 
 ### Enhancements
