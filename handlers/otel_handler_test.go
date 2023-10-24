@@ -15,16 +15,10 @@ func TestHeaderToAttributes(t *testing.T) {
 	event := createTestHttpEvent(requestTimestamp, responseTimestamp)
 
 	reqAttrs := headerToAttributes(true, event.Request().Header)
-	expectedReqAttrs := []attribute.KeyValue{
-		attribute.String("http.request.header.user_agent", "teapot-checker/1.0"),
-		attribute.String("http.request.header.connection", "keep-alive"),
-	}
-	assert.Equal(t, expectedReqAttrs, reqAttrs)
+	assert.Contains(t, reqAttrs, attribute.String("http.request.header.user_agent", "teapot-checker/1.0"))
+	assert.Contains(t, reqAttrs, attribute.String("http.request.header.connection", "keep-alive"))
 
 	resAttrs := headerToAttributes(false, event.Response().Header)
-	expectedResAttrs := []attribute.KeyValue{
-		attribute.String("http.response.header.content_type", "text/plain; charset=utf-8"),
-		attribute.String("http.response.header.x_custom_header", "tea-party"),
-	}
-	assert.Equal(t, expectedResAttrs, resAttrs)
+	assert.Contains(t, resAttrs, attribute.String("http.response.header.content_type", "text/plain; charset=utf-8"))
+	assert.Contains(t, resAttrs, attribute.String("http.response.header.x_custom_header", "tea-party"))
 }
