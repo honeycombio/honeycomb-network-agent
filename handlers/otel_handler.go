@@ -157,7 +157,7 @@ func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTim
 		)
 		// by this point, we've already extracted headers based on HTTP_HEADERS list
 		// so we can safely add the headers to the event
-		span.SetAttributes(headerToAttributes(false, event.Request().Header)...)
+		span.SetAttributes(headerToAttributes(false, event.Response().Header)...)
 		// We cannot quite follow the OTel spec for HTTP instrumentation and OK/Error Status.
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.25.0/specification/trace/semantic_conventions/http.md#status
 		// We don't (yet?) have a way to determine the client-or-server perspective of the event,
@@ -234,15 +234,9 @@ func (handler *otelHandler) getEventStartEndTimestamps(event assemblers.Event) (
 
 // headerToAttributes converts a http.Header into a slice of OpenTelemetry attributes
 func headerToAttributes(isRequest bool, header http.Header) []attribute.KeyValue {
-	var prefix string
-	if isRequest {
-		prefix = "http.request.header"
-	} else {
-		prefix = "http.response.header"
-	}
 	attrs := []attribute.KeyValue{}
-	for key, val := range header {
-		attrs = append(attrs, attribute.StringSlice(fmt.Sprintf("%s.%s", prefix, key), val))
+	for key, val := range sanitizeHeaders(isRequest, header) {
+		attrs = append(attrs, attribute.String(key, val))
 	}
 	return attrs
 }
