@@ -19,6 +19,14 @@ Events include network level information such as source & destination IPs and po
 
 ![design diagram](./agent_design.png)
 
+The agent generates events per Kubernetes host by inspecting network traffic, in the perspective of either the receiving or sending process.
+This results in events being generated in the following 3 scenarios:
+- External to pod (cluster ingress)
+- Pod to pod
+- Pod to external (cluster egress)
+
+**NOTE**: For pod-to-pod interactions when each pod is on seperate Kubernetes nodes, two events will be created.
+
 ## Getting Started (Quickstart)
 
 ### Requirements
