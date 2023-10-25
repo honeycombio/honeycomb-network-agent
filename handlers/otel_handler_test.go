@@ -34,7 +34,7 @@ func Test_extractContextFromEvent(t *testing.T) {
 	})
 
 	// use handler to get context from the HTTP event
-	ctx := handler.getContextFromEvent(event)
+	ctx := handler.getContextFromHTTPEvent(event)
 	// get the span context out of the full event context
 	spanCtx := trace.SpanContextFromContext(ctx)
 
