@@ -46,6 +46,7 @@ func NewOtelHandler(config config.Config, k8sClient *utils.CachedK8sClient, even
 			"meta.agent.serviceaccount.name": config.AgentServiceAccount,
 			"meta.agent.pod.ip":              config.AgentPodIP,
 			"meta.agent.pod.name":            config.AgentPodName,
+			"net.component":                  "proxy", // I'm an interstitial! ᕕ( ᐛ )ᕗ
 		}),
 		otelconfig.WithMetricsEnabled(false),
 	)
