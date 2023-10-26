@@ -248,7 +248,7 @@ func headerToAttributes(isRequest bool, header http.Header) []attribute.KeyValue
 // If not, it returns a new empty context.
 func (handler *otelHandler) getContextFromHTTPEvent(event *assemblers.HttpEvent) context.Context {
 	ctx := context.Background()
-	if handler.config.EnableOtelTraceLinking && event.Request() != nil {
+	if event.Request() != nil {
 		ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(event.Request().Header))
 	}
 	return ctx

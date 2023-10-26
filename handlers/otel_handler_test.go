@@ -16,8 +16,7 @@ func Test_extractContextFromEvent(t *testing.T) {
 	// create otel handler
 	handler := NewOtelHandler(
 		config.Config{
-			Endpoint:               "https://api.example.com",
-			EnableOtelTraceLinking: true,
+			Endpoint: "https://api.example.com",
 		},
 		nil,
 		nil,
