@@ -15,3 +15,6 @@ updates:
       k8s-dependencies:
         patterns:
           - "k8s.io/*"
+      otel-dependencies:
+        patterns:
+          - "go.opentelemetry.io/otel/*"
