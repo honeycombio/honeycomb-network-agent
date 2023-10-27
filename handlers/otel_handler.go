@@ -131,7 +131,9 @@ func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTim
 	if event.Request() != nil {
 		span.SetAttributes(
 			semconv.HTTPRequestMethodKey.String(event.Request().Method),
+			semconv.HTTPMethodKey.String(event.Request().Method), // dual-send; deprecated in favor of HTTPRequestMethodKey
 			semconv.HTTPRequestBodySize(int(event.Request().ContentLength)),
+			semconv.HTTPRequestContentLength(int(event.Request().ContentLength)), // dual-send; deprecated in favor of HTTPRequestBodySize
 		)
 		// by this point, we've already extracted headers based on HTTP_HEADERS list
 		// so we can safely add the headers to the event
@@ -141,6 +143,7 @@ func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTim
 			if err == nil {
 				span.SetAttributes(
 					semconv.URLPath(url.Path),
+					semconv.HTTPTarget(url.Path), // dual-send; deprecated in favor of URLPath
 				)
 			}
 		}
@@ -154,7 +157,9 @@ func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTim
 	if event.Response() != nil {
 		span.SetAttributes(
 			semconv.HTTPResponseStatusCode(event.Response().StatusCode),
+			semconv.HTTPStatusCode(event.Response().StatusCode), // dual-send; deprecated in favor of HTTPResponseStatusCode
 			semconv.HTTPResponseBodySize(int(event.Response().ContentLength)),
+			semconv.HTTPResponseContentLength(int(event.Response().ContentLength)), // dual-send; deprecated in favor of HTTPResponseBodySize
 		)
 		// by this point, we've already extracted headers based on HTTP_HEADERS list
 		// so we can safely add the headers to the event
