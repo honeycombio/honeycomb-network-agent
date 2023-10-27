@@ -247,6 +247,7 @@ func (c *Config) Validate() error {
 
 var defaultHeadersToExtract = []string{
 	"User-Agent",
+	"Traceparent",
 }
 
 // getHTTPHeadersToExtract returns the list of HTTP headers to extract from a HTTP request/response

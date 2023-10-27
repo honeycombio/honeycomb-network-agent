@@ -65,9 +65,9 @@ The network agent can be configured using the following environment variables.
 | `DEBUG_ADDRESS`           | The endpoint to listen to when running the profile endpoint                              | `localhost:6060`           | No        |
 | `ADDITIONAL_ATTRIBUTES`   | Extra attributes to include on all events                                                | `` (empty)                 | No        |
 | `INCLUDE_REQUEST_URL`     | Include the request URL in events                                                        | `true`                     | No        |
-| `HTTP_HEADERS`            | Case-sensitive, comma separated list of headers to be recorded from requests/responses†  | `User-Agent`               | No        |
+| `HTTP_HEADERS`            | Case-sensitive, comma separated list of headers to be recorded from requests/responses†  | `User-Agent, Traceparent`  | No        |
 
-†: When providing an override of a list of values, you must provide all values including any defaults.
+†: When providing an override of a list of values, you must include in your override any defaults you wish to keep.
 
 ### Run
 
