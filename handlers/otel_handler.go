@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
 	"sync"
@@ -103,85 +102,32 @@ func (handler *otelHandler) handleEvent(event assemblers.Event) {
 	}
 }
 
-func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTime, endTime time.Time, attrs []attribute.KeyValue) {
+func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTime, endTime time.Time, incomingAttrs []attribute.KeyValue) {
 	var spanName string
 	if event.Request() == nil {
 		spanName = "HTTP"
 	} else {
-		spanName = fmt.Sprintf("HTTP %s", event.Request().Method)
+		spanName = event.Request().Method
 	}
+
+	attrs := []attribute.KeyValue{
+		attribute.String("meta.stream.ident", event.StreamIdent()),
+		attribute.Int64("meta.seqack", event.RequestId()),
+		attribute.Int("meta.request.packet_count", event.RequestPacketCount()),
+		attribute.Int("meta.response.packet_count", event.ResponsePacketCount()),
+		semconv.ClientSocketAddress(event.SrcIp()),
+		semconv.ServerSocketAddress(event.DstIp()),
+	}
+	attrs = append(attrs, incomingAttrs...)
+	attrs = append(attrs, handler.resolveHTTPAttributes(event)...)
 
 	_, span := handler.tracer.Start(
 		handler.getContextFromHTTPEvent(event),
 		spanName,
 		trace.WithTimestamp(startTime),
-		trace.WithAttributes(
-			attribute.String("meta.stream.ident", event.StreamIdent()),
-			attribute.Int64("meta.seqack", event.RequestId()),
-			attribute.Int("meta.request.packet_count", event.RequestPacketCount()),
-			attribute.Int("meta.response.packet_count", event.ResponsePacketCount()),
-			semconv.ClientSocketAddress(event.SrcIp()),
-			semconv.ServerSocketAddress(event.DstIp()),
-		),
 		trace.WithAttributes(attrs...),
 	)
 	defer span.End(trace.WithTimestamp(endTime))
-
-	// request attributes
-	if event.Request() != nil {
-		span.SetAttributes(
-			semconv.HTTPRequestMethodKey.String(event.Request().Method),
-			semconv.HTTPMethodKey.String(event.Request().Method), // dual-send; deprecated in favor of HTTPRequestMethodKey
-			semconv.HTTPRequestBodySize(int(event.Request().ContentLength)),
-			semconv.HTTPRequestContentLength(int(event.Request().ContentLength)), // dual-send; deprecated in favor of HTTPRequestBodySize
-		)
-		// by this point, we've already extracted headers based on HTTP_HEADERS list
-		// so we can safely add the headers to the event
-		span.SetAttributes(headerToAttributes(true, event.Request().Header)...)
-		if handler.config.IncludeRequestURL {
-			url, err := url.ParseRequestURI(event.Request().RequestURI)
-			if err == nil {
-				span.SetAttributes(
-					semconv.URLPath(url.Path),
-					semconv.HTTPTarget(url.Path), // dual-send; deprecated in favor of URLPath
-				)
-			}
-		}
-	} else {
-		span.SetAttributes(
-			attribute.String("http.request.missing", "no request on this event"),
-		)
-	}
-
-	// response attributes
-	if event.Response() != nil {
-		span.SetAttributes(
-			semconv.HTTPResponseStatusCode(event.Response().StatusCode),
-			semconv.HTTPStatusCode(event.Response().StatusCode), // dual-send; deprecated in favor of HTTPResponseStatusCode
-			semconv.HTTPResponseBodySize(int(event.Response().ContentLength)),
-			semconv.HTTPResponseContentLength(int(event.Response().ContentLength)), // dual-send; deprecated in favor of HTTPResponseBodySize
-		)
-		// by this point, we've already extracted headers based on HTTP_HEADERS list
-		// so we can safely add the headers to the event
-		span.SetAttributes(headerToAttributes(false, event.Response().Header)...)
-		// We cannot quite follow the OTel spec for HTTP instrumentation and OK/Error Status.
-		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.25.0/specification/trace/semantic_conventions/http.md#status
-		// We don't (yet?) have a way to determine the client-or-server perspective of the event,
-		// so we'll set the "error" field to the general category of the error status codes.
-		if event.Response().StatusCode >= 500 {
-			span.SetAttributes(
-				attribute.String("error", "HTTP server error"),
-			)
-		} else if event.Response().StatusCode >= 400 {
-			span.SetAttributes(
-				attribute.String("error", "HTTP client error"),
-			)
-		}
-	} else {
-		span.SetAttributes(
-			attribute.String("http.response.missing", "no response on this event"),
-		)
-	}
 
 	// TODO: it would be nicer if the k8s attrs were returned as otel attrs instead of a map
 	// so that we don't need to loop over them again here
@@ -192,6 +138,66 @@ func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTim
 	for key, val := range handler.k8sClient.GetK8sAttrsForDestinationIP(handler.config.AgentPodIP, event.DstIp()) {
 		span.SetAttributes(attribute.String(key, val))
 	}
+}
+
+func (handler *otelHandler) resolveHTTPAttributes(event *assemblers.HttpEvent) (attrs []attribute.KeyValue) {
+	// request attributes
+	if event.Request() != nil {
+		attrs = append(attrs, []attribute.KeyValue{
+			semconv.HTTPRequestMethodKey.String(event.Request().Method),
+			semconv.HTTPMethodKey.String(event.Request().Method), // dual-send; deprecated in favor of HTTPRequestMethodKey
+			semconv.HTTPRequestBodySize(int(event.Request().ContentLength)),
+			semconv.HTTPRequestContentLength(int(event.Request().ContentLength)), // dual-send; deprecated in favor of HTTPRequestBodySize
+		}...)
+
+		// by this point, we've already extracted headers based on HTTP_HEADERS list
+		// so we can safely add the headers to the event
+		attrs = append(attrs, headerToAttributes(true, event.Request().Header)...)
+
+		if handler.config.IncludeRequestURL {
+			url, err := url.ParseRequestURI(event.Request().RequestURI)
+			if err == nil {
+				attrs = append(attrs, []attribute.KeyValue{
+					semconv.URLPath(url.Path),
+					semconv.HTTPTarget(url.Path), // dual-send; deprecated in favor of URLPath
+				}...)
+			}
+		}
+	} else {
+		attrs = append(attrs, attribute.String("http.request.missing", "no request on this event"))
+	}
+
+	// response attributes
+	if event.Response() != nil {
+		attrs = append(attrs, []attribute.KeyValue{
+			semconv.HTTPResponseStatusCode(event.Response().StatusCode),
+			semconv.HTTPStatusCode(event.Response().StatusCode), // dual-send; deprecated in favor of HTTPResponseStatusCode
+			semconv.HTTPResponseBodySize(int(event.Response().ContentLength)),
+			semconv.HTTPResponseContentLength(int(event.Response().ContentLength)), // dual-send; deprecated in favor of HTTPResponseBodySize
+		}...)
+		// by this point, we've already extracted headers based on HTTP_HEADERS list
+		// so we can safely add the headers to the event
+		attrs = append(attrs, headerToAttributes(false, event.Response().Header)...)
+		// We cannot quite follow the OTel spec for HTTP instrumentation and OK/Error Status.
+		// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.25.0/specification/trace/semantic_conventions/http.md#status
+		// We don't (yet?) have a way to determine the client-or-server perspective of the event,
+		// so we'll set the "error" field to the general category of the error status codes.
+		if event.Response().StatusCode >= 500 {
+			attrs = append(attrs,
+				attribute.String("error", "HTTP server error"),
+			)
+		} else if event.Response().StatusCode >= 400 {
+			attrs = append(attrs,
+				attribute.String("error", "HTTP client error"),
+			)
+		}
+	} else {
+		attrs = append(attrs,
+			attribute.String("http.response.missing", "no response on this event"),
+		)
+	}
+
+	return attrs
 }
 
 // getEventStartEndTimestamps sets time-related fields in the emitted telemetry

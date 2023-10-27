@@ -55,3 +55,34 @@ func TestHeaderToAttributes(t *testing.T) {
 	assert.Contains(t, resAttrs, attribute.String("http.response.header.content_type", "text/plain; charset=utf-8"))
 	assert.Contains(t, resAttrs, attribute.String("http.response.header.x_custom_header", "tea-party"))
 }
+
+func TestResolveHTTPAttributes(t *testing.T) {
+	handler := NewOtelHandler(
+		config.Config{
+			Endpoint:          "https://api.example.com",
+			IncludeRequestURL: true,
+		},
+		nil,
+		nil,
+		"").(*otelHandler)
+	defer handler.Close()
+
+	requestTimestamp := time.Now()
+	responseTimestamp := requestTimestamp.Add(3 * time.Millisecond)
+	event := createTestHttpEvent(requestTimestamp, responseTimestamp)
+
+	attrs := handler.resolveHTTPAttributes(event)
+	// request attrs
+	assert.Contains(t, attrs, attribute.String("http.request.method", "GET"))
+	assert.Contains(t, attrs, attribute.String("http.method", "GET"))
+	assert.Contains(t, attrs, attribute.String("url.path", "/check"))
+	assert.Contains(t, attrs, attribute.String("http.target", "/check"))
+	assert.Contains(t, attrs, attribute.String("http.request.header.user_agent", "teapot-checker/1.0"))
+	assert.Contains(t, attrs, attribute.String("http.request.header.connection", "keep-alive"))
+	// response attrs
+	assert.Contains(t, attrs, attribute.Int("http.response.status_code", 418))
+	assert.Contains(t, attrs, attribute.Int("http.status_code", 418))
+	assert.Contains(t, attrs, attribute.String("error", "HTTP client error"))
+	assert.Contains(t, attrs, attribute.String("http.response.header.content_type", "text/plain; charset=utf-8"))
+	assert.Contains(t, attrs, attribute.String("http.response.header.x_custom_header", "tea-party"))
+}
