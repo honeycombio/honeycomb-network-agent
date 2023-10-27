@@ -115,7 +115,7 @@ func TestEnvVarsDefault(t *testing.T) {
 	assert.Equal(t, "", config.AgentPodName)
 	assert.Equal(t, map[string]string{}, config.AdditionalAttributes)
 	assert.Equal(t, true, config.IncludeRequestURL)
-	assert.Equal(t, []string{"User-Agent"}, config.HTTPHeadersToExtract)
+	assert.Equal(t, []string{"User-Agent", "Traceparent"}, config.HTTPHeadersToExtract)
 }
 
 func Test_Config_buildBpfFilter(t *testing.T) {

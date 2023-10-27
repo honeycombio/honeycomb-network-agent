@@ -15,6 +15,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -45,6 +46,7 @@ func NewOtelHandler(config config.Config, k8sClient *utils.CachedK8sClient, even
 			"meta.agent.serviceaccount.name": config.AgentServiceAccount,
 			"meta.agent.pod.ip":              config.AgentPodIP,
 			"meta.agent.pod.name":            config.AgentPodName,
+			"net.component":                  "proxy", // I'm an interstitial! ᕕ( ᐛ )ᕗ
 		}),
 		otelconfig.WithMetricsEnabled(false),
 	)
@@ -110,7 +112,7 @@ func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTim
 	}
 
 	_, span := handler.tracer.Start(
-		context.Background(),
+		handler.getContextFromHTTPEvent(event),
 		spanName,
 		trace.WithTimestamp(startTime),
 		trace.WithAttributes(
@@ -238,4 +240,17 @@ func headerToAttributes(isRequest bool, header http.Header) []attribute.KeyValue
 		attrs = append(attrs, attribute.String(key, val))
 	}
 	return attrs
+}
+
+// getContextFromHTTPEvent attempts to extract OTEL trace context from a HTTP event's request headers
+//
+// If present, it returns a new context with the extracted trace context.
+//
+// If not, it returns a new empty context.
+func (handler *otelHandler) getContextFromHTTPEvent(event *assemblers.HttpEvent) context.Context {
+	ctx := context.Background()
+	if event.Request() != nil {
+		ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(event.Request().Header))
+	}
+	return ctx
 }

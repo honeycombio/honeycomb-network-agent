@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"net/http"
 	"sync"
 	"testing"
 	"time"
@@ -372,28 +371,4 @@ func setupTestLibhoney(t testing.TB) *transmission.MockSender {
 	assert.NoError(t, err, "Failed to setup libhoney for testing")
 
 	return mockTransmission
-}
-
-func createTestHttpEvent(requestTimestamp, responseTimestamp time.Time) *assemblers.HttpEvent {
-	return assemblers.NewHttpEvent(
-		"c->s:1->2",
-		0,
-		requestTimestamp,
-		responseTimestamp,
-		2,
-		3,
-		"1.2.3.4",
-		"5.6.7.8",
-		&http.Request{
-			Method:        "GET",
-			RequestURI:    "/check?teapot=true",
-			ContentLength: 42,
-			Header:        http.Header{"User-Agent": []string{"teapot-checker/1.0"}, "Connection": []string{"keep-alive"}},
-		},
-		&http.Response{
-			StatusCode:    418,
-			ContentLength: 84,
-			Header:        http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}, "X-Custom-Header": []string{"tea-party"}},
-		},
-	)
 }
