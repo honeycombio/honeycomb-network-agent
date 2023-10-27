@@ -23,6 +23,7 @@ The agent generates events per Kubernetes host by inspecting network traffic, in
 This results in events being generated in the following 3 scenarios:
 - External to pod (cluster ingress)
 - Pod to pod
+- Pod to Service
 - Pod to external (cluster egress)
 
 **NOTE**: For pod-to-pod interactions when each pod is on seperate Kubernetes nodes, two events will be created.
