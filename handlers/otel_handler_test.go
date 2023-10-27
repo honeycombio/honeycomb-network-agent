@@ -74,13 +74,11 @@ func TestResolveHTTPAttributes(t *testing.T) {
 		assert.Contains(t, emptyAttrs, attribute.String("http.response.missing", "no response on this event"))
 	})
 
-	// a "real" HTTP event
-	requestTimestamp := time.Now()
-	responseTimestamp := requestTimestamp.Add(3 * time.Millisecond)
-	event := createTestHttpEvent(requestTimestamp, responseTimestamp)
+	// a "real" HTTP realishEvent
+	realishEvent := createTestHttpEvent(time.Now(), time.Now().Add(3*time.Millisecond))
 
 	t.Run("a realish request", func(t *testing.T) {
-		attrs := defaultHandler.resolveHTTPAttributes(event)
+		attrs := defaultHandler.resolveHTTPAttributes(realishEvent)
 
 		assert.Contains(t, attrs, attribute.String("http.request.method", "GET"))
 		assert.Contains(t, attrs, attribute.String("http.method", "GET"))
@@ -103,7 +101,7 @@ func TestResolveHTTPAttributes(t *testing.T) {
 			"").(*otelHandler)
 		defer defaultHandler.Close()
 
-		attrs := moreDetailHandler.resolveHTTPAttributes(event)
+		attrs := moreDetailHandler.resolveHTTPAttributes(realishEvent)
 
 		assert.Contains(t, attrs, attribute.String("url.path", "/check"))
 		assert.Contains(t, attrs, attribute.String("http.target", "/check"))
