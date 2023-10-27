@@ -152,7 +152,7 @@ func NewConfig() Config {
 		AdditionalAttributes:          utils.LookupEnvAsStringMap("ADDITIONAL_ATTRIBUTES"),
 		IncludeRequestURL:             utils.LookupEnvOrBool("INCLUDE_REQUEST_URL", true),
 		HTTPHeadersToExtract:          getHTTPHeadersToExtract(),
-		EventHandlerType:              utils.LookupEnvOrString("HANDLER_TYPE", "libhoney"),
+		EventHandlerType:              utils.LookupEnvOrString("HANDLER_TYPE", "otel"),
 	}
 }
 

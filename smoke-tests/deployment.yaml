@@ -147,8 +147,9 @@ spec:
             ## uncomment this to disable including the request URL in events
             # - name: INCLUDE_REQUEST_URL
             #   value: "false"
+            ## uncomment this to change the handler that is used to send events
             # - name: HANDLER_TYPE
-            #   value: "otel"
+            #   value: "libhoney"
           securityContext:
             capabilities:
               add:

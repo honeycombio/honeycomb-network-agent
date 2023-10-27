@@ -116,6 +116,7 @@ func TestEnvVarsDefault(t *testing.T) {
 	assert.Equal(t, map[string]string{}, config.AdditionalAttributes)
 	assert.Equal(t, true, config.IncludeRequestURL)
 	assert.Equal(t, []string{"User-Agent", "Traceparent"}, config.HTTPHeadersToExtract)
+	assert.Equal(t, "otel", config.EventHandlerType)
 }
 
 func Test_Config_buildBpfFilter(t *testing.T) {
