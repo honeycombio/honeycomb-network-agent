@@ -1,5 +1,23 @@
 # Honeycomb Network Agent changelog
 
+## [0.0.24-alpha] - 2023-10-30
+
+### Enhancements
+
+- feat: Make OTel handler default (#304) | Mike Goldsmith
+- feat: Detect and use OTel trace context for agent spans when handling HTTP events (#293) | Mike Goldsmith
+
+### Fixes
+
+- fix: include OTel semconv 1.20 attributes in spans (#306) | Robb Kidd
+
+### Maintenance
+
+- docs: update configs in readme and smoke-test deployment (#308) | Jamie Danielson
+- docs: Document expected behaviour for event creation (#302) | Mike Goldsmith
+- maint(deps): bump google.golang.org/grpc from 1.58.1 to 1.58.3 (#303) | dependabot[bot]
+- maint: Add otel dependabot group (#299) | Mike Goldsmith
+
 ## [0.0.23-alpha] - 2023-10-24
 
 ### Enhancements
