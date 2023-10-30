@@ -54,18 +54,18 @@ kubectl create secret generic honeycomb --from-literal=api-key=$HONEYCOMB_API_KE
 
 The network agent can be configured using the following environment variables.
 
-| Environment Variable      | Description                                                                              | Default                    | Required? |
-| ------------------------- | ---------------------------------------------------------------------------------------- | -------------------------- | --------- |
-| `HONEYCOMB_API_KEY`       | The Honeycomb API key used when sending events                                           | `` (empty)                 | **Yes**   |
-| `HONEYCOMB_API_ENDPOINT`  | The endpoint to send events to                                                           | `https://api.honeycomb.io` | No        |
-| `HONEYCOMB_DATASET`       | Dataset where network events are stored                                                  | `hny-network-agent`        | No        |
-| `HONEYCOMB_STATS_DATASET` | Dataset where operational statistics for the network agent are stored                    | `hny-network-agent-stats`  | No        |
-| `LOG_LEVEL`               | The log level to use when printing logs to console                                       | `INFO`                     | No        |
-| `DEBUG`                   | Runs the agent in debug mode including enabling a profiling endpoint using Debug Address | `false`                    | No        |
-| `DEBUG_ADDRESS`           | The endpoint to listen to when running the profile endpoint                              | `localhost:6060`           | No        |
-| `OTEL_RESOURCE_ATTRIBUTES`   | Extra attributes to include on all events                                                | `` (empty)                 | No        |
-| `INCLUDE_REQUEST_URL`     | Include the request URL in events                                                        | `true`                     | No        |
-| `HTTP_HEADERS`            | Case-sensitive, comma separated list of headers to be recorded from requests/responses†  | `User-Agent, Traceparent`  | No        |
+| Environment Variable       | Description                                                                              | Default                    | Required? |
+| -------------------------- | ---------------------------------------------------------------------------------------- | -------------------------- | --------- |
+| `HONEYCOMB_API_KEY`        | The Honeycomb API key used when sending events                                           | `` (empty)                 | **Yes**   |
+| `HONEYCOMB_API_ENDPOINT`   | The endpoint to send events to                                                           | `https://api.honeycomb.io` | No        |
+| `HONEYCOMB_DATASET`        | Dataset where network events are stored                                                  | `hny-network-agent`        | No        |
+| `HONEYCOMB_STATS_DATASET`  | Dataset where operational statistics for the network agent are stored                    | `hny-network-agent-stats`  | No        |
+| `LOG_LEVEL`                | The log level to use when printing logs to console                                       | `INFO`                     | No        |
+| `DEBUG`                    | Runs the agent in debug mode including enabling a profiling endpoint using Debug Address | `false`                    | No        |
+| `DEBUG_ADDRESS`            | The endpoint to listen to when running the profile endpoint                              | `localhost:6060`           | No        |
+| `OTEL_RESOURCE_ATTRIBUTES` | Extra attributes to include on all events                                                | `` (empty)                 | No        |
+| `INCLUDE_REQUEST_URL`      | Include the request URL in events                                                        | `true`                     | No        |
+| `HTTP_HEADERS`             | Case-sensitive, comma separated list of headers to be recorded from requests/responses†  | `User-Agent, Traceparent`  | No        |
 
 †: When providing an override of a list of values, you must include in your override any defaults you wish to keep.
 
