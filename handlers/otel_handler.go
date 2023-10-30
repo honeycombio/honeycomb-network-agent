@@ -143,12 +143,12 @@ func (handler *otelHandler) createHTTPSpan(event *assemblers.HttpEvent, startTim
 func (handler *otelHandler) resolveHTTPAttributes(event *assemblers.HttpEvent) (attrs []attribute.KeyValue) {
 	// request attributes
 	if event.Request() != nil {
-		attrs = append(attrs, []attribute.KeyValue{
+		attrs = append(attrs,
 			semconv.HTTPRequestMethodKey.String(event.Request().Method),
 			semconv.HTTPMethodKey.String(event.Request().Method), // dual-send; deprecated in favor of HTTPRequestMethodKey
 			semconv.HTTPRequestBodySize(int(event.Request().ContentLength)),
 			semconv.HTTPRequestContentLength(int(event.Request().ContentLength)), // dual-send; deprecated in favor of HTTPRequestBodySize
-		}...)
+		)
 
 		// by this point, we've already extracted headers based on HTTP_HEADERS list
 		// so we can safely add the headers to the event
@@ -157,10 +157,10 @@ func (handler *otelHandler) resolveHTTPAttributes(event *assemblers.HttpEvent) (
 		if handler.config.IncludeRequestURL {
 			url, err := url.ParseRequestURI(event.Request().RequestURI)
 			if err == nil {
-				attrs = append(attrs, []attribute.KeyValue{
+				attrs = append(attrs,
 					semconv.URLPath(url.Path),
 					semconv.HTTPTarget(url.Path), // dual-send; deprecated in favor of URLPath
-				}...)
+				)
 			}
 		}
 	} else {
@@ -169,12 +169,12 @@ func (handler *otelHandler) resolveHTTPAttributes(event *assemblers.HttpEvent) (
 
 	// response attributes
 	if event.Response() != nil {
-		attrs = append(attrs, []attribute.KeyValue{
+		attrs = append(attrs,
 			semconv.HTTPResponseStatusCode(event.Response().StatusCode),
 			semconv.HTTPStatusCode(event.Response().StatusCode), // dual-send; deprecated in favor of HTTPResponseStatusCode
 			semconv.HTTPResponseBodySize(int(event.Response().ContentLength)),
 			semconv.HTTPResponseContentLength(int(event.Response().ContentLength)), // dual-send; deprecated in favor of HTTPResponseBodySize
-		}...)
+		)
 		// by this point, we've already extracted headers based on HTTP_HEADERS list
 		// so we can safely add the headers to the event
 		attrs = append(attrs, headerToAttributes(false, event.Response().Header)...)
