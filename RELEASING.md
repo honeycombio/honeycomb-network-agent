@@ -12,3 +12,4 @@
 - Ensure that there is a draft GitHub release created as part of CI publish steps.
 - Click "generate release notes" in GitHub for full changelog notes and any new contributors
 - Publish the GitHub draft release - if it is a prerelease (e.g. beta) click the prerelease checkbox.
+- Update [network agent helm chart](https://github.com/honeycombio/helm-charts/tree/main/charts/network-agent) with the changes
