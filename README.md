@@ -63,7 +63,7 @@ The network agent can be configured using the following environment variables.
 | `LOG_LEVEL`               | The log level to use when printing logs to console                                       | `INFO`                     | No        |
 | `DEBUG`                   | Runs the agent in debug mode including enabling a profiling endpoint using Debug Address | `false`                    | No        |
 | `DEBUG_ADDRESS`           | The endpoint to listen to when running the profile endpoint                              | `localhost:6060`           | No        |
-| `ADDITIONAL_ATTRIBUTES`   | Extra attributes to include on all events                                                | `` (empty)                 | No        |
+| `OTEL_RESOURCE_ATTRIBUTES`   | Extra attributes to include on all events                                                | `` (empty)                 | No        |
 | `INCLUDE_REQUEST_URL`     | Include the request URL in events                                                        | `true`                     | No        |
 | `HTTP_HEADERS`            | Case-sensitive, comma separated list of headers to be recorded from requests/responses†  | `User-Agent, Traceparent`  | No        |
 
