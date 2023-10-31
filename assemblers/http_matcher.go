@@ -69,7 +69,7 @@ func (m *httpMatcher) GetOrStoreResponse(key int64, timestamp time.Time, respons
 	if match, matchFound = m.messages[key]; matchFound {
 		match.response = response
 		match.responseTimestamp = timestamp
-		match.requestPacketCount = packetCount
+		match.responsePacketCount = packetCount
 		delete(m.messages, key)
 		return match, matchFound
 	}
