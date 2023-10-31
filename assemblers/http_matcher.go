@@ -38,20 +38,20 @@ func (m *httpMatcher) GetOrStoreRequest(key int64, timestamp time.Time, request 
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
-	if e, ok := m.messages[key]; ok {
-		e.request = request
-		e.requestTimestamp = timestamp
+	if match, matchFound = m.messages[key]; matchFound {
+		match.request = request
+		match.requestTimestamp = timestamp
+		match.requestPacketCount = packetCount
 		delete(m.messages, key)
-		return e, true
+		return match, matchFound
 	}
 
-	e := &entry{
+	m.messages[key] = &entry{
 		request:            request,
 		requestTimestamp:   timestamp,
 		requestPacketCount: packetCount,
 	}
 
-	m.messages[key] = e
 	return nil, false
 }
 
@@ -66,20 +66,19 @@ func (m *httpMatcher) GetOrStoreResponse(key int64, timestamp time.Time, respons
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
-	if e, ok := m.messages[key]; ok {
-		e.response = response
-		e.responseTimestamp = timestamp
+	if match, matchFound = m.messages[key]; matchFound {
+		match.response = response
+		match.responseTimestamp = timestamp
+		match.requestPacketCount = packetCount
 		delete(m.messages, key)
-		return e, true
+		return match, matchFound
 	}
 
-	e := &entry{
+	m.messages[key] = &entry{
 		response:            response,
 		responseTimestamp:   timestamp,
 		responsePacketCount: packetCount,
 	}
 
-	m.messages[key] = e
 	return nil, false
-
 }
