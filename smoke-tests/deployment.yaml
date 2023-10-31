@@ -143,7 +143,7 @@ spec:
             ## uncomment this to configure a list of HTTP headers to be recorded from requests/responses.
             ## this will show as http.request.header.user_agent and http.response.header.x_custom_header
             # - name: HTTP_HEADERS
-            #   value: "User-Agent,X-Custom-Header"
+            #   value: "User-Agent,Traceparent,X-Custom-Header"
             ## uncomment this to disable including the request URL in events
             # - name: INCLUDE_REQUEST_URL
             #   value: "false"
