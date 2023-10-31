@@ -1,18 +1,16 @@
 package assemblers
 
 import (
-	"sync"
-
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	"github.com/gopacket/gopacket/reassembly"
-	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/rs/zerolog/log"
+
+	"github.com/honeycombio/honeycomb-network-agent/config"
 )
 
 type tcpStreamFactory struct {
 	config     config.Config
-	wg         sync.WaitGroup
 	eventsChan chan Event
 }
 
@@ -30,8 +28,4 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcp *layers.T
 		Msg("NEW tcp stream")
 	IncrementActiveStreamCount()
 	return NewTcpStream(net, transport, factory.config, factory.eventsChan)
-}
-
-func (factory *tcpStreamFactory) WaitGoRoutines() {
-	factory.wg.Wait()
 }

@@ -12,35 +12,39 @@ import (
 	"github.com/gopacket/gopacket/layers"
 	"github.com/gopacket/gopacket/pcap"
 	"github.com/gopacket/gopacket/reassembly"
-	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/honeycombio/libhoney-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/honeycombio/honeycomb-network-agent/config"
 )
 
 var stats struct {
-	ipdefrag          int
-	totalsz           int
-	rejectFsm         int
-	rejectOpt         int
-	rejectConnFsm     int
-	source_received   int
-	source_dropped    int
-	source_if_dropped int
-	total_streams     uint64
-	active_streams    int64
+	ipdefrag int
+	totalsz  int
+
+	// Below stats could be accessed concurrently, so explicitly
+	// mark them as atomic.
+	rejectFsm         atomic.Uint64
+	rejectOpt         atomic.Uint64
+	rejectConnFsm     atomic.Uint64
+	total_streams     atomic.Uint64
+	active_streams    atomic.Uint64
+	source_received   atomic.Uint64
+	source_dropped    atomic.Uint64
+	source_if_dropped atomic.Uint64
 }
 
 func IncrementStreamCount() uint64 {
-	return atomic.AddUint64(&stats.total_streams, 1)
+	return stats.total_streams.Add(1)
 }
 
 func IncrementActiveStreamCount() {
-	atomic.AddInt64(&stats.active_streams, 1)
+	stats.active_streams.Add(1)
 }
 
 func DecrementActiveStreamCount() {
-	atomic.AddInt64(&stats.active_streams, -1)
+	stats.active_streams.Add(^uint64(0))
 }
 
 type Context struct {
@@ -186,7 +190,6 @@ func (h *tcpAssembler) Stop() {
 		h.streamPool.Dump()
 	}
 
-	h.streamFactory.WaitGoRoutines()
 	h.logAssemblerStats()
 	log.Debug().
 		Int("closed", closed).
@@ -198,17 +201,17 @@ func (a *tcpAssembler) logAssemblerStats() {
 	statsFields := map[string]interface{}{
 		"uptime_ms":          time.Since(a.startedAt).Milliseconds(),
 		"IPdefrag":           stats.ipdefrag,
-		"rejected_FSM":       stats.rejectFsm,
-		"rejected_Options":   stats.rejectOpt,
+		"rejected_FSM":       stats.rejectFsm.Load(),
+		"rejected_Options":   stats.rejectOpt.Load(),
 		"total_TCP_bytes":    stats.totalsz,
-		"conn_rejected_FSM":  stats.rejectConnFsm,
-		"source_received":    stats.source_received,
-		"source_dropped":     stats.source_dropped,
-		"source_if_dropped":  stats.source_if_dropped,
+		"conn_rejected_FSM":  stats.rejectConnFsm.Load(),
+		"source_received":    stats.source_received.Load(),
+		"source_dropped":     stats.source_dropped.Load(),
+		"source_if_dropped":  stats.source_if_dropped.Load(),
 		"event_queue_length": len(a.eventsChan),
 		"goroutines":         runtime.NumGoroutine(),
-		"total_streams":      stats.total_streams,
-		"active_streams":     stats.active_streams,
+		"total_streams":      stats.total_streams.Load(),
+		"active_streams":     stats.active_streams.Load(),
 	}
 	statsEvent := libhoney.NewEvent()
 	statsEvent.Dataset = a.config.StatsDataset
@@ -261,8 +264,8 @@ func logPcapHandleStats(handle *pcap.Handle) {
 			log.Error().Err(err).Msg("Failed to get pcap handle stats")
 			continue
 		}
-		stats.source_received += pcapStats.PacketsReceived
-		stats.source_dropped += pcapStats.PacketsDropped
-		stats.source_if_dropped += pcapStats.PacketsIfDropped
+		stats.source_received.Add(uint64(pcapStats.PacketsReceived))
+		stats.source_dropped.Add(uint64(pcapStats.PacketsDropped))
+		stats.source_if_dropped.Add(uint64(pcapStats.PacketsIfDropped))
 	}
 }

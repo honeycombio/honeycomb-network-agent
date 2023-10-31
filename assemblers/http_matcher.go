@@ -7,7 +7,8 @@ import (
 )
 
 type httpMatcher struct {
-	entries *sync.Map
+	messages map[int64]*entry
+	mtx      *sync.Mutex
 }
 
 type entry struct {
@@ -21,7 +22,8 @@ type entry struct {
 
 func newRequestResponseMatcher() *httpMatcher {
 	return &httpMatcher{
-		entries: &sync.Map{},
+		messages: make(map[int64]*entry),
+		mtx:      &sync.Mutex{},
 	}
 }
 
@@ -33,20 +35,23 @@ func newRequestResponseMatcher() *httpMatcher {
 // If the response hasn't been seen yet,
 // stores the Request for later lookup and returns match as nil and matchFound will be false.
 func (m *httpMatcher) GetOrStoreRequest(key int64, timestamp time.Time, request *http.Request, packetCount int) (match *entry, matchFound bool) {
-	e := &entry{
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
+	if match, matchFound = m.messages[key]; matchFound {
+		match.request = request
+		match.requestTimestamp = timestamp
+		match.requestPacketCount = packetCount
+		delete(m.messages, key)
+		return match, matchFound
+	}
+
+	m.messages[key] = &entry{
 		request:            request,
 		requestTimestamp:   timestamp,
 		requestPacketCount: packetCount,
 	}
 
-	if v, matchFound := m.entries.LoadOrStore(key, e); matchFound {
-		m.entries.Delete(key)
-		e = v.(*entry) // reuse allocated &entry{} to hold the match
-		// found entry has Response, so update it with Request
-		e.request = request
-		e.requestTimestamp = timestamp
-		return e, true
-	}
 	return nil, false
 }
 
@@ -58,19 +63,22 @@ func (m *httpMatcher) GetOrStoreRequest(key int64, timestamp time.Time, request 
 // If the request hasn't been seen yet,
 // stores the Response for later lookup and returns match as nil and matchFound will be false.
 func (m *httpMatcher) GetOrStoreResponse(key int64, timestamp time.Time, response *http.Response, packetCount int) (match *entry, matchFound bool) {
-	e := &entry{
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
+	if match, matchFound = m.messages[key]; matchFound {
+		match.response = response
+		match.responseTimestamp = timestamp
+		match.responsePacketCount = packetCount
+		delete(m.messages, key)
+		return match, matchFound
+	}
+
+	m.messages[key] = &entry{
 		response:            response,
 		responseTimestamp:   timestamp,
 		responsePacketCount: packetCount,
 	}
 
-	if v, matchFound := m.entries.LoadOrStore(key, e); matchFound {
-		m.entries.Delete(key)
-		e = v.(*entry) // reuse allocated &entry{} to hold the match
-		// found entry has Request, so update it with Response
-		e.response = response
-		e.responseTimestamp = timestamp
-		return e, true
-	}
 	return nil, false
 }
