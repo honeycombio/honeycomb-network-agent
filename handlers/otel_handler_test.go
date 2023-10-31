@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/honeycombio/honeycomb-network-agent/assemblers"
 	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
@@ -54,4 +55,59 @@ func TestHeaderToAttributes(t *testing.T) {
 	resAttrs := headerToAttributes(false, event.Response().Header)
 	assert.Contains(t, resAttrs, attribute.String("http.response.header.content_type", "text/plain; charset=utf-8"))
 	assert.Contains(t, resAttrs, attribute.String("http.response.header.x_custom_header", "tea-party"))
+}
+
+func TestResolveHTTPAttributes(t *testing.T) {
+	defaultHandler := NewOtelHandler(
+		config.Config{},
+		nil,
+		nil,
+		"").(*otelHandler)
+	defer defaultHandler.Close()
+
+	t.Run("no request or response", func(t *testing.T) {
+		// no request or response
+		emptyEvent := &assemblers.HttpEvent{}
+		emptyAttrs := defaultHandler.resolveHTTPAttributes(emptyEvent)
+
+		assert.Contains(t, emptyAttrs, attribute.String("http.request.missing", "no request on this event"))
+		assert.Contains(t, emptyAttrs, attribute.String("http.response.missing", "no response on this event"))
+	})
+
+	// a "real" HTTP realishEvent
+	realishEvent := createTestHttpEvent(time.Now(), time.Now().Add(3*time.Millisecond))
+
+	t.Run("a realish request", func(t *testing.T) {
+		attrs := defaultHandler.resolveHTTPAttributes(realishEvent)
+
+		assert.Contains(t, attrs, attribute.String("http.request.method", "GET"))
+		assert.Contains(t, attrs, attribute.String("http.method", "GET"))
+		assert.Contains(t, attrs, attribute.String("http.request.header.user_agent", "teapot-checker/1.0"))
+		assert.Contains(t, attrs, attribute.String("http.request.header.connection", "keep-alive"))
+		assert.Contains(t, attrs, attribute.Int("http.response.status_code", 418))
+		assert.Contains(t, attrs, attribute.Int("http.status_code", 418))
+		assert.Contains(t, attrs, attribute.String("error", "HTTP client error"))
+		assert.Contains(t, attrs, attribute.Int("http.request_content_length", 42))
+		assert.Contains(t, attrs, attribute.Int("http.request.body.size", 42))
+		assert.Contains(t, attrs, attribute.Int("http.response_content_length", 84))
+		assert.Contains(t, attrs, attribute.Int("http.response.body.size", 84))
+		assert.Contains(t, attrs, attribute.String("http.response.header.content_type", "text/plain; charset=utf-8"))
+		assert.Contains(t, attrs, attribute.String("http.response.header.x_custom_header", "tea-party"))
+	})
+
+	t.Run("a realish request including URL", func(t *testing.T) {
+		moreDetailHandler := NewOtelHandler(
+			config.Config{
+				IncludeRequestURL: true,
+			},
+			nil,
+			nil,
+			"").(*otelHandler)
+		defer defaultHandler.Close()
+
+		attrs := moreDetailHandler.resolveHTTPAttributes(realishEvent)
+
+		assert.Contains(t, attrs, attribute.String("url.path", "/check"))
+		assert.Contains(t, attrs, attribute.String("http.target", "/check"))
+	})
 }
