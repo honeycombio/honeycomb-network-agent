@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: smoke-job
+  namespace: echoserver
+spec:
+  template:
+    metadata:
+      annotations:
+        workload: job
+      labels:
+        app: smoke
+    spec:
+      shareProcessNamespace: true
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: smoke-curl
+        image: docker.io/curlimages/curl
+        imagePullPolicy: IfNotPresent
+        args:
+        - --verbose
+        - --header
+        - 'X-ECHO-CODE: 404'
+        - http://echoserver

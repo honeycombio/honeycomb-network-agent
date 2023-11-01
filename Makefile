@@ -22,6 +22,27 @@ docker-test:
 
 ### Testing targets
 
+.PHONY: smoke
+#: run smoke tests
+smoke: #docker-build
+	kind create cluster
+
+	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+	helm install smokey-collector open-telemetry/opentelemetry-collector --values smoke-tests/collector-helm-values.yaml
+	kubectl rollout status statefulset.apps/smokey-collector-opentelemetry-collector --timeout=60s
+
+	kind load docker-image $(IMG_NAME):$(IMG_TAG)
+	helm repo add honeycomb https://honeycombio.github.io/helm-charts
+	helm install smokey-agent honeycomb/network-agent --values smoke-tests/agent-helm-values.yaml
+
+	make apply-echoserver
+	kubectl create --filename smoke-tests/smoke-job.yaml
+
+.PHONY: unsmoke
+#: teardown smoke tests
+unsmoke:
+	kind delete cluster
+
 .PHONY: apply-agent
 #: deploy network agent daemonset to already-running cluster with env vars from .env file
 apply-agent:
