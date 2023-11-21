@@ -107,7 +107,10 @@ func (c *CachedK8sClient) GetServiceForPod(pod *v1.Pod) *v1.Service {
 		if service.Spec.Selector == nil {
 			continue
 		}
-		serviceSelector := labels.SelectorFromSet(service.Spec.Selector)
+
+		// We use a ValidatedSetSelector here as the lables should be treated as immutable,
+		// due to the fact we receieve them directly from the client cache.
+		serviceSelector := labels.ValidatedSetSelector(service.Spec.Selector)
 		if serviceSelector.Matches(podLabels) {
 			return service
 		}
