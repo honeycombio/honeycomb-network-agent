@@ -23,7 +23,7 @@ docker-test:
 ### Testing targets
 
 .PHONY: smoke
-#: run smoke tests
+#: run smoke tests - expected local iamge already built, run `make docker-build` if not
 smoke: #docker-build
 	kind create cluster
 
