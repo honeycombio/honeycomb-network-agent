@@ -1,5 +1,17 @@
 # Honeycomb Network Agent changelog
 
+## [0.0.25-alpha] - 2023-11-22
+
+### Fixes
+
+- Use ValidatedSetSelector to reduce memory usage in k8s client (#317) | @loshz
+- Improved locking of assembler state (#307) | @loshz
+
+### Maintenance
+
+- Bump otel-config-go to v1.13.0 (#319) | @MikeGoldsmith
+- maint(deps): bump the k8s-dependencies group with 2 updates (#315) | @Dependabot
+
 ## [0.0.24-alpha] - 2023-10-30
 
 ### Enhancements

@@ -9,8 +9,9 @@ import (
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	"github.com/gopacket/gopacket/reassembly"
-	"github.com/honeycombio/honeycomb-network-agent/config"
 	"github.com/rs/zerolog/log"
+
+	"github.com/honeycombio/honeycomb-network-agent/config"
 )
 
 // tcpStream represents a TCP stream and receives TCP packets from the gopacket assembler
@@ -61,10 +62,10 @@ func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir re
 	// FSM
 	if !stream.tcpstate.CheckState(tcp, dir) {
 		// Error("FSM", "%s: Packet rejected by FSM (state:%s)\n", t.ident, t.tcpstate.String())
-		stats.rejectFsm++
+		stats.rejectFsm.Add(1)
 		if !stream.fsmerr {
 			stream.fsmerr = true
-			stats.rejectConnFsm++
+			stats.rejectConnFsm.Add(1)
 		}
 		if !stream.config.Ignorefsmerr {
 			return false
@@ -74,7 +75,7 @@ func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir re
 	err := stream.optchecker.Accept(tcp, ci, dir, nextSeq, start)
 	if err != nil {
 		// Error("OptionChecker", "%s: Packet rejected by OptionChecker: %s\n", t.ident, err)
-		stats.rejectOpt++
+		stats.rejectOpt.Add(1)
 		if !stream.config.Nooptcheck {
 			return false
 		}
@@ -98,7 +99,7 @@ func (stream *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir re
 		}
 	}
 	if !accept {
-		stats.rejectOpt++
+		stats.rejectOpt.Add(1)
 	}
 	return accept
 }
