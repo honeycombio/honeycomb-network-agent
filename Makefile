@@ -29,13 +29,16 @@ smoke: #docker-build
 
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 	helm install smokey-collector open-telemetry/opentelemetry-collector --values smoke-tests/collector-helm-values.yaml
-	kubectl rollout status statefulset.apps/smokey-collector-opentelemetry-collector --timeout=60s
 
 	kind load docker-image $(IMG_NAME):$(IMG_TAG)
 	make apply-agent
-	kubectl rollout status daemonset.apps/hny-network-agent --timeout=10s --namespace honeycomb
 
 	make apply-echoserver
+	
+	kubectl rollout status statefulset.apps/smokey-collector-opentelemetry-collector --timeout=60s
+	kubectl rollout status daemonset.apps/hny-network-agent --timeout=10s --namespace honeycomb
+	kubectl rollout status deployment.apps/echoserver --timeout=10s --namespace echoserver
+
 	kubectl create --filename smoke-tests/smoke-job.yaml
 
 .PHONY: unsmoke
