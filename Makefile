@@ -23,23 +23,30 @@ docker-test:
 ### Testing targets
 
 .PHONY: smoke
-#: run smoke tests - expected local iamge already built, run `make docker-build` if not
+#: run smoke tests - for local tests comment out docker-build to save time, for CI uncomment docker-build
 smoke: #docker-build
 	kind create cluster
 
+  # install opentelemetry collector
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 	helm install smokey-collector open-telemetry/opentelemetry-collector --values smoke-tests/collector-helm-values.yaml
 
+  # install network agent using helm chart and local build
 	kind load docker-image $(IMG_NAME):$(IMG_TAG)
-	make apply-agent
+	helm repo add honeycomb https://honeycombio.github.io/helm-charts
+	helm install smokey-agent honeycomb/network-agent --values smoke-tests/agent-helm-values.yaml
 
-	make apply-echoserver
-	
+  # wait for collector and agent to be ready
 	kubectl rollout status statefulset.apps/smokey-collector-opentelemetry-collector --timeout=60s
-	kubectl rollout status daemonset.apps/hny-network-agent --timeout=10s --namespace honeycomb
-	kubectl rollout status deployment.apps/echoserver --timeout=10s --namespace echoserver
+	kubectl rollout status daemonset.apps/smokey-agent-network-agent --timeout=10s
 
+.PHONY: save-for-later
+#: apply echo server and run smoke-job; not necessary for local setup - plenty of chatter already
+save-for-later:
+	make apply-echoserver
 	kubectl create --filename smoke-tests/smoke-job.yaml
+	kubectl rollout status deployment.apps/echoserver --timeout=10s --namespace echoserver
+	kubectl wait --for=condition=complete job/smoke-job --timeout=60s --namespace echoserver
 
 .PHONY: unsmoke
 #: teardown smoke tests
