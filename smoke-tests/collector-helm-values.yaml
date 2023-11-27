@@ -9,6 +9,8 @@ config:
       protocols:
         http:
           endpoint: ${env:MY_POD_IP}:4318
+        grpc:
+          endpoint: ${env:MY_POD_IP}:4317
 
   exporters:
     debug:
