@@ -1,0 +1,574 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "environment",
+            "value": {
+              "stringValue": "smokey"
+            }
+          },
+          {
+            "key": "honeycomb.agent_version",
+            "value": {
+              "stringValue": "0.0.25-alpha"
+            }
+          },
+          {
+            "key": "host.name",
+            "value": {
+              "stringValue": "kind-control-plane"
+            }
+          },
+          {
+            "key": "meta.agent.node.ip",
+            "value": {
+              "stringValue": "172.21.0.2"
+            }
+          },
+          {
+            "key": "meta.agent.node.name",
+            "value": {
+              "stringValue": "kind-control-plane"
+            }
+          },
+          {
+            "key": "meta.agent.pod.ip",
+            "value": {
+              "stringValue": "172.21.0.2"
+            }
+          },
+          {
+            "key": "meta.agent.pod.name",
+            "value": {
+              "stringValue": "smokey-agent-network-agent-mlmxp"
+            }
+          },
+          {
+            "key": "meta.agent.serviceaccount.name",
+            "value": {
+              "stringValue": "smokey-agent-network-agent"
+            }
+          },
+          {
+            "key": "net.component",
+            "value": {
+              "stringValue": "proxy"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "hny-network-agent"
+            }
+          },
+          {
+            "key": "service.version",
+            "value": {
+              "stringValue": "0.0.25-alpha"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "go"
+            }
+          },
+          {
+            "key": "telemetry.sdk.name",
+            "value": {
+              "stringValue": "otelconfig"
+            }
+          },
+          {
+            "key": "telemetry.sdk.version",
+            "value": {
+              "stringValue": "1.13.0"
+            }
+          }
+        ]
+      },
+      "schemaUrl": "https://opentelemetry.io/schemas/1.21.0",
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "hny-network-agent"
+          },
+          "spans": [
+            {
+              "attributes": [
+                {
+                  "key": "meta.stream.ident",
+                  "value": {
+                    "stringValue": "10.244.0.11->10.244.0.7:56870->80:11"
+                  }
+                },
+                {
+                  "key": "meta.seqack",
+                  "value": {
+                    "intValue": "2018317637"
+                  }
+                },
+                {
+                  "key": "meta.request.packet_count",
+                  "value": {
+                    "intValue": "1"
+                  }
+                },
+                {
+                  "key": "meta.response.packet_count",
+                  "value": {
+                    "intValue": "1"
+                  }
+                },
+                {
+                  "key": "client.socket.address",
+                  "value": {
+                    "stringValue": "10.244.0.11"
+                  }
+                },
+                {
+                  "key": "server.socket.address",
+                  "value": {
+                    "stringValue": "10.244.0.7"
+                  }
+                },
+                {
+                  "key": "meta.event_handled_at",
+                  "value": {
+                    "stringValue": "2023-11-28 20:37:20.745071964 +0000 UTC m=+25.126294054"
+                  }
+                },
+                {
+                  "key": "http.request.timestamp",
+                  "value": {
+                    "stringValue": "2023-11-28 20:37:10.13757 +0000 UTC"
+                  }
+                },
+                {
+                  "key": "http.response.timestamp",
+                  "value": {
+                    "stringValue": "2023-11-28 20:37:10.14533 +0000 UTC"
+                  }
+                },
+                {
+                  "key": "meta.request.capture_to_handle.latency_ms",
+                  "value": {
+                    "intValue": "10607"
+                  }
+                },
+                {
+                  "key": "meta.response.capture_to_handle.latency_ms",
+                  "value": {
+                    "intValue": "10599"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": "7"
+                  }
+                },
+                {
+                  "key": "http.request.method",
+                  "value": {
+                    "stringValue": "GET"
+                  }
+                },
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "GET"
+                  }
+                },
+                {
+                  "key": "http.request.body.size",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "http.request_content_length",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "http.request.header.user_agent",
+                  "value": {
+                    "stringValue": "curl/8.4.0"
+                  }
+                },
+                {
+                  "key": "url.path",
+                  "value": {
+                    "stringValue": "/"
+                  }
+                },
+                {
+                  "key": "http.target",
+                  "value": {
+                    "stringValue": "/"
+                  }
+                },
+                {
+                  "key": "http.response.status_code",
+                  "value": {
+                    "intValue": "404"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "intValue": "404"
+                  }
+                },
+                {
+                  "key": "http.response.body.size",
+                  "value": {
+                    "intValue": "1132"
+                  }
+                },
+                {
+                  "key": "http.response_content_length",
+                  "value": {
+                    "intValue": "1132"
+                  }
+                },
+                {
+                  "key": "error",
+                  "value": {
+                    "stringValue": "HTTP client error"
+                  }
+                },
+                {
+                  "key": "source.k8s.node.name",
+                  "value": {
+                    "stringValue": "kind-control-plane"
+                  }
+                },
+                {
+                  "key": "source.k8s.node.uid",
+                  "value": {
+                    "stringValue": "a1b0791b-2380-4f44-ada6-165d505481bb"
+                  }
+                },
+                {
+                  "key": "source.k8s.resource.type",
+                  "value": {
+                    "stringValue": "pod"
+                  }
+                },
+                {
+                  "key": "source.k8s.pod.name",
+                  "value": {
+                    "stringValue": "smoke-job-6vq5v"
+                  }
+                },
+                {
+                  "key": "source.k8s.pod.uid",
+                  "value": {
+                    "stringValue": "b60d8013-411d-49eb-8c49-16b69ec3a96a"
+                  }
+                },
+                {
+                  "key": "source.k8s.namespace.name",
+                  "value": {
+                    "stringValue": "echoserver"
+                  }
+                },
+                {
+                  "key": "source.k8s.container.name",
+                  "value": {
+                    "stringValue": "smoke-curl"
+                  }
+                },
+                {
+                  "key": "destination.k8s.container.name",
+                  "value": {
+                    "stringValue": "echoserver"
+                  }
+                },
+                {
+                  "key": "destination.k8s.node.name",
+                  "value": {
+                    "stringValue": "kind-control-plane"
+                  }
+                },
+                {
+                  "key": "destination.k8s.service.name",
+                  "value": {
+                    "stringValue": "echoserver"
+                  }
+                },
+                {
+                  "key": "destination.k8s.pod.uid",
+                  "value": {
+                    "stringValue": "97bc7df5-c410-4a1e-bc73-6ded43a66ad4"
+                  }
+                },
+                {
+                  "key": "destination.k8s.namespace.name",
+                  "value": {
+                    "stringValue": "echoserver"
+                  }
+                },
+                {
+                  "key": "destination.k8s.node.uid",
+                  "value": {
+                    "stringValue": "a1b0791b-2380-4f44-ada6-165d505481bb"
+                  }
+                },
+                {
+                  "key": "destination.k8s.service.uid",
+                  "value": {
+                    "stringValue": "527e8338-75af-4761-9549-453b997be1b4"
+                  }
+                },
+                {
+                  "key": "destination.k8s.resource.type",
+                  "value": {
+                    "stringValue": "pod"
+                  }
+                },
+                {
+                  "key": "destination.k8s.pod.name",
+                  "value": {
+                    "stringValue": "echoserver-75b74d967-mggb8"
+                  }
+                }
+              ],
+              "kind": 1,
+              "name": "GET",
+              "parentSpanId": "",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            },
+            {
+              "attributes": [
+                {
+                  "key": "meta.stream.ident",
+                  "value": {
+                    "stringValue": "10.244.0.11->10.96.221.13:56870->80:10"
+                  }
+                },
+                {
+                  "key": "meta.seqack",
+                  "value": {
+                    "intValue": "2018317637"
+                  }
+                },
+                {
+                  "key": "meta.request.packet_count",
+                  "value": {
+                    "intValue": "1"
+                  }
+                },
+                {
+                  "key": "meta.response.packet_count",
+                  "value": {
+                    "intValue": "1"
+                  }
+                },
+                {
+                  "key": "client.socket.address",
+                  "value": {
+                    "stringValue": "10.244.0.11"
+                  }
+                },
+                {
+                  "key": "server.socket.address",
+                  "value": {
+                    "stringValue": "10.96.221.13"
+                  }
+                },
+                {
+                  "key": "meta.event_handled_at",
+                  "value": {
+                    "stringValue": "2023-11-28 20:37:20.745301339 +0000 UTC m=+25.126523512"
+                  }
+                },
+                {
+                  "key": "http.request.timestamp",
+                  "value": {
+                    "stringValue": "2023-11-28 20:37:10.137568 +0000 UTC"
+                  }
+                },
+                {
+                  "key": "http.response.timestamp",
+                  "value": {
+                    "stringValue": "2023-11-28 20:37:10.145334 +0000 UTC"
+                  }
+                },
+                {
+                  "key": "meta.request.capture_to_handle.latency_ms",
+                  "value": {
+                    "intValue": "10607"
+                  }
+                },
+                {
+                  "key": "meta.response.capture_to_handle.latency_ms",
+                  "value": {
+                    "intValue": "10599"
+                  }
+                },
+                {
+                  "key": "duration_ms",
+                  "value": {
+                    "intValue": "7"
+                  }
+                },
+                {
+                  "key": "http.request.method",
+                  "value": {
+                    "stringValue": "GET"
+                  }
+                },
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "GET"
+                  }
+                },
+                {
+                  "key": "http.request.body.size",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "http.request_content_length",
+                  "value": {
+                    "intValue": "0"
+                  }
+                },
+                {
+                  "key": "http.request.header.user_agent",
+                  "value": {
+                    "stringValue": "curl/8.4.0"
+                  }
+                },
+                {
+                  "key": "url.path",
+                  "value": {
+                    "stringValue": "/"
+                  }
+                },
+                {
+                  "key": "http.target",
+                  "value": {
+                    "stringValue": "/"
+                  }
+                },
+                {
+                  "key": "http.response.status_code",
+                  "value": {
+                    "intValue": "404"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "intValue": "404"
+                  }
+                },
+                {
+                  "key": "http.response.body.size",
+                  "value": {
+                    "intValue": "1132"
+                  }
+                },
+                {
+                  "key": "http.response_content_length",
+                  "value": {
+                    "intValue": "1132"
+                  }
+                },
+                {
+                  "key": "error",
+                  "value": {
+                    "stringValue": "HTTP client error"
+                  }
+                },
+                {
+                  "key": "source.k8s.node.name",
+                  "value": {
+                    "stringValue": "kind-control-plane"
+                  }
+                },
+                {
+                  "key": "source.k8s.node.uid",
+                  "value": {
+                    "stringValue": "a1b0791b-2380-4f44-ada6-165d505481bb"
+                  }
+                },
+                {
+                  "key": "source.k8s.resource.type",
+                  "value": {
+                    "stringValue": "pod"
+                  }
+                },
+                {
+                  "key": "source.k8s.pod.name",
+                  "value": {
+                    "stringValue": "smoke-job-6vq5v"
+                  }
+                },
+                {
+                  "key": "source.k8s.pod.uid",
+                  "value": {
+                    "stringValue": "b60d8013-411d-49eb-8c49-16b69ec3a96a"
+                  }
+                },
+                {
+                  "key": "source.k8s.namespace.name",
+                  "value": {
+                    "stringValue": "echoserver"
+                  }
+                },
+                {
+                  "key": "source.k8s.container.name",
+                  "value": {
+                    "stringValue": "smoke-curl"
+                  }
+                },
+                {
+                  "key": "destination.k8s.resource.type",
+                  "value": {
+                    "stringValue": "service"
+                  }
+                },
+                {
+                  "key": "destination.k8s.namespace.name",
+                  "value": {
+                    "stringValue": "echoserver"
+                  }
+                },
+                {
+                  "key": "destination.k8s.service.name",
+                  "value": {
+                    "stringValue": "echoserver"
+                  }
+                },
+                {
+                  "key": "destination.k8s.service.uid",
+                  "value": {
+                    "stringValue": "527e8338-75af-4761-9549-453b997be1b4"
+                  }
+                }
+              ],
+              "kind": 1,
+              "name": "GET",
+              "parentSpanId": "",
+              "spanId": "xxxxx",
+              "status": {},
+              "traceId": "xxxxx"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
