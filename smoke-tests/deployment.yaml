@@ -112,12 +112,14 @@ spec:
                 secretKeyRef:
                   name: honeycomb
                   key: api-key
+            ## uncomment this to change the endpoint for events
             # - name: HONEYCOMB_API_ENDPOINT
             #   value: $HONEYCOMB_API_ENDPOINT
+            ## uncomment this to send to insecure endpoint like collector
             # - name: OTEL_EXPORTER_OTLP_INSECURE
             #   value: "true"
-            ## uncomment this to set the destination dataset for events
-            ## this will represent service.name in honeycomb when using otel
+            # uncomment this to set the destination dataset for events
+            # this will represent service.name in honeycomb when using otel
             # - name: HONEYCOMB_DATASET
             #   value: $HONEYCOMB_DATASET
             ## uncomment this to set the destination dataset for agent performance stats
@@ -128,7 +130,7 @@ spec:
             #   value: $DEBUG_ADDRESS
             ## uncomment this to enable set log level
             # - name: LOG_LEVEL
-            #   value: #LOG_LEVEL
+            #   value: $LOG_LEVEL
             ## uncomment this to enable profiling
             # - name: DEBUG
             #   value: "$DEBUG"
