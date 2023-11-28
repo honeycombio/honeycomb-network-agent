@@ -1,8 +1,6 @@
 IMG_NAME ?= hny/network-agent
 IMG_TAG ?= local
 
-COLLECTOR_IP := $(shell echo kubectl get service smokey-collector-opentelemetry-collector --template '{{.spec.clusterIP}}')
-
 .PHONY: build
 #: compile the agent executable
 build:
@@ -27,22 +25,32 @@ docker-test:
 
 .PHONY: smoke
 #: run smoke tests - for local tests comment out docker-build to save time, for CI uncomment docker-build
-smoke: #docker-build
+smoke:  smokey_cluster_create smokey_collector_install smokey_agent_install
+
+smokey_cluster_create:
 	kind create cluster
 
+smokey_collector_install:
   # install opentelemetry collector using helm chart and wait for it to be ready
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 	helm install smokey-collector open-telemetry/opentelemetry-collector --values smoke-tests/collector-helm-values.yaml
 	kubectl rollout status statefulset.apps/smokey-collector-opentelemetry-collector --timeout=60s
 
-  # get collector IP from service
-	export ip = $(COLLECTOR_IP)
+# If the image doesn't exist, return the name of the make target to build it.
+# Use this as a prerequisite to any target that needs the image to exist.
+maybe_docker_build = $(if $(shell docker images -q $(IMG_NAME):$(IMG_TAG)),,docker-build)
 
+smokey_agent_install: $(maybe_docker_build)
   # install network agent using helm chart using local build and wait for it to be ready
 	kind load docker-image $(IMG_NAME):$(IMG_TAG)
 	helm repo add honeycomb https://honeycombio.github.io/helm-charts
-	envsubst < smoke-tests/agent-helm-values.yaml | helm install smokey-agent honeycomb/network-agent --values -
+	OTEL_COLLECTOR_IP="$(call get_collector_ip)" \
+		envsubst < smoke-tests/agent-helm-values.yaml | helm install smokey-agent honeycomb/network-agent --values -
 	kubectl rollout status daemonset.apps/smokey-agent-network-agent --timeout=10s
+
+# A function to get the IP address of the collector service. Use = instead of := so that it is lazy-evaluated.
+get_collector_ip = \
+	$(shell kubectl get service smokey-collector-opentelemetry-collector --template '{{.spec.clusterIP}}')
 
 .PHONY: save-for-later
 #: apply echo server and run smoke-job; not necessary for local setup - plenty of chatter already
