@@ -1,12 +1,5 @@
 honeycomb:
   apiKey: "bogosity" # we'll be sending to a Collector in smoke tests
-  # https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#stable-network-id
-  # smokey-collector-opentelemetry-collector-0 is Pod Name
-  # smokey-collector-opentelemetry-collector.default.svc.cluster.local is StatefulSet Domain
-  # endpoint: http://smokey-collector-opentelemetry-collector-0.smokey-collector-opentelemetry-collector.default.svc.cluster.local:4317
-  # endpoint: "http://smokey-collector-opentelemetry-collector:4317"
-  # setting the endpoint with the IP address works... what are we missing with the name?
-  # endpoint: "http://10.244.0.6:4317"
   endpoint: "http://$OTEL_COLLECTOR_IP:4317"
 
 image:
