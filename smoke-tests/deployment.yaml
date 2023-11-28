@@ -108,13 +108,14 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: HONEYCOMB_API_KEY
-              value: "test-apikey"
-            ## uncomment this to change the endpoint for events
-            - name: HONEYCOMB_API_ENDPOINT
-              value: http://smokey-collector-opentelemetry-collector:4317
-            ## uncomment this to send to insecure endpoint like collector
-            - name: OTEL_EXPORTER_OTLP_INSECURE
-              value: "true"
+              valueFrom:
+                secretKeyRef:
+                  name: honeycomb
+                  key: api-key
+            # - name: HONEYCOMB_API_ENDPOINT
+            #   value: $HONEYCOMB_API_ENDPOINT
+            # - name: OTEL_EXPORTER_OTLP_INSECURE
+            #   value: "true"
             ## uncomment this to set the destination dataset for events
             ## this will represent service.name in honeycomb when using otel
             # - name: HONEYCOMB_DATASET
@@ -127,7 +128,7 @@ spec:
             #   value: $DEBUG_ADDRESS
             ## uncomment this to enable set log level
             # - name: LOG_LEVEL
-            #   value: DEBUG
+            #   value: #LOG_LEVEL
             ## uncomment this to enable profiling
             # - name: DEBUG
             #   value: "$DEBUG"
