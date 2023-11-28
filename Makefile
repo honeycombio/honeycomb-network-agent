@@ -1,5 +1,8 @@
 IMG_NAME ?= hny/network-agent
 IMG_TAG ?= local
+
+COLLECTOR_IP := $(shell echo kubectl get service smokey-collector-opentelemetry-collector --template '{{.spec.clusterIP}}')
+
 .PHONY: build
 #: compile the agent executable
 build:
@@ -27,17 +30,18 @@ docker-test:
 smoke: #docker-build
 	kind create cluster
 
-  # install opentelemetry collector
+  # install opentelemetry collector using helm chart and wait for it to be ready
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 	helm install smokey-collector open-telemetry/opentelemetry-collector --values smoke-tests/collector-helm-values.yaml
+	kubectl rollout status statefulset.apps/smokey-collector-opentelemetry-collector --timeout=60s
 
-  # install network agent using helm chart and local build
+  # get collector IP from service
+	export ip = $(COLLECTOR_IP)
+
+  # install network agent using helm chart using local build and wait for it to be ready
 	kind load docker-image $(IMG_NAME):$(IMG_TAG)
 	helm repo add honeycomb https://honeycombio.github.io/helm-charts
-	helm install smokey-agent honeycomb/network-agent --values smoke-tests/agent-helm-values.yaml
-
-  # wait for collector and agent to be ready
-	kubectl rollout status statefulset.apps/smokey-collector-opentelemetry-collector --timeout=60s
+	envsubst < smoke-tests/agent-helm-values.yaml | helm install smokey-agent honeycomb/network-agent --values -
 	kubectl rollout status daemonset.apps/smokey-agent-network-agent --timeout=10s
 
 .PHONY: save-for-later
