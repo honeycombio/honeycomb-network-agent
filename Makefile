@@ -25,7 +25,7 @@ docker-test:
 
 .PHONY: smoke
 #: run smoke tests - for local tests comment out docker-build to save time, for CI uncomment docker-build
-smoke:  smokey_cluster_create smokey_collector_install smokey_agent_install
+smoke:  smokey_cluster_create smokey_collector_install smokey_agent_install smokey_echo_job smokey_copy_output smokey_verify_output
 
 smokey_cluster_create:
 	kind create cluster
@@ -48,13 +48,22 @@ smokey_agent_install: $(maybe_docker_build)
 		envsubst < smoke-tests/agent-helm-values.yaml | helm install smokey-agent honeycomb/network-agent --values -
 	kubectl rollout status daemonset.apps/smokey-agent-network-agent --timeout=10s
 
+smokey_copy_output:
+  # copy output from collector file to local machine
+  # this is ignored in .gitignore
+	kubectl cp -c filecp default/smokey-collector-opentelemetry-collector-0:/tmp/trace.json ./smoke-tests/traces-orig.json
+
+smokey_verify_output:
+  # verify that the output from the collector matches the expected output
+	bats ./smoke-tests/verify.bats
+
 # A function to get the IP address of the collector service. Use = instead of := so that it is lazy-evaluated.
 get_collector_ip = \
 	$(shell kubectl get service smokey-collector-opentelemetry-collector --template '{{.spec.clusterIP}}')
 
-.PHONY: save-for-later
+.PHONY: smokey_echo_job
 #: apply echo server and run smoke-job; not necessary for local setup - plenty of chatter already
-save-for-later:
+smokey_echo_job:
 	make apply-echoserver
 	kubectl create --filename smoke-tests/smoke-job.yaml
 	kubectl rollout status deployment.apps/echoserver --timeout=10s --namespace echoserver
