@@ -51,6 +51,9 @@ smokey_agent_install: $(maybe_docker_build)
 smokey_copy_output:
   # copy output from collector file to local machine
   # this is ignored in .gitignore
+  # TODO use more reliable way to wait for file to be ready
+  # for now just sleeping a bit
+	sleep 12
 	kubectl cp -c filecp default/smokey-collector-opentelemetry-collector-0:/tmp/trace.json ./smoke-tests/traces-orig.json
 
 smokey_verify_output:
