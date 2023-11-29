@@ -30,13 +30,8 @@ spans_received() {
 }
 
 # the output of the log file produced by the collector
-# json_output() {
-# 	cat "${BATS_TEST_DIRNAME}/traces-orig.json"
-# }
-
-## temporary for setting up tests to use specific trace from echo ##
 json_output() {
-	cat "${BATS_TEST_DIRNAME}/traces-temp-test.json"
+	cat "${BATS_TEST_DIRNAME}/traces-orig.json"
 }
 
 # ASSERTION HELPERS
