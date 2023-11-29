@@ -12,6 +12,20 @@ config:
         grpc:
           endpoint: ${env:MY_POD_IP}:4317
 
+  processors:
+    filter/echoonly:
+      spans:
+        include:
+          match_type: strict
+          attributes:
+            - key: destination.k8s.namespace.name
+              value: echoserver
+        exclude:
+          match_type: strict
+          attributes:
+            - key: destination.k8s.resource.type
+              value: service
+
   exporters:
     debug:
       verbosity: detailed
@@ -26,6 +40,8 @@ config:
       traces:
         receivers:
           - otlp
+        processors:
+          - filter/echoonly
         exporters:
           - file/trace
           - debug
