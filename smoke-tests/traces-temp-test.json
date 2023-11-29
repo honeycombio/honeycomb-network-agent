@@ -24,7 +24,7 @@
           {
             "key": "meta.agent.node.ip",
             "value": {
-              "stringValue": "172.21.0.2"
+              "stringValue": "172.18.0.2"
             }
           },
           {
@@ -36,13 +36,13 @@
           {
             "key": "meta.agent.pod.ip",
             "value": {
-              "stringValue": "172.21.0.2"
+              "stringValue": "172.18.0.2"
             }
           },
           {
             "key": "meta.agent.pod.name",
             "value": {
-              "stringValue": "smokey-agent-network-agent-mlmxp"
+              "stringValue": "smokey-agent-network-agent-nsn2w"
             }
           },
           {
@@ -89,7 +89,6 @@
           }
         ]
       },
-      "schemaUrl": "https://opentelemetry.io/schemas/1.21.0",
       "scopeSpans": [
         {
           "scope": {
@@ -97,17 +96,24 @@
           },
           "spans": [
             {
+              "traceId": "7965d8e66c85872a7006b771974380b1",
+              "spanId": "81bee08a3134ae6a",
+              "parentSpanId": "",
+              "name": "POST",
+              "kind": 1,
+              "startTimeUnixNano": "1701286913421119000",
+              "endTimeUnixNano": "1701286913432339000",
               "attributes": [
                 {
                   "key": "meta.stream.ident",
                   "value": {
-                    "stringValue": "10.244.0.11->10.244.0.7:56870->80:11"
+                    "stringValue": "10.244.0.11-\u003e10.244.0.6:46914-\u003e80:6"
                   }
                 },
                 {
                   "key": "meta.seqack",
                   "value": {
-                    "intValue": "2018317637"
+                    "intValue": "2849550448"
                   }
                 },
                 {
@@ -131,67 +137,67 @@
                 {
                   "key": "server.socket.address",
                   "value": {
-                    "stringValue": "10.244.0.7"
+                    "stringValue": "10.244.0.6"
                   }
                 },
                 {
                   "key": "meta.event_handled_at",
                   "value": {
-                    "stringValue": "2023-11-28 20:37:20.745071964 +0000 UTC m=+25.126294054"
+                    "stringValue": "2023-11-29 19:42:05.114023967 +0000 UTC m=+17.622850843"
                   }
                 },
                 {
                   "key": "http.request.timestamp",
                   "value": {
-                    "stringValue": "2023-11-28 20:37:10.13757 +0000 UTC"
+                    "stringValue": "2023-11-29 19:41:53.421119 +0000 UTC"
                   }
                 },
                 {
                   "key": "http.response.timestamp",
                   "value": {
-                    "stringValue": "2023-11-28 20:37:10.14533 +0000 UTC"
+                    "stringValue": "2023-11-29 19:41:53.432339 +0000 UTC"
                   }
                 },
                 {
                   "key": "meta.request.capture_to_handle.latency_ms",
                   "value": {
-                    "intValue": "10607"
+                    "intValue": "11692"
                   }
                 },
                 {
                   "key": "meta.response.capture_to_handle.latency_ms",
                   "value": {
-                    "intValue": "10599"
+                    "intValue": "11681"
                   }
                 },
                 {
                   "key": "duration_ms",
                   "value": {
-                    "intValue": "7"
+                    "intValue": "11"
                   }
                 },
                 {
                   "key": "http.request.method",
                   "value": {
-                    "stringValue": "GET"
+                    "stringValue": "POST"
                   }
                 },
                 {
                   "key": "http.method",
                   "value": {
-                    "stringValue": "GET"
+                    "stringValue": "POST"
                   }
                 },
                 {
                   "key": "http.request.body.size",
                   "value": {
-                    "intValue": "0"
+                    "intValue": "15"
                   }
                 },
                 {
                   "key": "http.request_content_length",
                   "value": {
-                    "intValue": "0"
+                    "intValue": "15"
                   }
                 },
                 {
@@ -215,31 +221,37 @@
                 {
                   "key": "http.response.status_code",
                   "value": {
-                    "intValue": "404"
+                    "intValue": "405"
                   }
                 },
                 {
                   "key": "http.status_code",
                   "value": {
-                    "intValue": "404"
+                    "intValue": "405"
                   }
                 },
                 {
                   "key": "http.response.body.size",
                   "value": {
-                    "intValue": "1132"
+                    "intValue": "1225"
                   }
                 },
                 {
                   "key": "http.response_content_length",
                   "value": {
-                    "intValue": "1132"
+                    "intValue": "1225"
                   }
                 },
                 {
                   "key": "error",
                   "value": {
                     "stringValue": "HTTP client error"
+                  }
+                },
+                {
+                  "key": "source.k8s.container.name",
+                  "value": {
+                    "stringValue": "smoke-curl"
                   }
                 },
                 {
@@ -251,7 +263,7 @@
                 {
                   "key": "source.k8s.node.uid",
                   "value": {
-                    "stringValue": "a1b0791b-2380-4f44-ada6-165d505481bb"
+                    "stringValue": "4423059c-f48f-494b-a906-7da383875c5d"
                   }
                 },
                 {
@@ -263,13 +275,13 @@
                 {
                   "key": "source.k8s.pod.name",
                   "value": {
-                    "stringValue": "smoke-job-6vq5v"
+                    "stringValue": "smoke-job-pn4mv"
                   }
                 },
                 {
                   "key": "source.k8s.pod.uid",
                   "value": {
-                    "stringValue": "b60d8013-411d-49eb-8c49-16b69ec3a96a"
+                    "stringValue": "4d346cd7-3ed5-433c-9d73-a181d86fafdc"
                   }
                 },
                 {
@@ -279,9 +291,15 @@
                   }
                 },
                 {
-                  "key": "source.k8s.container.name",
+                  "key": "destination.k8s.resource.type",
                   "value": {
-                    "stringValue": "smoke-curl"
+                    "stringValue": "pod"
+                  }
+                },
+                {
+                  "key": "destination.k8s.pod.name",
+                  "value": {
+                    "stringValue": "echoserver-75b74d967-jsvv2"
                   }
                 },
                 {
@@ -297,247 +315,21 @@
                   }
                 },
                 {
-                  "key": "destination.k8s.service.name",
+                  "key": "destination.k8s.node.uid",
                   "value": {
-                    "stringValue": "echoserver"
+                    "stringValue": "4423059c-f48f-494b-a906-7da383875c5d"
+                  }
+                },
+                {
+                  "key": "destination.k8s.service.uid",
+                  "value": {
+                    "stringValue": "f10b35a5-7667-46bd-8531-fa6b42d0445f"
                   }
                 },
                 {
                   "key": "destination.k8s.pod.uid",
                   "value": {
-                    "stringValue": "97bc7df5-c410-4a1e-bc73-6ded43a66ad4"
-                  }
-                },
-                {
-                  "key": "destination.k8s.namespace.name",
-                  "value": {
-                    "stringValue": "echoserver"
-                  }
-                },
-                {
-                  "key": "destination.k8s.node.uid",
-                  "value": {
-                    "stringValue": "a1b0791b-2380-4f44-ada6-165d505481bb"
-                  }
-                },
-                {
-                  "key": "destination.k8s.service.uid",
-                  "value": {
-                    "stringValue": "527e8338-75af-4761-9549-453b997be1b4"
-                  }
-                },
-                {
-                  "key": "destination.k8s.resource.type",
-                  "value": {
-                    "stringValue": "pod"
-                  }
-                },
-                {
-                  "key": "destination.k8s.pod.name",
-                  "value": {
-                    "stringValue": "echoserver-75b74d967-mggb8"
-                  }
-                }
-              ],
-              "kind": 1,
-              "name": "GET",
-              "parentSpanId": "",
-              "spanId": "xxxxx",
-              "status": {},
-              "traceId": "xxxxx"
-            },
-            {
-              "attributes": [
-                {
-                  "key": "meta.stream.ident",
-                  "value": {
-                    "stringValue": "10.244.0.11->10.96.221.13:56870->80:10"
-                  }
-                },
-                {
-                  "key": "meta.seqack",
-                  "value": {
-                    "intValue": "2018317637"
-                  }
-                },
-                {
-                  "key": "meta.request.packet_count",
-                  "value": {
-                    "intValue": "1"
-                  }
-                },
-                {
-                  "key": "meta.response.packet_count",
-                  "value": {
-                    "intValue": "1"
-                  }
-                },
-                {
-                  "key": "client.socket.address",
-                  "value": {
-                    "stringValue": "10.244.0.11"
-                  }
-                },
-                {
-                  "key": "server.socket.address",
-                  "value": {
-                    "stringValue": "10.96.221.13"
-                  }
-                },
-                {
-                  "key": "meta.event_handled_at",
-                  "value": {
-                    "stringValue": "2023-11-28 20:37:20.745301339 +0000 UTC m=+25.126523512"
-                  }
-                },
-                {
-                  "key": "http.request.timestamp",
-                  "value": {
-                    "stringValue": "2023-11-28 20:37:10.137568 +0000 UTC"
-                  }
-                },
-                {
-                  "key": "http.response.timestamp",
-                  "value": {
-                    "stringValue": "2023-11-28 20:37:10.145334 +0000 UTC"
-                  }
-                },
-                {
-                  "key": "meta.request.capture_to_handle.latency_ms",
-                  "value": {
-                    "intValue": "10607"
-                  }
-                },
-                {
-                  "key": "meta.response.capture_to_handle.latency_ms",
-                  "value": {
-                    "intValue": "10599"
-                  }
-                },
-                {
-                  "key": "duration_ms",
-                  "value": {
-                    "intValue": "7"
-                  }
-                },
-                {
-                  "key": "http.request.method",
-                  "value": {
-                    "stringValue": "GET"
-                  }
-                },
-                {
-                  "key": "http.method",
-                  "value": {
-                    "stringValue": "GET"
-                  }
-                },
-                {
-                  "key": "http.request.body.size",
-                  "value": {
-                    "intValue": "0"
-                  }
-                },
-                {
-                  "key": "http.request_content_length",
-                  "value": {
-                    "intValue": "0"
-                  }
-                },
-                {
-                  "key": "http.request.header.user_agent",
-                  "value": {
-                    "stringValue": "curl/8.4.0"
-                  }
-                },
-                {
-                  "key": "url.path",
-                  "value": {
-                    "stringValue": "/"
-                  }
-                },
-                {
-                  "key": "http.target",
-                  "value": {
-                    "stringValue": "/"
-                  }
-                },
-                {
-                  "key": "http.response.status_code",
-                  "value": {
-                    "intValue": "404"
-                  }
-                },
-                {
-                  "key": "http.status_code",
-                  "value": {
-                    "intValue": "404"
-                  }
-                },
-                {
-                  "key": "http.response.body.size",
-                  "value": {
-                    "intValue": "1132"
-                  }
-                },
-                {
-                  "key": "http.response_content_length",
-                  "value": {
-                    "intValue": "1132"
-                  }
-                },
-                {
-                  "key": "error",
-                  "value": {
-                    "stringValue": "HTTP client error"
-                  }
-                },
-                {
-                  "key": "source.k8s.node.name",
-                  "value": {
-                    "stringValue": "kind-control-plane"
-                  }
-                },
-                {
-                  "key": "source.k8s.node.uid",
-                  "value": {
-                    "stringValue": "a1b0791b-2380-4f44-ada6-165d505481bb"
-                  }
-                },
-                {
-                  "key": "source.k8s.resource.type",
-                  "value": {
-                    "stringValue": "pod"
-                  }
-                },
-                {
-                  "key": "source.k8s.pod.name",
-                  "value": {
-                    "stringValue": "smoke-job-6vq5v"
-                  }
-                },
-                {
-                  "key": "source.k8s.pod.uid",
-                  "value": {
-                    "stringValue": "b60d8013-411d-49eb-8c49-16b69ec3a96a"
-                  }
-                },
-                {
-                  "key": "source.k8s.namespace.name",
-                  "value": {
-                    "stringValue": "echoserver"
-                  }
-                },
-                {
-                  "key": "source.k8s.container.name",
-                  "value": {
-                    "stringValue": "smoke-curl"
-                  }
-                },
-                {
-                  "key": "destination.k8s.resource.type",
-                  "value": {
-                    "stringValue": "service"
+                    "stringValue": "05278a63-d6fb-4898-9203-2706e3319825"
                   }
                 },
                 {
@@ -551,24 +343,14 @@
                   "value": {
                     "stringValue": "echoserver"
                   }
-                },
-                {
-                  "key": "destination.k8s.service.uid",
-                  "value": {
-                    "stringValue": "527e8338-75af-4761-9549-453b997be1b4"
-                  }
                 }
               ],
-              "kind": 1,
-              "name": "GET",
-              "parentSpanId": "",
-              "spanId": "xxxxx",
-              "status": {},
-              "traceId": "xxxxx"
+              "status": {}
             }
           ]
         }
-      ]
+      ],
+      "schemaUrl": "https://opentelemetry.io/schemas/1.21.0"
     }
   ]
 }

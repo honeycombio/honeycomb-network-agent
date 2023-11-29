@@ -16,20 +16,17 @@ SCOPE="hny-network-agent"
 
 @test "Agent emits a span name '{http.method}' (per semconv)" {
   result=$(span_names_for ${SCOPE})
-  assert_equal "$result" '"GET"
-"GET"'
+  assert_equal "$result" '"POST"'
 }
 
 @test "Agent includes specified headers as attributes" {
   result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"http.request.header.user_agent\").value.stringValue")
-  assert_equal "$result" '"curl/8.4.0"
-"curl/8.4.0"'
+  assert_equal "$result" '"curl/8.4.0"'
 }
 
 @test "Agent includes k8s source attributes" {
   result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"source.k8s.container.name\").value.stringValue")
-  assert_equal "$result" '"smoke-curl"
-"smoke-curl"'
+  assert_equal "$result" '"smoke-curl"'
 }
 
 @test "Agent includes k8s destination attributes" {
@@ -39,26 +36,22 @@ SCOPE="hny-network-agent"
 
 @test "HTTP span includes http.method attribute" {
   result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"http.method\").value.stringValue")
-  assert_equal "$result" '"GET"
-"GET"'
+  assert_equal "$result" '"POST"'
 }
 
 @test "HTTP span includes http.target attribute" {
   result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"http.target\").value.stringValue")
-  assert_equal "$result" '"/"
-"/"'
+  assert_equal "$result" '"/"'
 }
 
 @test "HTTP span includes http.status_code attribute" {
   result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"http.status_code\").value.intValue")
-  assert_equal "$result" '"404"
-"404"'
+  assert_equal "$result" '"405"'
 }
 
-@test "HTTP span includes client error attribute with 404 response" {
+@test "HTTP span includes client error attribute with 4xx response" {
   result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"error\").value.stringValue")
-  assert_equal "$result" '"HTTP client error"
-"HTTP client error"'
+  assert_equal "$result" '"HTTP client error"'
 }
 
 @test "Trace ID present in all spans" {
