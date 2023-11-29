@@ -2,33 +2,16 @@ name: Pull Request
 
 on:
   pull_request:
-  workflow_dispatch:
 
 jobs:
-  docker-build:
+  build-and-test:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3.5.3
 
-      # - name: Run tests
-      #   run: make docker-test
-
-      # - name: Set up QEMU
-      #   uses: docker/setup-qemu-action@v2.2.0
-
-      # - name: Set up Docker Buildx
-      #   uses: docker/setup-buildx-action@v2.9.0
-
-      # - name: Build docker image
-      #   uses: docker/build-push-action@v4.1.1
-      #   with:
-      #     context: .
-      #     push: false
-      #     platforms: linux/amd64
-      #     # platforms: linux/amd64,linux/arm64 - don't build arm64 on PRs for now
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max
+      - name: Run tests
+        run: make docker-test
 
       - name: Setup BATS
         uses: mig4/setup-bats@v1
