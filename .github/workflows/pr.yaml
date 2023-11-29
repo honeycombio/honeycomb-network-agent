@@ -28,3 +28,9 @@ jobs:
           # platforms: linux/amd64,linux/arm64 - don't build arm64 on PRs for now
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Run smoke tests
+        run: make smoke
+
+      - name: Spin down smokers
+        run: make unsmoke
