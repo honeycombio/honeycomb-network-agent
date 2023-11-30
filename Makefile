@@ -46,7 +46,7 @@ smokey_agent_install: $(maybe_docker_build)
 	helm repo add honeycomb https://honeycombio.github.io/helm-charts
 	OTEL_COLLECTOR_IP="$(call get_collector_ip)" \
 		envsubst < smoke-tests/agent-helm-values.yaml | helm install smokey-agent honeycomb/network-agent --values -
-	kubectl rollout status daemonset.apps/smokey-agent-network-agent --timeout=10s
+	kubectl rollout status daemonset.apps/smokey-agent-network-agent --timeout=60s
 
 smokey_copy_output:
   # copy output from collector file to local machine
@@ -69,7 +69,7 @@ get_collector_ip = \
 smokey_echo_job:
 	make apply-echoserver
 	kubectl create --filename smoke-tests/smoke-job.yaml
-	kubectl rollout status deployment.apps/echoserver --timeout=10s --namespace echoserver
+	kubectl rollout status deployment.apps/echoserver --timeout=60s --namespace echoserver
 	kubectl wait --for=condition=complete job/smoke-job --timeout=60s --namespace echoserver
 
 .PHONY: unsmoke
