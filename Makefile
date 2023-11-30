@@ -57,11 +57,11 @@ smokey_copy_output:
   # the file may not be ready immediately, so retry a few times
   # note: the file is ignored in .gitignore
 	for i in {1..10}; do \
+		sleep 10; \
 		kubectl cp -c filecp default/smokey-collector-opentelemetry-collector-0:/tmp/trace.json ./smoke-tests/traces-orig.json; \
 		if [ -f ./smoke-tests/traces-orig.json ]; then \
 			break; \
 		fi; \
-		sleep 5; \
 	done
 
 smokey_verify_output:
