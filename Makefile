@@ -49,12 +49,20 @@ smokey_agent_install: $(maybe_docker_build)
 	kubectl rollout status daemonset.apps/smokey-agent-network-agent --timeout=60s
 
 smokey_copy_output:
-  # copy output from collector file to local machine
-  # this is ignored in .gitignore
-  # TODO use more reliable way to wait for file to be ready
-  # for now just sleeping a bit
-	sleep 12
-	kubectl cp -c filecp default/smokey-collector-opentelemetry-collector-0:/tmp/trace.json ./smoke-tests/traces-orig.json
+  # removes the file first in case it already exists
+	if [ -f ./smoke-tests/traces-orig.json ]; then \
+		rm ./smoke-tests/traces-orig.json; \
+	fi
+  # copy collector output file to local machine to run tests on
+  # the file may not be ready immediately, so retry a few times
+  # note: the file is ignored in .gitignore
+	for i in {1..10}; do \
+		kubectl cp -c filecp default/smokey-collector-opentelemetry-collector-0:/tmp/trace.json ./smoke-tests/traces-orig.json; \
+		if [ -f ./smoke-tests/traces-orig.json ]; then \
+			break; \
+		fi; \
+		sleep 5; \
+	done
 
 smokey_verify_output:
   # verify that the output from the collector matches the expected output
