@@ -56,15 +56,11 @@ smokey_copy_output:
   # copy collector output file to local machine to run tests on
   # the file may not be ready immediately, so retry a few times
   # note: the file is ignored in .gitignore
-	for i in {1..10}; do \
-		echo "attempt $$i to get collector out file"; \
-		kubectl cp -c filecp default/smokey-collector-opentelemetry-collector-0:/tmp/trace.json ./smoke-tests/traces-orig.json; \
-		if [ -s ./smoke-tests/traces-orig.json ]; then \
-			echo "got collector out file"; \
-			break; \
-		fi; \
-		sleep 10; \
-	done
+	sleep 30
+	kubectl cp -c filecp default/smokey-collector-opentelemetry-collector-0:/tmp/trace.json ./smoke-tests/traces-orig.json; \
+	if [ ! -s ./smoke-tests/traces-orig.json ]; then \
+		echo "failed to copy collector output file"; \
+	fi;
 
 smokey_verify_output:
   # verify that the output from the collector matches the expected output
