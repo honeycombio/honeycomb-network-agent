@@ -16,6 +16,15 @@ jobs:
       - name: Run tests
         run: make docker-test
 
+      - name: Setup BATS
+        uses: mig4/setup-bats@v1
+
+      - name: Run smoke tests
+        run: make smoke
+
+      - name: Spin down smokers
+        run: make unsmoke
+
       - name: Log in to the Container registry
         uses: docker/login-action@v2.2.0
         with:

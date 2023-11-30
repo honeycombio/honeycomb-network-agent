@@ -1,0 +1,70 @@
+mode: "statefulset"
+
+config:
+  receivers:
+    jaeger: null
+    prometheus: null
+    zipkin: null
+    otlp:
+      protocols:
+        http:
+          endpoint: ${env:MY_POD_IP}:4318
+        grpc:
+          endpoint: ${env:MY_POD_IP}:4317
+
+  processors:
+    filter/echoonly:
+      spans:
+        include:
+          match_type: strict
+          attributes:
+            - key: destination.k8s.namespace.name
+              value: echoserver
+        exclude:
+          match_type: strict
+          attributes:
+            - key: destination.k8s.resource.type
+              value: service
+
+  exporters:
+    debug:
+      verbosity: detailed
+    file/trace:
+      path: /tmp/trace.json
+      rotation:
+
+  service:
+    pipelines:
+      metrics: null
+      logs: null
+      traces:
+        receivers:
+          - otlp
+        processors:
+          - filter/echoonly
+        exporters:
+          - file/trace
+          - debug
+
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+  tag: "latest"
+
+command:
+  name: otelcol-contrib
+
+extraVolumes:
+- name: filevolume
+  emptyDir: {}
+extraVolumeMounts:
+- mountPath: /tmp
+  name: filevolume
+
+extraContainers:
+- name: filecp
+  image: busybox
+  command: ["sh", "-c", "sleep 36000"]
+  volumeMounts:
+  - name: filevolume
+    mountPath: /tmp

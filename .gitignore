@@ -16,3 +16,6 @@ terraform.tfstate*
 
 # python cache (locust)
 __pycache__/
+
+# don't track smoke test traces
+smoke-tests/**/traces-orig.json
