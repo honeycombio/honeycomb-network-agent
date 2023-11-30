@@ -59,7 +59,7 @@ smokey_copy_output:
 	for i in {1..10}; do \
 		sleep 10; \
 		kubectl cp -c filecp default/smokey-collector-opentelemetry-collector-0:/tmp/trace.json ./smoke-tests/traces-orig.json; \
-		if [ -f ./smoke-tests/traces-orig.json ]; then \
+		if [ -s ./smoke-tests/traces-orig.json ]; then \
 			break; \
 		fi; \
 	done
