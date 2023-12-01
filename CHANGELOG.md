@@ -1,5 +1,12 @@
 # Honeycomb Network Agent changelog
 
+## [0.1.0-beta] - 2023-12-01
+
+### Maintenance
+
+- maint: Add simple smoke test(s) (#310) | @RobbKidd
+- maint: Make smoke tests more reliable (#321) | @MikeGoldsmith
+
 ## [0.0.25-alpha] - 2023-11-22
 
 ### Fixes
