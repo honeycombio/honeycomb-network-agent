@@ -54,7 +54,7 @@ smokey_copy_output:
 		rm ./smoke-tests/traces-orig.json; \
 	fi
   # copy collector output file to local machine to run tests on
-  # the file may not be ready immediately, so retry a few times
+  # the file may not be ready immediately, so wait before trying to copy
   # note: the file is ignored in .gitignore
 	sleep 30
 	kubectl cp -c filecp default/smokey-collector-opentelemetry-collector-0:/tmp/trace.json ./smoke-tests/traces-orig.json; \
