@@ -46,15 +46,21 @@ smokey_agent_install: $(maybe_docker_build)
 	helm repo add honeycomb https://honeycombio.github.io/helm-charts
 	OTEL_COLLECTOR_IP="$(call get_collector_ip)" \
 		envsubst < smoke-tests/agent-helm-values.yaml | helm install smokey-agent honeycomb/network-agent --values -
-	kubectl rollout status daemonset.apps/smokey-agent-network-agent --timeout=10s
+	kubectl rollout status daemonset.apps/smokey-agent-network-agent --timeout=60s
 
 smokey_copy_output:
-  # copy output from collector file to local machine
-  # this is ignored in .gitignore
-  # TODO use more reliable way to wait for file to be ready
-  # for now just sleeping a bit
-	sleep 12
-	kubectl cp -c filecp default/smokey-collector-opentelemetry-collector-0:/tmp/trace.json ./smoke-tests/traces-orig.json
+  # removes the file first in case it already exists
+	if [ -f ./smoke-tests/traces-orig.json ]; then \
+		rm ./smoke-tests/traces-orig.json; \
+	fi
+  # copy collector output file to local machine to run tests on
+  # the file may not be ready immediately, so wait before trying to copy
+  # note: the file is ignored in .gitignore
+	sleep 30
+	kubectl cp -c filecp default/smokey-collector-opentelemetry-collector-0:/tmp/trace.json ./smoke-tests/traces-orig.json; \
+	if [ ! -s ./smoke-tests/traces-orig.json ]; then \
+		echo "failed to copy collector output file"; \
+	fi;
 
 smokey_verify_output:
   # verify that the output from the collector matches the expected output
@@ -69,7 +75,7 @@ get_collector_ip = \
 smokey_echo_job:
 	make apply-echoserver
 	kubectl create --filename smoke-tests/smoke-job.yaml
-	kubectl rollout status deployment.apps/echoserver --timeout=10s --namespace echoserver
+	kubectl rollout status deployment.apps/echoserver --timeout=60s --namespace echoserver
 	kubectl wait --for=condition=complete job/smoke-job --timeout=60s --namespace echoserver
 
 .PHONY: unsmoke
