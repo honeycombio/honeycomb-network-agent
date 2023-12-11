@@ -21,7 +21,7 @@ SCOPE="hny-network-agent"
 
 @test "Agent includes specified headers as attributes" {
   result=$(span_attributes_for ${SCOPE} | jq "select(.key == \"http.request.header.user_agent\").value.stringValue")
-  assert_equal "$result" '"curl/8.4.0"'
+  assert_equal "$result" '"curl/8.5.0"'
 }
 
 @test "Agent includes k8s source attributes" {
