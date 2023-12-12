@@ -68,6 +68,8 @@ func initLibhoney(config config.Config, version string) func() {
 	})
 
 	// configure global fields that are set on all events
+	libhoney.AddField("honeycomb.agent.name", "Honeycomb Network Agent")
+	libhoney.AddField("honeycomb.agent.version", version)
 	libhoney.AddField("honeycomb.agent_version", version)
 
 	if config.AgentNodeIP != "" {

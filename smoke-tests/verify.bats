@@ -14,6 +14,11 @@ SCOPE="hny-network-agent"
   assert_equal "$result" '"smokey"'
 }
 
+@test "Agent includes Honeycomb resource attributes" {
+  result=$(resource_attributes_received | jq "select(.key == \"honeycomb.agent.name\").value.stringValue")
+  assert_equal "$result" '"Honeycomb Network Agent"'
+}
+
 @test "Agent emits a span name '{http.method}' (per semconv)" {
   result=$(span_names_for ${SCOPE})
   assert_equal "$result" '"POST"'
