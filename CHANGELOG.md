@@ -1,5 +1,24 @@
 # Honeycomb Network Agent changelog
 
+## [0.2.0-beta] - 2023-12-14
+
+💥 Breaking changes 💥
+
+This release replaces the resource attribute `honeycomb.agent_version` with `honeycomb.agent.version`.
+If you're using that attribute to identify traffic that's coming from the Network Agent, you will need to update to use the new name.
+
+### Enhancements
+
+- feat: add honeycomb resource attributes (#331) | Jamie Danielson
+
+### Maintenance
+
+- maint: add deps and docs to maintenance in release (#326) | Jamie Danielson
+- maint: update codeowners to pipeline-team (#330) | Jamie Danielson
+- maint: update codeowners to pipeline (#325) | Jamie Danielson
+- maint: update curl in smoke tests (#327) | Jamie Danielson
+- maint(deps): bump github.com/honeycombio/otel-config-go from 1.13.0 to 1.13.1 (#329) | @Dependabot
+
 ## [0.1.0-beta] - 2023-12-01
 
 ### Maintenance
