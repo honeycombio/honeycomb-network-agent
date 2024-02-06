@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const Version string = "0.2.0-beta"
+const Version string = "0.2.1-beta"
 
 func main() {
 	config := config.NewConfig()

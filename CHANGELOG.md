@@ -1,5 +1,13 @@
 # Honeycomb Network Agent changelog
 
+## [0.2.1-beta] - 2024-02-06
+
+### Maintenance
+
+- maint: bump dependencies (#337) | @TylerHelmuth
+- maint(deps): bump github.com/rs/zerolog from 1.31.0 to 1.32.0 (#338) | @Dependabot
+- maint(deps): bump the k8s-dependencies group with 2 updates (#333) | @Dependabot
+
 ## [0.2.0-beta] - 2023-12-14
 
 💥 Breaking changes 💥
