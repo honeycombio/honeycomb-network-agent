@@ -6,7 +6,7 @@ require (
 	github.com/gopacket/gopacket v1.1.1
 	github.com/honeycombio/libhoney-go v1.20.0
 	github.com/rs/zerolog v1.32.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel v1.23.1
 	go.opentelemetry.io/otel/trace v1.23.1
 	k8s.io/api v0.29.2
