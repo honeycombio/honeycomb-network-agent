@@ -5,9 +5,9 @@ updates:
     labels:
       - "type: dependencies"
     reviewers:
-      - "honeycombio/telemetry-team"
+      - "honeycombio/pipeline-team"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     commit-message:
       prefix: "maint"
       include: "scope"
