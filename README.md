@@ -2,7 +2,7 @@
 
 [![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/honeycomb-network-agent)](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md)
 
-**STATUS: this project is being sunset.** See https://github.com/honeycombio/honeycomb-network-agent/issues/353
+**STATUS: Archived** This project is now archived. See #353 for details. For further questions, visit the [Honeycomb Pollinators Community Slack](https://docs.honeycomb.io/troubleshoot/community/#join-pollinators-community-slack).
 
 The Honeycomb Network Agent is a low effort, no-code, language agnostic solution to getting telemetry of your applications running in Kubernetes.
 
